@@ -1,9 +1,13 @@
+import Navbar from "@/components/Navbar";
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white">
+      <Navbar />
+
       <section className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
 
-        <h1 className="text-5xl font-bold tracking-wide md:text-7xl">
+        <h1 className="text-5xl font-bold tracking-wide text-yellow-400 md:text-7xl">
           STAGEFRONT
         </h1>
 
@@ -20,7 +24,7 @@ export default function Home() {
         </p>
 
         <div className="mt-10 flex gap-4">
-          <button className="rounded-full bg-yellow-500 px-8 py-4 font-bold text-black">
+          <button className="rounded-full bg-yellow-400 px-8 py-4 font-bold text-black hover:bg-yellow-300">
             Become a Founding Member
           </button>
 
