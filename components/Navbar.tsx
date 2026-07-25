@@ -1,31 +1,63 @@
+import Image from "next/image";
+import Link from "next/link";
+
+const navigation = [
+  { label: "Discover", href: "/#discover" },
+  { label: "Golden Voices", href: "/#golden-voices" },
+  { label: "Original Artists", href: "/#original-artists" },
+  { label: "Community", href: "/#community" },
+  { label: "About", href: "/#about" },
+];
+
 export default function Navbar() {
   return (
-    <nav className="fixed top-0 z-50 w-full border-b border-white/10 bg-black/80 backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#070708]/80 backdrop-blur-xl">
+      <nav
+        aria-label="Primary navigation"
+        className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-6 px-5 sm:px-8"
+      >
+        <Link
+          href="/#top"
+          aria-label="StageFront home"
+          className="group relative h-14 w-44 shrink-0 sm:w-52"
+        >
+          <Image
+            src="/images/logos/stagefront-logo-gold.png"
+            alt="StageFront"
+            fill
+            sizes="(max-width: 640px) 176px, 208px"
+            className="object-contain transition duration-300 group-hover:brightness-110"
+            priority
+          />
+        </Link>
 
-        <div className="text-2xl font-bold tracking-wider text-yellow-400">
-          STAGEFRONT
+        <div className="hidden items-center gap-7 lg:flex">
+          {navigation.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className="text-sm font-medium text-white/70 transition hover:text-[#f4b400] focus-visible:text-[#f4b400]"
+            >
+              {item.label}
+            </a>
+          ))}
         </div>
 
-        <div className="hidden gap-8 text-sm text-white md:flex">
-          <a href="#">Discover</a>
-          <a href="#">Golden Voices</a>
-          <a href="#">Original Artists</a>
-          <a href="#">Community</a>
-          <a href="#">About</a>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <button className="hidden text-sm text-white md:block">
-            Sign In
-          </button>
-
-          <button className="rounded-full bg-yellow-400 px-5 py-2 text-sm font-bold text-black transition hover:bg-yellow-300">
+        <div className="flex items-center gap-3">
+          <a
+            href="/sign-in"
+            className="hidden text-sm font-semibold text-white/80 transition hover:text-white sm:inline-flex"
+          >
+            Sign in
+          </a>
+          <a
+            href="/join"
+            className="rounded-full bg-[#f4b400] px-4 py-2.5 text-xs font-extrabold text-[#0b0b0f] shadow-[0_0_28px_rgba(244,180,0,0.18)] transition hover:-translate-y-0.5 hover:bg-[#ffd05a] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#f4b400] sm:px-5 sm:text-sm"
+          >
             Founding Member
-          </button>
+          </a>
         </div>
-
-      </div>
-    </nav>
+      </nav>
+    </header>
   );
 }
