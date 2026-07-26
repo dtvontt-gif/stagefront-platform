@@ -1,6 +1,6 @@
 # StageFront Developer Bible
 
-Version: 1.0
+Version: 1.1
 
 ## Product
 
@@ -73,7 +73,60 @@ See [Asset_Manifest.md](./Asset_Manifest.md) for official filenames and replacem
 - Tailwind CSS
 - GitHub
 - Vercel
-- Supabase planned for authentication, profiles, founding members, and live queue data
+- Supabase for authentication, profiles, founding members, host presence, and live queue data
+
+## Founding Member Administration
+
+- Founding Member status and Wall of Founders visibility are separate values.
+- An administrator may add or remove a member from the public Wall without
+  changing or deleting that member's Founding Member status.
+- Member numbers, registration dates, usernames, roles, and badges must remain
+  unchanged when Wall visibility is overridden.
+- Every administrator override must record who changed it, when it changed, and
+  an optional reason.
+- Public users may never update Wall visibility directly.
+- The administrator dashboard must require an authenticated account with an
+  explicit admin role.
+
+## Host Profiles and Live Presence
+
+- Members registered as hosts may maintain a public host profile.
+- Supported profile links include TikTok, YouTube, Instagram, Facebook, Discord,
+  and a personal website.
+- Hosts may publish a TikTok LIVE or other approved livestream URL.
+- Hosts may switch an `I'm Live` status on or off from their authenticated
+  dashboard.
+- The public Live Now directory lists only approved hosts whose live status is
+  active.
+- Each live card links viewers to the host's stream and social profiles.
+- Live status should expire automatically after a configured period unless the
+  host renews it, preventing stale listings.
+
+## Payments and Support
+
+StageFront keeps three payment purposes separate:
+
+1. Community donation - voluntary support for StageFront and its community.
+2. Show sponsorship - funding prizes, showcases, episodes, or community events.
+3. Entry fee - payment tied to a specific contest or Original Artist Showcase
+   registration.
+
+- Every checkout records its payment purpose and related event when applicable.
+- Donations must not be presented as tax-deductible unless StageFront has the
+  required legal status and documentation.
+- Sponsorships require sponsor contact information and follow-up details.
+- Entry fees must display the event, amount, refund terms, and eligibility rules
+  before payment.
+- Payment secrets must remain server-side and must never be stored in public
+  source code.
+- PayPal is the selected checkout provider.
+- Community donations, sponsorships, and entry fees must use distinct PayPal
+  checkout links or distinct server-created orders so StageFront can identify
+  the purpose of every payment.
+- For automated payment confirmation, StageFront will use a PayPal Developer
+  application and verified webhooks. Credentials must be stored only in
+  Vercel environment variables and never pasted into documentation or source
+  control.
 
 ## Naming Convention
 
@@ -81,4 +134,3 @@ See [Asset_Manifest.md](./Asset_Manifest.md) for official filenames and replacem
 - Use descriptive names such as `stagefront-logo-gold.png`.
 - Add dimensions only when a platform requires a specific size.
 - Do not use spaces, duplicate punctuation, or names such as `final-final`.
-
