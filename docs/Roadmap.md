@@ -52,7 +52,7 @@ Version: 1.1
 
 ## Future
 
-- Golden Voices registration, voting, and leaderboards
+- [x] Golden Voices registration, rules, scheduling, voting, and leaderboards
 - Original artist profiles and uploads
 - Producer marketplace
 - Embedded or simulcast StageFront live viewing after platform and rights review

@@ -7,7 +7,7 @@ const experiences = [
     title: "Golden Voices",
     description:
       "Weekly showcases, community voting, and championship moments built to give exceptional voices a real audience.",
-    href: "#golden-voices",
+    href: "/golden-voices",
   },
   {
     number: "02",

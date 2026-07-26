@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import AdminFounders from "@/components/AdminFounders";
+import AdminGoldenVoices from "@/components/AdminGoldenVoices";
 import AdminHosts from "@/components/AdminHosts";
 import AdminQueue from "@/components/AdminQueue";
 import { requireAdministrator } from "@/lib/stagefront-auth";
@@ -30,6 +31,8 @@ export default async function AdminPage() {
       <AdminHosts />
       <div className="mx-auto my-16 h-px max-w-6xl bg-white/10" />
       <AdminQueue />
+      <div className="mx-auto my-16 h-px max-w-6xl bg-white/10" />
+      <AdminGoldenVoices />
     </main>
   );
 }

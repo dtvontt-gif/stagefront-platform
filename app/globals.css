@@ -475,6 +475,50 @@ h6 {
   }
 }
 
+.gv-date-card {
+  border: 1px solid rgba(244, 180, 0, 0.22);
+  border-radius: 1.75rem;
+  padding: clamp(1.6rem, 5vw, 2.5rem);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244, 180, 0, 0.12), transparent 42%),
+    rgba(255, 255, 255, 0.025);
+}
+
+.gv-rule {
+  display: flex;
+  gap: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.025);
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.gv-rule span {
+  color: var(--stage-gold);
+  font-family: "Montserrat", "Arial Black", sans-serif;
+  font-weight: 900;
+}
+
+.gv-contestant {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+@media (max-width: 520px) {
+  .gv-contestant {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
 .join-form {
   display: grid;
   gap: 1.5rem;

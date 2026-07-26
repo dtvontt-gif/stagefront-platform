@@ -165,6 +165,20 @@ Queue writes are validated by server routes and use the Supabase service role
 only on the server. The administrator controls whether the queue is open and
 sets the estimated number of minutes per performer.
 
+## Golden Voices
+
+- Public route: `/golden-voices`
+- Public API: `/api/golden-voices`
+- Voting API: `/api/golden-voices/vote`
+- Administrator API: `/api/admin/golden-voices`
+- Database migration: `supabase/004_golden_voices.sql`
+
+Golden Voices registration is free. The $40 entry-fee payment link belongs only
+to the Original Artist Showcase and must never be displayed as a Golden Voices
+requirement. Voting uses a private, secure browser token to limit each browser
+to one vote per round. Voter tokens and contestant email addresses are never
+returned by public APIs.
+
 ## Naming Convention
 
 - Use lowercase kebab-case.
