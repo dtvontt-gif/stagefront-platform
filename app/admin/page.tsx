@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import AdminFounders from "@/components/AdminFounders";
+import AdminHosts from "@/components/AdminHosts";
 import { requireAdministrator } from "@/lib/stagefront-auth";
 
 export const metadata = {
@@ -24,6 +25,8 @@ export default async function AdminPage() {
         </form>
       </div>
       <AdminFounders />
+      <div className="mx-auto my-16 h-px max-w-6xl bg-white/10" />
+      <AdminHosts />
     </main>
   );
 }

@@ -5,6 +5,10 @@ create table if not exists public.founding_members (
   username text not null check (username ~ '^[a-z0-9_]{3,24}$'),
   role text not null check (role in ('fan', 'artist', 'producer', 'host')),
   show_on_wall boolean not null default false,
+  tiktok_profile_url text,
+  tiktok_live_url text,
+  is_live boolean not null default false,
+  host_published boolean not null default false,
   created_at timestamptz not null default now()
 );
 
