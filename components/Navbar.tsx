@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 const navigation = [
+  { label: "Live", href: "/live" },
   { label: "Discover", href: "/#discover" },
   { label: "Hosts", href: "/hosts" },
   { label: "Golden Voices", href: "/#golden-voices" },

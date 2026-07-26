@@ -140,6 +140,18 @@ StageFront keeps three payment purposes separate:
   Vercel environment variables and never pasted into documentation or source
   control.
 
+## Live Hub
+
+- Public route: `/live`
+- Homepage component: `components/LiveNowSection.tsx`
+- Live host cards: `components/LiveHosts.tsx`
+- Public host data: `/api/hosts`
+- Administrator control: `/admin`
+
+Only hosts with `host_published = true`, `is_live = true`, and a valid TikTok
+Live URL receive a Watch Live button. External TikTok links open in a new tab
+so the StageFront page remains available.
+
 ## Naming Convention
 
 - Use lowercase kebab-case.

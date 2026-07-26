@@ -288,6 +288,85 @@ h6 {
   outline-offset: 4px;
 }
 
+.live-host-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  border-radius: 1.75rem;
+  padding: clamp(1.6rem, 4vw, 2.4rem);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(239, 68, 68, 0.14), transparent 38%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012)),
+    #0b0b0f;
+  box-shadow: 0 0 55px rgba(239, 68, 68, 0.1);
+}
+
+.live-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border-radius: 9999px;
+  padding: 0.45rem 0.75rem;
+  background: #ef4444;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.live-status-offline {
+  background: rgba(255, 255, 255, 0.09);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.live-empty {
+  border: 1px dashed rgba(244, 180, 0, 0.25);
+  border-radius: 1.75rem;
+  padding: clamp(2rem, 6vw, 4rem);
+  background: rgba(244, 180, 0, 0.035);
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.live-primary-cta,
+.live-secondary-cta {
+  display: inline-flex;
+  min-height: 3.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  border-radius: 9999px;
+  padding: 0.85rem 1.2rem;
+  font-size: 0.8rem;
+  font-weight: 900;
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    border-color 180ms ease;
+}
+
+.live-primary-cta {
+  background: #ef4444;
+  color: white;
+}
+
+.live-primary-cta:hover {
+  transform: translateY(-2px);
+  background: #f87171;
+}
+
+.live-secondary-cta {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.live-secondary-cta:hover {
+  transform: translateY(-2px);
+  border-color: rgba(244, 180, 0, 0.65);
+  color: var(--stage-gold);
+}
+
 .join-form {
   display: grid;
   gap: 1.5rem;

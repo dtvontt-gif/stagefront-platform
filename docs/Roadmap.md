@@ -25,11 +25,12 @@ Version: 1.1
 
 ## Sprint 2B — Hosts and Live Discovery
 
-- Host profile editor
-- TikTok and social-media links
-- Livestream URL field
-- Authenticated `I'm Live` control
-- Public Live Now directory
+- [x] Host profile editor
+- [x] TikTok profile and livestream links
+- [x] Administrator `I'm Live` control
+- [x] Public Live Now directory
+- [x] Homepage live-status panel
+- [x] Dedicated `/live` Watch Live hub
 - Automatic expiration for stale live statuses
 
 ## Sprint 2C — Payments and Partnerships
