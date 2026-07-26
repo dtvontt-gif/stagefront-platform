@@ -50,6 +50,7 @@ const communityRoles = [
   {
     label: "Hosts",
     copy: "Run showcases, organize live queues, and grow loyal communities.",
+    href: "/hosts",
   },
 ];
 
@@ -294,8 +295,13 @@ export default function HomeSections() {
           </div>
 
           <div className="mt-14 grid gap-px overflow-hidden rounded-3xl border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
-            {communityRoles.map((role, index) => (
-              <div key={role.label} className="bg-[#0b0b0f] p-8">
+            {communityRoles.map((role, index) =>
+              "href" in role ? (
+              <a
+                key={role.label}
+                href={role.href}
+                className="group bg-[#0b0b0f] p-8 transition hover:bg-[#f4b400]/[0.07]"
+              >
                 <span className="font-display text-xs font-black text-[#f4b400]">
                   0{index + 1}
                 </span>
@@ -303,8 +309,22 @@ export default function HomeSections() {
                   {role.label}
                 </h3>
                 <p className="mt-3 text-sm leading-7 text-white/55">{role.copy}</p>
-              </div>
-            ))}
+                <span className="mt-6 inline-flex text-sm font-black text-[#f4b400]">
+                  View hosts →
+                </span>
+              </a>
+              ) : (
+                <div key={role.label} className="bg-[#0b0b0f] p-8">
+                  <span className="font-display text-xs font-black text-[#f4b400]">
+                    0{index + 1}
+                  </span>
+                  <h3 className="mt-10 font-display text-2xl font-black uppercase">
+                    {role.label}
+                  </h3>
+                  <p className="mt-3 text-sm leading-7 text-white/55">{role.copy}</p>
+                </div>
+              ),
+            )}
           </div>
         </div>
       </section>
