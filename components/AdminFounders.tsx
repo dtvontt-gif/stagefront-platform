@@ -14,6 +14,7 @@ type Member = {
 export default function AdminFounders() {
   const [members, setMembers] = useState<Member[]>([]);
   const [search, setSearch] = useState("");
+  const [wallFilter, setWallFilter] = useState<"all" | "visible" | "hidden">("all");
   const [message, setMessage] = useState("Loading Founding Members...");
   const [busy, setBusy] = useState<number | null>(null);
 
@@ -30,12 +31,21 @@ export default function AdminFounders() {
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return members;
-    return members.filter((member) =>
-      [String(member.founder_number), member.display_name, member.email, member.username, member.role]
-        .some((value) => value.toLowerCase().includes(query)),
-    );
-  }, [members, search]);
+    return members.filter((member) => {
+      const matchesWall =
+        wallFilter === "all" ||
+        (wallFilter === "visible" && member.show_on_wall) ||
+        (wallFilter === "hidden" && !member.show_on_wall);
+      const matchesSearch =
+        !query ||
+        [String(member.founder_number), member.display_name, member.email, member.username, member.role]
+          .some((value) => value.toLowerCase().includes(query));
+      return matchesWall && matchesSearch;
+    });
+  }, [members, search, wallFilter]);
+
+  const visibleCount = members.filter((member) => member.show_on_wall).length;
+  const hiddenCount = members.length - visibleCount;
 
   async function override(member: Member) {
     const nextValue = !member.show_on_wall;
@@ -73,6 +83,32 @@ export default function AdminFounders() {
           placeholder="Search members"
           className="w-full rounded-full border border-white/15 bg-white/[0.05] px-5 py-3 text-sm text-white outline-none focus:border-[#f4b400] sm:max-w-sm"
         />
+      </div>
+      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+        {[
+          { label: "Total members", value: members.length, filter: "all" as const },
+          { label: "Visible on Wall", value: visibleCount, filter: "visible" as const },
+          { label: "Hidden from Wall", value: hiddenCount, filter: "hidden" as const },
+        ].map((stat) => (
+          <button
+            key={stat.filter}
+            type="button"
+            onClick={() => setWallFilter(stat.filter)}
+            aria-pressed={wallFilter === stat.filter}
+            className={`rounded-2xl border p-5 text-left transition ${
+              wallFilter === stat.filter
+                ? "border-[#f4b400] bg-[#f4b400]/10"
+                : "border-white/10 bg-white/[0.035] hover:border-white/25"
+            }`}
+          >
+            <span className="block text-xs font-bold uppercase tracking-wider text-white/45">
+              {stat.label}
+            </span>
+            <span className="mt-2 block font-display text-4xl font-black text-white">
+              {stat.value}
+            </span>
+          </button>
+        ))}
       </div>
       {message ? <p aria-live="polite" className="mb-5 text-sm text-white/60">{message}</p> : null}
       <div className="overflow-hidden rounded-3xl border border-white/10">

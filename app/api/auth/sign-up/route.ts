@@ -17,7 +17,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const response = await fetch(`${config.url}/auth/v1/signup`, {
+  const confirmationUrl = new URL("/sign-in?confirmed=1", request.url).toString();
+  const signupUrl = new URL(`${config.url}/auth/v1/signup`);
+  signupUrl.searchParams.set("redirect_to", confirmationUrl);
+
+  const response = await fetch(signupUrl, {
     method: "POST",
     headers: { apikey: config.anonKey, "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
