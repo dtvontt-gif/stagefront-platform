@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { authenticatedUser } from "@/lib/stagefront-auth";
+import { staffAccess } from "@/lib/stagefront-auth";
+import MobileNavigation from "@/components/MobileNavigation";
 
 const navigation = [
   { label: "Live", href: "/live" },
@@ -16,7 +18,7 @@ const navigation = [
 ];
 
 export default async function Navbar() {
-  const user = await authenticatedUser();
+  const [user, staff] = await Promise.all([authenticatedUser(), staffAccess()]);
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#070708]/80 backdrop-blur-xl">
       <nav
@@ -50,7 +52,7 @@ export default async function Navbar() {
           ))}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="hidden items-center gap-3 lg:flex">
           {user ? (
             <>
               <a href="/profile" className="hidden text-sm font-semibold text-white/80 transition hover:text-white sm:inline-flex">My profile</a>
@@ -68,6 +70,7 @@ export default async function Navbar() {
             Founding Member
           </a>
         </div>
+        <MobileNavigation links={navigation} signedIn={Boolean(user)} staff={Boolean(staff)} />
       </nav>
     </header>
   );
