@@ -10,6 +10,7 @@ const navigation = [
   { label: "Original Artists", href: "/#original-artists" },
   { label: "Community", href: "/#community" },
   { label: "Support", href: "/#support" },
+  { label: "My Profile", href: "/profile" },
   { label: "About", href: "/#about" },
 ];
 

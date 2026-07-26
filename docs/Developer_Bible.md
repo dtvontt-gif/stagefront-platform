@@ -1,5 +1,16 @@
 # StageFront Developer Bible
 
+## Member Profiles — v1.4
+
+- Every Founding Member keeps the permanent `founder_number` assigned by Supabase.
+- Public member identity is displayed as a four-digit number such as `#0008`; names may duplicate, member numbers never do.
+- Profile photos are optional during Founding Member registration and editable from `/profile`.
+- Accepted uploads: JPG, PNG, and WebP, maximum 5 MB.
+- Originals are stored in the public `stagefront-profile-images` Supabase Storage bucket.
+- The gold stage and open-curtain treatment is a CSS overlay. Never bake it into the member's original photo.
+- Administrators may remove a profile photo without changing Founding Member status or Wall visibility.
+- Public member pages use `/members/[founderNumber]`.
+
 ## Payments
 
 StageFront uses three official PayPal payment links:

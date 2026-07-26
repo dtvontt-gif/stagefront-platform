@@ -73,6 +73,13 @@ export default function AccountForm() {
         </button>
       </form>
       {message ? <p aria-live="polite" className="mt-5 text-sm leading-6 text-white/70">{message}</p> : null}
+      {mode === "sign-up" ? (
+        <p className="mt-5 text-center text-xs leading-5 text-white/45">
+          Want a member number and profile photo? Complete the{" "}
+          <a href="/join" className="font-bold text-[#f4b400]">Founding Member form</a>{" "}
+          using this same email.
+        </p>
+      ) : null}
     </div>
   );
 }

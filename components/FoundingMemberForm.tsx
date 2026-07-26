@@ -18,20 +18,10 @@ export default function FoundingMemberForm() {
 
     const form = event.currentTarget;
     const formData = new FormData(form);
-    const payload = {
-      displayName: formData.get("displayName"),
-      email: formData.get("email"),
-      username: formData.get("username"),
-      role: formData.get("role"),
-      showOnWall: formData.get("showOnWall") === "on",
-      website: formData.get("website"),
-    };
-
     try {
       const response = await fetch("/api/founding-members", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: formData,
       });
       const result = (await response.json()) as { message?: string };
 
@@ -133,6 +123,20 @@ export default function FoundingMemberForm() {
           ))}
         </div>
       </fieldset>
+
+      <label className="form-field">
+        <span>Profile photo (optional)</span>
+        <input
+          name="profilePhoto"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="profile-file-input"
+        />
+        <small>
+          JPG, PNG, or WebP up to 5 MB. StageFront adds the stage-curtain frame
+          and your permanent member number automatically.
+        </small>
+      </label>
 
       <label className="flex items-start gap-3 text-sm leading-6 text-white/65">
         <input

@@ -641,6 +641,45 @@ h6 {
   outline-offset: 3px;
 }
 
+.profile-file-input { min-height: auto !important; padding: 0.7rem !important; }
+.profile-file-input::file-selector-button {
+  margin-right: 0.85rem; border: 0; border-radius: 999px; background: var(--stage-gold);
+  padding: 0.65rem 1rem; color: #0b0b0f; font-weight: 800; cursor: pointer;
+}
+.stage-portrait {
+  position: relative; aspect-ratio: 4 / 5; width: min(100%, 20rem); overflow: hidden;
+  border: 5px solid #bd8510; border-radius: 1.5rem 1.5rem 0.8rem 0.8rem; background: #08080a;
+  box-shadow: 0 24px 70px rgba(0,0,0,.55), 0 0 35px rgba(244,180,0,.12);
+}
+.stage-portrait-photo {
+  position: absolute; inset: 0; display: grid; place-items: center; background-color: #121218;
+  background-position: center; background-size: cover; color: rgba(244,180,0,.35);
+  font-family: "Montserrat","Arial Black",sans-serif; font-size: clamp(2rem,12vw,5rem); font-weight: 900;
+}
+.stage-curtain {
+  position: absolute; z-index: 2; top: 0; bottom: 2.3rem; width: 34%;
+  background: repeating-linear-gradient(90deg,#3d0008 0 15%,#940f24 30%,#4c000b 46%);
+  box-shadow: inset -10px 0 20px rgba(0,0,0,.45);
+  clip-path: polygon(0 0,100% 0,72% 58%,88% 100%,0 100%);
+}
+.stage-curtain-left { left: 0; }
+.stage-curtain-right { right: 0; transform: scaleX(-1); }
+.stage-valance {
+  position: absolute; z-index: 3; inset: 0 0 auto; height: 18%;
+  background: repeating-linear-gradient(90deg,#4c000b 0 9%,#a4142b 18%,#54000c 28%);
+  clip-path: polygon(0 0,100% 0,100% 57%,88% 80%,75% 57%,62% 83%,50% 58%,37% 83%,25% 57%,12% 80%,0 57%);
+}
+.stage-member-number {
+  position: absolute; z-index: 4; right: 50%; bottom: .45rem; transform: translateX(50%);
+  border: 1px solid #ffd56b; border-radius: 999px; background: linear-gradient(180deg,#f7ca58,#ad7208);
+  padding: .25rem .8rem; color: #130d02; font-family: "Montserrat","Arial Black",sans-serif;
+  font-size: .72rem; font-weight: 900; letter-spacing: .1em;
+}
+.stage-portrait-compact { width: 4.6rem; flex: 0 0 4.6rem; border-width: 2px; border-radius: .65rem; }
+.stage-portrait-compact .stage-curtain { bottom: 1.15rem; }
+.stage-portrait-compact .stage-member-number { bottom: .16rem; padding: .1rem .35rem; font-size: .48rem; }
+.stage-portrait-compact .stage-portrait-photo { font-size: 1.2rem; }
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
