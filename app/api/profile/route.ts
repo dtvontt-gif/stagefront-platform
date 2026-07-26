@@ -59,7 +59,16 @@ export async function PATCH(request: Request) {
   const removePhoto = form.get("removePhoto") === "true";
   const imageError = validateProfileImage(file);
   if (imageError) return Response.json({ message: imageError }, { status: 400 });
-  if (!file && !removePhoto) return Response.json({ message: "Choose a new photo or remove the current one." }, { status: 400 });
+  const displayName = String(form.get("displayName") ?? member.display_name).trim();
+  const username = String(form.get("username") ?? member.username).trim().replace(/^@/, "").toLowerCase();
+  const role = String(form.get("role") ?? member.role).toLowerCase();
+  const showOnWall = form.get("showOnWall") === "on";
+  if (displayName.length < 2 || displayName.length > 80)
+    return Response.json({ message: "Display name must be 2–80 characters." }, { status: 400 });
+  if (!/^[a-zA-Z0-9_]{3,24}$/.test(username))
+    return Response.json({ message: "Username must use 3–24 letters, numbers, or underscores." }, { status: 400 });
+  if (!["fan", "artist", "producer", "host"].includes(role))
+    return Response.json({ message: "Choose a valid member role." }, { status: 400 });
 
   const oldPath = member.profile_image_path as string | null;
   let newPath: string | null = oldPath;
@@ -68,12 +77,22 @@ export async function PATCH(request: Request) {
   const update = await fetch(`${config.url}/rest/v1/founding_members?founder_number=eq.${member.founder_number}`, {
     method: "PATCH",
     headers: { ...headers(config.serviceKey), Prefer: "return=minimal" },
-    body: JSON.stringify({ profile_image_path: newPath, profile_image_updated_at: new Date().toISOString() }),
+    body: JSON.stringify({
+      display_name: displayName,
+      username,
+      role,
+      show_on_wall: showOnWall,
+      profile_image_path: newPath,
+      profile_image_updated_at: file || removePhoto ? new Date().toISOString() : member.profile_image_updated_at,
+    }),
   });
   if (!update.ok) {
     if (file && newPath) await deleteProfileImage(config, newPath);
-    return Response.json({ message: "The profile photo could not be saved." }, { status: 502 });
+    const detail = await update.text();
+    if (update.status === 409 || detail.includes("duplicate"))
+      return Response.json({ message: "That username is already being used." }, { status: 409 });
+    return Response.json({ message: "The profile could not be saved." }, { status: 502 });
   }
   if (oldPath && oldPath !== newPath) await deleteProfileImage(config, oldPath);
-  return Response.json({ message: removePhoto ? "Profile photo removed." : "Profile photo updated.", profileImageUrl: profileImageUrl(config.url, newPath) });
+  return Response.json({ message: "Profile updated successfully.", profileImageUrl: profileImageUrl(config.url, newPath) });
 }

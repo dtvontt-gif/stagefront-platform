@@ -59,6 +59,31 @@ export default function ProfileEditor() {
         <h2 className="mt-3 font-display text-3xl font-black uppercase">{member.display_name}</h2>
         <p className="mt-2 capitalize text-white/50">@{member.username} · {member.role}</p>
         <form onSubmit={save} className="mt-8 grid gap-5">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className="form-field">
+              <span>Display name</span>
+              <input name="displayName" defaultValue={member.display_name} required minLength={2} maxLength={80} />
+            </label>
+            <label className="form-field">
+              <span>Username</span>
+              <input name="username" defaultValue={member.username} required minLength={3} maxLength={24} pattern="[A-Za-z0-9_]+" />
+            </label>
+          </div>
+          <fieldset>
+            <legend>Member role</legend>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {["fan", "artist", "producer", "host"].map((role) => (
+                <label key={role} className="role-choice">
+                  <input type="radio" name="role" value={role} defaultChecked={member.role === role} />
+                  <span className="capitalize">{role}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <label className="flex items-center gap-3 text-sm text-white/65">
+            <input type="checkbox" name="showOnWall" defaultChecked={member.show_on_wall} className="h-4 w-4 accent-[#f4b400]" />
+            Show this member on the Wall of Founders
+          </label>
           <label className="form-field">
             <span>Change profile photo</span>
             <input name="profilePhoto" type="file" accept="image/jpeg,image/png,image/webp" className="profile-file-input" />
@@ -71,7 +96,7 @@ export default function ProfileEditor() {
             </label>
           ) : null}
           <button disabled={busy} className="primary-cta disabled:opacity-50">
-            {busy ? "Saving..." : "Save profile photo"}
+            {busy ? "Saving..." : "Save Profile"}
           </button>
         </form>
         {message ? <p aria-live="polite" className="mt-5 text-sm text-white/60">{message}</p> : null}

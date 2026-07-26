@@ -17,9 +17,9 @@ export default function StagePortrait({ imageUrl, memberNumber, name, compact = 
       >
         {!imageUrl ? <span aria-hidden="true">SF</span> : null}
       </div>
-      <div className="stage-curtain stage-curtain-left" aria-hidden="true" />
-      <div className="stage-curtain stage-curtain-right" aria-hidden="true" />
-      <div className="stage-valance" aria-hidden="true" />
+      <div className="stage-portal" aria-hidden="true" />
+      <div className="stage-light stage-light-left" aria-hidden="true" />
+      <div className="stage-light stage-light-right" aria-hidden="true" />
       <strong className="stage-member-number">{number}</strong>
     </div>
   );
