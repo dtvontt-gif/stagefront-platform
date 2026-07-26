@@ -43,11 +43,12 @@ Version: 1.1
 
 ## Sprint 3 — Live Queue
 
-- Join queue
-- Song request
-- Estimated wait
-- Host controls
-- Performer status and notifications
+- [x] Join queue
+- [x] Song request
+- [x] Public queue order
+- [x] Estimated wait
+- [x] Administrator queue controls
+- Performer notifications
 
 ## Future
 

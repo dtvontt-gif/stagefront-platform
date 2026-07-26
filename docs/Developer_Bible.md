@@ -152,6 +152,19 @@ Only hosts with `host_published = true`, `is_live = true`, and a valid TikTok
 Live URL receive a Watch Live button. External TikTok links open in a new tab
 so the StageFront page remains available.
 
+## Live Queue
+
+- Public route: `/queue`
+- Public API: `/api/queue`
+- Administrator API: `/api/admin/queue`
+- Administrator controls: `/admin`
+- Database migration: `supabase/003_live_queue.sql`
+
+The public queue never exposes performer email addresses or private host notes.
+Queue writes are validated by server routes and use the Supabase service role
+only on the server. The administrator controls whether the queue is open and
+sets the estimated number of minutes per performer.
+
 ## Naming Convention
 
 - Use lowercase kebab-case.

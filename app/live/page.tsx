@@ -1,6 +1,7 @@
 import Footer from "@/components/Footer";
 import LiveHosts from "@/components/LiveHosts";
 import Navbar from "@/components/Navbar";
+import Link from "next/link";
 
 export const metadata = {
   title: "Watch Live | StageFront",
@@ -24,6 +25,9 @@ export default function LivePage() {
             StageFront brings every published live host into one place. Use the
             live button to watch, comment, gift, and interact through TikTok.
           </p>
+          <Link href="/queue" className="primary-cta mt-8">
+            Join the performer queue
+          </Link>
 
           <div className="mt-14">
             <LiveHosts />
