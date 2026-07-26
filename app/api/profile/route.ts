@@ -1,11 +1,11 @@
-import { authenticatedUser, isAdministrator, serviceConfiguration } from "@/lib/stagefront-auth";
+import { authenticatedUser, requirePermission, serviceConfiguration } from "@/lib/stagefront-auth";
 import { deleteProfileImage, profileImageUrl, uploadProfileImage, validateProfileImage } from "@/lib/profile-images";
 
 const headers = (key: string) => ({ apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" });
 
 async function memberForEmail(url: string, key: string, email: string) {
   const query = new URLSearchParams({
-    select: "founder_number,display_name,email,username,role,show_on_wall,profile_image_path",
+    select: "founder_number,display_name,email,username,role,show_on_wall,profile_image_path,bio,location,genres,tiktok_profile_url,instagram_url,youtube_url,facebook_url,website_url",
     email: `eq.${email.toLowerCase()}`,
     limit: "1",
   });
@@ -17,7 +17,7 @@ async function memberForEmail(url: string, key: string, email: string) {
 
 async function memberForNumber(url: string, key: string, founderNumber: number) {
   const query = new URLSearchParams({
-    select: "founder_number,display_name,email,username,role,show_on_wall,profile_image_path",
+    select: "founder_number,display_name,email,username,role,show_on_wall,profile_image_path,bio,location,genres,tiktok_profile_url,instagram_url,youtube_url,facebook_url,website_url",
     founder_number: `eq.${founderNumber}`,
     limit: "1",
   });
@@ -33,8 +33,9 @@ export async function GET(request: Request) {
   if (!user?.email) return Response.json({ message: "Sign in to manage your profile." }, { status: 401 });
   if (!config) return Response.json({ message: "Profile service is not configured." }, { status: 503 });
   const requestedNumber = Number(new URL(request.url).searchParams.get("member"));
+  const canManage = requestedNumber > 0 ? await requirePermission("profiles") : null;
   const member =
-    isAdministrator(user.email) && Number.isSafeInteger(requestedNumber) && requestedNumber > 0
+    canManage && Number.isSafeInteger(requestedNumber) && requestedNumber > 0
       ? await memberForNumber(config.url, config.serviceKey, requestedNumber)
       : await memberForEmail(config.url, config.serviceKey, user.email);
   if (!member) return Response.json({ message: "No Founding Member registration matches this email. Join first, then return here." }, { status: 404 });
@@ -48,9 +49,11 @@ export async function PATCH(request: Request) {
   if (!config) return Response.json({ message: "Profile service is not configured." }, { status: 503 });
   const form = await request.formData().catch(() => null);
   if (!form) return Response.json({ message: "Invalid profile update." }, { status: 400 });
+  const profileForm = form;
   const requestedNumber = Number(form.get("founderNumber"));
+  const canManage = requestedNumber > 0 ? await requirePermission("profiles") : null;
   const member =
-    isAdministrator(user.email) && Number.isSafeInteger(requestedNumber) && requestedNumber > 0
+    canManage && Number.isSafeInteger(requestedNumber) && requestedNumber > 0
       ? await memberForNumber(config.url, config.serviceKey, requestedNumber)
       : await memberForEmail(config.url, config.serviceKey, user.email);
   if (!member) return Response.json({ message: "No matching Founding Member was found." }, { status: 404 });
@@ -63,6 +66,24 @@ export async function PATCH(request: Request) {
   const username = String(form.get("username") ?? member.username).trim().replace(/^@/, "").toLowerCase();
   const role = String(form.get("role") ?? member.role).toLowerCase();
   const showOnWall = form.get("showOnWall") === "on";
+  const bio = String(form.get("bio") ?? "").trim().slice(0, 600);
+  const location = String(form.get("location") ?? "").trim().slice(0, 100);
+  const genres = String(form.get("genres") ?? "").trim().slice(0, 180);
+  function safeUrl(name: string) {
+    const value = String(profileForm.get(name) ?? "").trim();
+    if (!value) return null;
+    try {
+      const url = new URL(value);
+      return ["http:", "https:"].includes(url.protocol) ? url.toString() : undefined;
+    } catch { return undefined; }
+  }
+  const tiktokUrl = safeUrl("tiktokUrl");
+  const instagramUrl = safeUrl("instagramUrl");
+  const youtubeUrl = safeUrl("youtubeUrl");
+  const facebookUrl = safeUrl("facebookUrl");
+  const websiteUrl = safeUrl("websiteUrl");
+  if ([tiktokUrl, instagramUrl, youtubeUrl, facebookUrl, websiteUrl].includes(undefined))
+    return Response.json({ message: "Social and website links must be complete web addresses beginning with https://." }, { status: 400 });
   if (displayName.length < 2 || displayName.length > 80)
     return Response.json({ message: "Display name must be 2–80 characters." }, { status: 400 });
   if (!/^[a-zA-Z0-9_]{3,24}$/.test(username))
@@ -82,6 +103,14 @@ export async function PATCH(request: Request) {
       username,
       role,
       show_on_wall: showOnWall,
+      bio: bio || null,
+      location: location || null,
+      genres: genres || null,
+      tiktok_profile_url: tiktokUrl,
+      instagram_url: instagramUrl,
+      youtube_url: youtubeUrl,
+      facebook_url: facebookUrl,
+      website_url: websiteUrl,
       profile_image_path: newPath,
       profile_image_updated_at: file || removePhoto ? new Date().toISOString() : member.profile_image_updated_at,
     }),

@@ -1,4 +1,4 @@
-import { requireAdministrator, serviceConfiguration } from "@/lib/stagefront-auth";
+import { requirePermission, serviceConfiguration } from "@/lib/stagefront-auth";
 
 function serviceHeaders(key: string) {
   return {
@@ -11,7 +11,7 @@ function serviceHeaders(key: string) {
 const statuses = new Set(["waiting", "called", "completed", "skipped", "removed"]);
 
 export async function GET() {
-  const admin = await requireAdministrator();
+  const admin = await requirePermission("queue");
   const config = serviceConfiguration();
   if (!admin) return Response.json({ message: "Administrator access required." }, { status: 403 });
   if (!config) return Response.json({ message: "Queue service is not configured." }, { status: 503 });
@@ -38,7 +38,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const admin = await requireAdministrator();
+  const admin = await requirePermission("queue");
   const config = serviceConfiguration();
   if (!admin) return Response.json({ message: "Administrator access required." }, { status: 403 });
   if (!config) return Response.json({ message: "Queue service is not configured." }, { status: 503 });

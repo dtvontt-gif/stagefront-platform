@@ -1,4 +1,4 @@
-import { requireAdministrator, serviceConfiguration } from "@/lib/stagefront-auth";
+import { requirePermission, serviceConfiguration } from "@/lib/stagefront-auth";
 
 function headers(key: string) {
   return { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
@@ -22,7 +22,7 @@ function dateOrNull(value: unknown) {
 }
 
 export async function GET() {
-  const admin = await requireAdministrator();
+  const admin = await requirePermission("contests");
   const config = serviceConfiguration();
   if (!admin) return Response.json({ message: "Administrator access required." }, { status: 403 });
   if (!config) return Response.json({ message: "Golden Voices is not configured." }, { status: 503 });
@@ -45,13 +45,15 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const admin = await requireAdministrator();
+  const admin = await requirePermission("contests");
   const config = serviceConfiguration();
   if (!admin) return Response.json({ message: "Administrator access required." }, { status: 403 });
   if (!config) return Response.json({ message: "Golden Voices is not configured." }, { status: 503 });
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   if (body?.type === "settings") {
+    const manager = await requirePermission("profiles");
+    if (!manager) return Response.json({ message: "Manager access is required to change contest settings." }, { status: 403 });
     const seasonTitle = typeof body.seasonTitle === "string" ? body.seasonTitle.trim() : "";
     const currentRound = typeof body.currentRound === "string" ? body.currentRound.trim() : "";
     const upcomingShowAt = dateOrNull(body.upcomingShowAt);

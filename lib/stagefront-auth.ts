@@ -4,6 +4,14 @@ export const ACCESS_COOKIE = "stagefront_access_token";
 export const REFRESH_COOKIE = "stagefront_refresh_token";
 
 type SupabaseUser = { id: string; email?: string };
+export type StaffRole = "owner" | "manager" | "moderator";
+export type StaffPermission = "staff" | "finance" | "profiles" | "hosts" | "queue" | "contests";
+
+const rolePermissions: Record<StaffRole, StaffPermission[]> = {
+  owner: ["staff", "finance", "profiles", "hosts", "queue", "contests"],
+  manager: ["profiles", "hosts", "queue", "contests"],
+  moderator: ["queue", "contests"],
+};
 
 export function supabaseConfiguration() {
   const url = process.env.SUPABASE_URL?.replace(/\/$/, "");
@@ -40,6 +48,28 @@ export async function authenticatedUser(): Promise<SupabaseUser | null> {
 }
 
 export async function requireAdministrator() {
+  const access = await staffAccess();
+  return access ? access.user : null;
+}
+
+export async function staffAccess(): Promise<{ user: SupabaseUser; role: StaffRole; permissions: StaffPermission[] } | null> {
   const user = await authenticatedUser();
-  return user && isAdministrator(user.email) ? user : null;
+  if (!user?.email) return null;
+  if (isAdministrator(user.email)) return { user, role: "owner", permissions: rolePermissions.owner };
+  const config = serviceConfiguration();
+  if (!config) return null;
+  const query = new URLSearchParams({ select: "role,active", email: `eq.${user.email.toLowerCase()}`, limit: "1" });
+  const response = await fetch(`${config.url}/rest/v1/stagefront_staff?${query}`, {
+    headers: { apikey: config.serviceKey, Authorization: `Bearer ${config.serviceKey}` },
+    cache: "no-store",
+  });
+  if (!response.ok) return null;
+  const [record] = (await response.json()) as { role: StaffRole; active: boolean }[];
+  if (!record?.active || !rolePermissions[record.role]) return null;
+  return { user, role: record.role, permissions: rolePermissions[record.role] };
+}
+
+export async function requirePermission(permission: StaffPermission) {
+  const access = await staffAccess();
+  return access?.permissions.includes(permission) ? access : null;
 }

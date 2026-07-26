@@ -3,7 +3,8 @@ import AdminFounders from "@/components/AdminFounders";
 import AdminGoldenVoices from "@/components/AdminGoldenVoices";
 import AdminHosts from "@/components/AdminHosts";
 import AdminQueue from "@/components/AdminQueue";
-import { requireAdministrator } from "@/lib/stagefront-auth";
+import AdminStaff from "@/components/AdminStaff";
+import { staffAccess } from "@/lib/stagefront-auth";
 
 export const metadata = {
   title: "Administrator | StageFront",
@@ -11,8 +12,8 @@ export const metadata = {
 };
 
 export default async function AdminPage() {
-  const admin = await requireAdministrator();
-  if (!admin) redirect("/sign-in");
+  const access = await staffAccess();
+  if (!access) redirect("/sign-in");
 
   return (
     <main className="min-h-screen bg-[#070708] px-5 py-16 text-white sm:px-8">
@@ -31,13 +32,14 @@ export default async function AdminPage() {
         </form>
         </div>
       </div>
-      <AdminFounders />
-      <div className="mx-auto my-16 h-px max-w-6xl bg-white/10" />
-      <AdminHosts />
-      <div className="mx-auto my-16 h-px max-w-6xl bg-white/10" />
-      <AdminQueue />
-      <div className="mx-auto my-16 h-px max-w-6xl bg-white/10" />
-      <AdminGoldenVoices />
+      <div className="mx-auto mb-12 max-w-6xl rounded-2xl border border-[#f4b400]/20 bg-[#f4b400]/[0.05] px-5 py-4 text-sm text-white/65">
+        Signed in with <strong className="capitalize text-[#f4b400]">{access.role}</strong> access.
+      </div>
+      {access.permissions.includes("profiles") ? <><AdminFounders /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
+      {access.permissions.includes("hosts") ? <><AdminHosts /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
+      {access.permissions.includes("queue") ? <><AdminQueue /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
+      {access.permissions.includes("contests") ? <><AdminGoldenVoices /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
+      {access.permissions.includes("staff") ? <AdminStaff /> : null}
     </main>
   );
 }

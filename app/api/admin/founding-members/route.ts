@@ -1,4 +1,4 @@
-import { requireAdministrator, serviceConfiguration } from "@/lib/stagefront-auth";
+import { requirePermission, serviceConfiguration } from "@/lib/stagefront-auth";
 import { deleteProfileImage, profileImageUrl } from "@/lib/profile-images";
 
 function headers(key: string) {
@@ -6,9 +6,9 @@ function headers(key: string) {
 }
 
 export async function GET() {
-  const admin = await requireAdministrator();
+  const access = await requirePermission("profiles");
   const config = serviceConfiguration();
-  if (!admin) return Response.json({ message: "Administrator access required." }, { status: 403 });
+  if (!access) return Response.json({ message: "Profile-management access required." }, { status: 403 });
   if (!config) return Response.json({ message: "Admin service is not configured." }, { status: 503 });
 
   const query = new URLSearchParams({
@@ -29,9 +29,9 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const admin = await requireAdministrator();
+  const access = await requirePermission("profiles");
   const config = serviceConfiguration();
-  if (!admin) return Response.json({ message: "Administrator access required." }, { status: 403 });
+  if (!access) return Response.json({ message: "Profile-management access required." }, { status: 403 });
   if (!config) return Response.json({ message: "Admin service is not configured." }, { status: 503 });
 
   const body = (await request.json().catch(() => null)) as {
@@ -82,8 +82,8 @@ export async function PATCH(request: Request) {
     headers: { ...headers(config.serviceKey), Prefer: "return=minimal" },
     body: JSON.stringify({
       founder_number: founderNumber,
-      administrator_user_id: admin.id,
-      administrator_email: admin.email,
+      administrator_user_id: access.user.id,
+      administrator_email: access.user.email,
       show_on_wall: showOnWall,
       reason: reason || null,
     }),

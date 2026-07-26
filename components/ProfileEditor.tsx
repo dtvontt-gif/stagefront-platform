@@ -11,6 +11,14 @@ type Member = {
   role: string;
   show_on_wall: boolean;
   profile_image_url?: string | null;
+  bio?: string | null;
+  location?: string | null;
+  genres?: string | null;
+  tiktok_profile_url?: string | null;
+  instagram_url?: string | null;
+  youtube_url?: string | null;
+  facebook_url?: string | null;
+  website_url?: string | null;
 };
 
 export default function ProfileEditor() {
@@ -84,6 +92,21 @@ export default function ProfileEditor() {
             <input type="checkbox" name="showOnWall" defaultChecked={member.show_on_wall} className="h-4 w-4 accent-[#f4b400]" />
             Show this member on the Wall of Founders
           </label>
+          <label className="form-field">
+            <span>Bio</span>
+            <textarea name="bio" defaultValue={member.bio ?? ""} maxLength={600} rows={5} placeholder="Tell the StageFront community about yourself..." className="rounded-xl border border-white/15 bg-black/30 p-4 text-white outline-none focus:border-[#f4b400]" />
+          </label>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className="form-field"><span>Location</span><input name="location" defaultValue={member.location ?? ""} maxLength={100} placeholder="City, State" /></label>
+            <label className="form-field"><span>Genres</span><input name="genres" defaultValue={member.genres ?? ""} maxLength={180} placeholder="R&B, Soul, Pop" /></label>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className="form-field"><span>TikTok profile</span><input name="tiktokUrl" type="url" defaultValue={member.tiktok_profile_url ?? ""} placeholder="https://tiktok.com/@..." /></label>
+            <label className="form-field"><span>Instagram</span><input name="instagramUrl" type="url" defaultValue={member.instagram_url ?? ""} placeholder="https://instagram.com/..." /></label>
+            <label className="form-field"><span>YouTube</span><input name="youtubeUrl" type="url" defaultValue={member.youtube_url ?? ""} placeholder="https://youtube.com/@..." /></label>
+            <label className="form-field"><span>Facebook</span><input name="facebookUrl" type="url" defaultValue={member.facebook_url ?? ""} placeholder="https://facebook.com/..." /></label>
+          </div>
+          <label className="form-field"><span>Website</span><input name="websiteUrl" type="url" defaultValue={member.website_url ?? ""} placeholder="https://..." /></label>
           <label className="form-field">
             <span>Change profile photo</span>
             <input name="profilePhoto" type="file" accept="image/jpeg,image/png,image/webp" className="profile-file-input" />

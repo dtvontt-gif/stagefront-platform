@@ -1,4 +1,4 @@
-import { requireAdministrator, serviceConfiguration } from "@/lib/stagefront-auth";
+import { requirePermission, serviceConfiguration } from "@/lib/stagefront-auth";
 
 function serviceHeaders(key: string) {
   return { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
@@ -17,7 +17,7 @@ function validTikTokUrl(value: unknown) {
 }
 
 export async function GET() {
-  const admin = await requireAdministrator();
+  const admin = await requirePermission("hosts");
   const config = serviceConfiguration();
   if (!admin) return Response.json({ message: "Administrator access required." }, { status: 403 });
   if (!config) return Response.json({ message: "Admin service is not configured." }, { status: 503 });
@@ -38,7 +38,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const admin = await requireAdministrator();
+  const admin = await requirePermission("hosts");
   const config = serviceConfiguration();
   if (!admin) return Response.json({ message: "Administrator access required." }, { status: 403 });
   if (!config) return Response.json({ message: "Admin service is not configured." }, { status: 503 });

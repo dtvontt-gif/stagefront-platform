@@ -11,6 +11,16 @@
 - Administrators may remove a profile photo without changing Founding Member status or Wall visibility.
 - Public member pages use `/members/[founderNumber]`.
 
+## Expanded Profiles and Staff Access — v1.5
+
+- Profiles support bio, location, genres, TikTok, Instagram, YouTube, Facebook, and website links.
+- `owner`: full platform, staff administration, and future finance/reporting permission.
+- `manager`: profiles, hosts, queues, contests, and operations; never finance or staff assignment.
+- `moderator`: queues and contestant statuses only.
+- Emails in `STAGEFRONT_ADMIN_EMAILS` are permanent environment-level Owners and cannot be locked out by database changes.
+- Additional staff use `public.stagefront_staff`; the email must match their confirmed StageFront sign-in account.
+- Every protected API checks its required permission server-side. Hiding a dashboard section is never the only security control.
+
 ## Payments
 
 StageFront uses three official PayPal payment links:
