@@ -20,11 +20,16 @@ export default async function AdminPage() {
         <a href="/" className="font-display text-2xl font-black tracking-wider text-[#f4b400]">
           STAGEFRONT
         </a>
+        <div className="flex items-center gap-5">
+          <a href="/profile?member=1" className="text-sm font-semibold text-[#f4b400] hover:text-[#ffd05a]">
+            My profile
+          </a>
         <form action="/api/auth/sign-out" method="post">
           <button type="submit" className="text-sm font-semibold text-white/60 hover:text-white">
             Sign out
           </button>
         </form>
+        </div>
       </div>
       <AdminFounders />
       <div className="mx-auto my-16 h-px max-w-6xl bg-white/10" />

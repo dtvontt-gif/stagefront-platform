@@ -82,6 +82,7 @@ export default function AdminFounders() {
                 <td className="px-5 py-4 capitalize text-white/70">{member.role}</td>
                 <td className="px-5 py-4"><span className={member.show_on_wall ? "text-emerald-300" : "text-white/40"}>{member.show_on_wall ? "Visible" : "Hidden"}</span></td>
                 <td className="px-5 py-4"><div className="flex flex-wrap gap-2">
+                  <a href={`/profile?member=${member.founder_number}`} className="rounded-full border border-white/25 px-4 py-2 font-bold text-white/80">Edit Profile</a>
                   <button disabled={busy === member.founder_number} onClick={() => void override(member)} className="rounded-full border border-[#f4b400]/40 px-4 py-2 font-bold text-[#f4b400] disabled:opacity-50">{member.show_on_wall ? "Remove from Wall" : "Add to Wall"}</button>
                   {member.profile_image_url ? <button disabled={busy === member.founder_number} onClick={() => void removePhoto(member)} className="rounded-full border border-red-400/35 px-4 py-2 font-bold text-red-200 disabled:opacity-50">Remove Photo</button> : null}
                 </div></td>

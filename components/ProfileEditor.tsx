@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import StagePortrait from "@/components/StagePortrait";
 
 type Member = {
@@ -13,24 +14,29 @@ type Member = {
 };
 
 export default function ProfileEditor() {
+  const searchParams = useSearchParams();
+  const managedMember = searchParams.get("member");
   const [member, setMember] = useState<Member | null>(null);
   const [message, setMessage] = useState("Loading your profile...");
   const [busy, setBusy] = useState(false);
 
   async function load() {
-    const response = await fetch("/api/profile", { cache: "no-store" });
+    const query = managedMember ? `?member=${encodeURIComponent(managedMember)}` : "";
+    const response = await fetch(`/api/profile${query}`, { cache: "no-store" });
     const result = (await response.json()) as { member?: Member; message?: string };
     setMember(result.member ?? null);
     setMessage(result.message ?? "");
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(); }, [managedMember]);
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     const form = event.currentTarget;
-    const response = await fetch("/api/profile", { method: "PATCH", body: new FormData(form) });
+    const formData = new FormData(form);
+    if (managedMember) formData.set("founderNumber", managedMember);
+    const response = await fetch("/api/profile", { method: "PATCH", body: formData });
     const result = (await response.json()) as { message?: string };
     setMessage(result.message ?? "Profile updated.");
     setBusy(false);
@@ -49,7 +55,7 @@ export default function ProfileEditor() {
         <p className="mt-5 text-center text-sm text-white/45">Your original photo stays clean. The stage frame and member number are added by StageFront.</p>
       </div>
       <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-6 sm:p-8">
-        <p className="section-kicker">Member #{String(member.founder_number).padStart(4, "0")}</p>
+        <p className="section-kicker">{managedMember ? "Administrator editing" : "Your profile"} · Member #{String(member.founder_number).padStart(4, "0")}</p>
         <h2 className="mt-3 font-display text-3xl font-black uppercase">{member.display_name}</h2>
         <p className="mt-2 capitalize text-white/50">@{member.username} · {member.role}</p>
         <form onSubmit={save} className="mt-8 grid gap-5">
