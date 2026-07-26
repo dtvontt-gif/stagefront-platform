@@ -1,5 +1,17 @@
 # StageFront Developer Bible
 
+## Payments
+
+StageFront uses three official PayPal payment links:
+
+- Community donations: `https://www.paypal.com/ncp/payment/TJJ4VKY927A6J`
+- Event sponsorships: `https://www.paypal.com/ncp/payment/6235Y7RCZFU72`
+- Competition and showcase entry fee ($40): `https://www.paypal.com/ncp/payment/TNTG33EFH58FY`
+
+Payment buttons live in `components/SupportStageFront.tsx`. External payment
+links must open in a new tab with `rel="noopener noreferrer"`. StageFront does
+not collect or store payment-card information.
+
 Version: 1.1
 
 ## Product

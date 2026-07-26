@@ -7,6 +7,7 @@ const navigation = [
   { label: "Golden Voices", href: "/#golden-voices" },
   { label: "Original Artists", href: "/#original-artists" },
   { label: "Community", href: "/#community" },
+  { label: "Support", href: "/#support" },
   { label: "About", href: "/#about" },
 ];
 

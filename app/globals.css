@@ -236,6 +236,58 @@ h6 {
   outline-offset: 4px;
 }
 
+.support-card {
+  display: flex;
+  min-height: 28rem;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.75rem;
+  padding: clamp(1.6rem, 4vw, 2.4rem);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.012)),
+    rgba(7, 7, 8, 0.9);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.24);
+  transition:
+    transform 250ms ease,
+    border-color 250ms ease,
+    box-shadow 250ms ease;
+}
+
+.support-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(244, 180, 0, 0.42);
+  box-shadow: 0 34px 100px rgba(0, 0, 0, 0.38);
+}
+
+.support-cta {
+  display: inline-flex;
+  min-height: 3.4rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgba(244, 180, 0, 0.55);
+  border-radius: 9999px;
+  padding: 0.9rem 1.25rem;
+  color: var(--stage-gold);
+  font-size: 0.84rem;
+  font-weight: 800;
+  transition:
+    background 200ms ease,
+    color 200ms ease,
+    transform 200ms ease;
+}
+
+.support-cta:hover {
+  transform: translateY(-2px);
+  background: var(--stage-gold);
+  color: #0b0b0f;
+}
+
+.support-cta:focus-visible {
+  outline: 2px solid var(--stage-gold);
+  outline-offset: 4px;
+}
+
 .join-form {
   display: grid;
   gap: 1.5rem;

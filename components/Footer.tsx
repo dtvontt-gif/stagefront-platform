@@ -7,6 +7,7 @@ const footerLinks = [
   { label: "Original Artists", href: "/#original-artists" },
   { label: "Founding Members", href: "/join" },
   { label: "Community", href: "/#community" },
+  { label: "Support StageFront", href: "/#support" },
   { label: "About", href: "/#about" },
 ];
 
