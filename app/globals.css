@@ -680,6 +680,53 @@ h6 {
 .stage-portrait-compact .stage-member-number { bottom: .16rem; padding: .1rem .35rem; font-size: .48rem; }
 .stage-portrait-compact .stage-portrait-photo { font-size: 1.2rem; }
 
+.audio-station {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(244, 180, 0, 0.24);
+  border-radius: 2rem;
+  padding: clamp(1.7rem, 5vw, 3.5rem);
+  background:
+    linear-gradient(135deg, rgba(244, 180, 0, 0.07), transparent 42%),
+    #0b0b0f;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.38);
+}
+
+.audio-station-glow {
+  position: absolute;
+  width: 22rem;
+  height: 22rem;
+  right: -8rem;
+  top: -11rem;
+  border-radius: 999px;
+  background: rgba(244, 180, 0, 0.15);
+  filter: blur(70px);
+}
+
+.audio-station-compact {
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.audio-play-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--stage-gold);
+  padding: 0.9rem 1.35rem;
+  color: #09090b;
+  font-size: 0.82rem;
+  font-weight: 900;
+  box-shadow: 0 0 28px rgba(244, 180, 0, 0.15);
+  transition: transform 180ms ease, background 180ms ease;
+}
+
+.audio-play-button:not(:disabled):hover {
+  transform: translateY(-2px);
+  background: #ffd05a;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

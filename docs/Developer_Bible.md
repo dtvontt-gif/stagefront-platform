@@ -21,6 +21,15 @@
 - Additional staff use `public.stagefront_staff`; the email must match their confirmed StageFront sign-in account.
 - Every protected API checks its required permission server-side. Hiding a dashboard section is never the only security control.
 
+## StageFront Radio — v1.6
+
+- Mixxx produces and sends the audio to an external Icecast/Shoutcast provider.
+- StageFront receives only the provider's public HTTPS listening URL. Never store a source password in the website.
+- The public player is displayed on the homepage and `/live`.
+- Owner and Manager roles control station title, show title, stream URL, TikTok Live URL, and live/offline status.
+- Browsers require a listener to press Play; autoplay must never be assumed.
+- The listening URL must use HTTPS or browsers will block it as mixed content.
+
 ## Payments
 
 StageFront uses three official PayPal payment links:

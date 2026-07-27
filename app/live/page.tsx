@@ -2,6 +2,7 @@ import Footer from "@/components/Footer";
 import LiveHosts from "@/components/LiveHosts";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
+import StageFrontAudioPlayer from "@/components/StageFrontAudioPlayer";
 
 export const metadata = {
   title: "Watch Live | StageFront",
@@ -30,21 +31,13 @@ export default function LivePage() {
           </Link>
 
           <div className="mt-14">
+            <StageFrontAudioPlayer />
+          </div>
+
+          <div className="mt-14">
             <LiveHosts />
           </div>
 
-          <aside className="mt-16 rounded-3xl border border-[#f4b400]/20 bg-[#f4b400]/[0.04] p-7 sm:p-10">
-            <p className="section-kicker">Broadcasting roadmap</p>
-            <h2 className="mt-4 font-display text-3xl font-black uppercase sm:text-4xl">
-              The StageFront player is next.
-            </h2>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-white/55">
-              This Live hub is ready for a future embedded or simulcast player
-              after we select a compatible broadcast service and confirm its
-              platform and music-rights requirements. TikTok remains the
-              interaction destination today.
-            </p>
-          </aside>
         </div>
       </section>
       <Footer />

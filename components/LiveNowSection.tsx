@@ -1,5 +1,6 @@
 import Link from "next/link";
 import LiveHosts from "@/components/LiveHosts";
+import StageFrontAudioPlayer from "@/components/StageFrontAudioPlayer";
 
 export default function LiveNowSection() {
   return (
@@ -27,7 +28,8 @@ export default function LiveNowSection() {
             <span aria-hidden="true">→</span>
           </Link>
         </div>
-        <LiveHosts compact />
+        <StageFrontAudioPlayer compact />
+        <div className="mt-8"><LiveHosts compact /></div>
       </div>
     </section>
   );
