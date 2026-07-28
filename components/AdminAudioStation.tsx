@@ -24,7 +24,7 @@ export default function AdminAudioStation() {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         stationName: data.get("stationName"), showTitle: data.get("showTitle"),
-        streamUrl: data.get("streamUrl"), tiktokLiveUrl: data.get("tiktokLiveUrl"),
+        streamUrl: "", tiktokLiveUrl: data.get("tiktokLiveUrl"),
         isLive: data.get("isLive") === "on",
       }),
     });
@@ -43,7 +43,6 @@ export default function AdminAudioStation() {
           <label className="form-field"><span>Station name</span><input name="stationName" defaultValue={station.station_name} required maxLength={80} /></label>
           <label className="form-field"><span>Current show title</span><input name="showTitle" defaultValue={station.show_title} required maxLength={120} /></label>
         </div>
-        <label className="form-field"><span>Direct listening URL (optional)</span><input name="streamUrl" type="url" defaultValue={station.stream_url ?? ""} placeholder="Available with a future paid streaming plan" /><small>Leave this blank while using the connected free Caster.fm player. Never enter the private broadcast password here.</small></label>
         <label className="form-field"><span>TikTok Live link (optional)</span><input name="tiktokLiveUrl" type="url" defaultValue={station.tiktok_live_url ?? ""} placeholder="https://www.tiktok.com/@yourname/live" /></label>
         <label className="flex items-center gap-3 rounded-2xl border border-red-400/20 bg-red-400/[0.05] p-4 font-bold text-white/75">
           <input name="isLive" type="checkbox" defaultChecked={station.is_live} className="h-5 w-5 accent-red-500" />
