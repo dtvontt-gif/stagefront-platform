@@ -209,6 +209,24 @@ requirement. Voting uses a private, secure browser token to limit each browser
 to one vote per round. Voter tokens and contestant email addresses are never
 returned by public APIs.
 
+## StageFront Radio
+
+- Broadcast software: Mixxx
+- Public streaming host: Caster.fm Free Cloud (Icecast 2)
+- Website player: `components/CasterFmPlayer.tsx`
+- Public station component: `components/StageFrontAudioPlayer.tsx`
+- Public station API: `/api/audio-stream`
+- Administrator station API: `/api/admin/audio-stream`
+
+The free Caster.fm plan uses its official embedded player because direct
+listening URLs require an upgraded plan. The public widget token may appear in
+client code because it is designed for website embedding. The broadcast
+password must never be placed in the website, repository, documentation, or
+administrator form.
+
+The administrator switches the website's Live status on only after Mixxx is
+connected and the Caster.fm dashboard reports that the broadcast is On Air.
+
 ## Naming Convention
 
 - Use lowercase kebab-case.

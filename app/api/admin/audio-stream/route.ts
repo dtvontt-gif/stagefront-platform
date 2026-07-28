@@ -38,7 +38,6 @@ export async function PATCH(request: Request) {
   if (!stationName || !showTitle || streamUrl === undefined || tiktokUrl === undefined || typeof body?.isLive !== "boolean") {
     return Response.json({ message: "Enter valid station details. Stream links must begin with https://." }, { status: 400 });
   }
-  if (body.isLive && !streamUrl) return Response.json({ message: "Add the Mixxx/Icecast stream URL before going live." }, { status: 400 });
   const response = await fetch(`${config.url}/rest/v1/stagefront_audio_station?id=eq.1`, {
     method: "PATCH",
     headers: { ...headers(config.serviceKey), Prefer: "return=minimal" },

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import CasterFmPlayer from "@/components/CasterFmPlayer";
 
 type Station = {
   station_name: string; show_title: string; stream_url: string | null;
@@ -9,9 +10,7 @@ type Station = {
 
 export default function StageFrontAudioPlayer({ compact = false }: { compact?: boolean }) {
   const [station, setStation] = useState<Station | null>(null);
-  const [playing, setPlaying] = useState(false);
   const [message, setMessage] = useState("Checking the broadcast...");
-  const audio = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     fetch("/api/audio-stream", { cache: "no-store" })
@@ -23,23 +22,7 @@ export default function StageFrontAudioPlayer({ compact = false }: { compact?: b
       .catch(() => setMessage("The station could not be reached."));
   }, []);
 
-  async function toggle() {
-    if (!audio.current) return;
-    if (playing) {
-      audio.current.pause(); setPlaying(false); return;
-    }
-    setMessage("Connecting to StageFront Radio...");
-    try {
-      audio.current.load();
-      await audio.current.play();
-      setPlaying(true); setMessage("");
-    } catch {
-      setPlaying(false);
-      setMessage("The broadcast is not responding yet. Try again in a moment.");
-    }
-  }
-
-  const live = Boolean(station?.is_live && station.stream_url);
+  const live = Boolean(station?.is_live);
   return (
     <section className={`audio-station ${compact ? "audio-station-compact" : ""}`} aria-label="StageFront live audio">
       <div className="audio-station-glow" />
@@ -55,12 +38,8 @@ export default function StageFrontAudioPlayer({ compact = false }: { compact?: b
         <p className="mt-4 max-w-2xl text-sm leading-7 text-white/55">
           {live ? "Listen here while you browse StageFront, or open TikTok to join the live conversation." : "When the show begins, the gold Listen Live button will activate here."}
         </p>
-        {station?.stream_url ? <audio ref={audio} src={station.stream_url} preload="none" onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} /> : null}
+        {live ? <CasterFmPlayer /> : null}
         <div className="mt-7 flex flex-wrap gap-3">
-          <button onClick={() => void toggle()} disabled={!live} className="audio-play-button disabled:cursor-not-allowed disabled:opacity-35">
-            <span aria-hidden="true">{playing ? "Ⅱ" : "▶"}</span>
-            {playing ? "Pause" : "Listen Live"}
-          </button>
           {station?.tiktok_live_url ? <a href={station.tiktok_live_url} target="_blank" rel="noreferrer" className="live-secondary-cta">Join on TikTok ↗</a> : null}
         </div>
         {message ? <p aria-live="polite" className="mt-4 text-xs text-white/45">{message}</p> : null}
