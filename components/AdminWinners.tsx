@@ -41,6 +41,8 @@ export default function AdminWinners() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [message, setMessage] = useState("Loading winners...");
   const [busy, setBusy] = useState(false);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   const load = useCallback(() => {
     fetch("/api/admin/winners", { cache: "no-store" })
@@ -69,34 +71,38 @@ export default function AdminWinners() {
       won_at: winner.won_at,
       display_order: winner.display_order,
     });
+    setPhoto(null);
+    setPhotoPreview(winner.photo_url);
     document.getElementById("winner-editor")?.scrollIntoView({ behavior: "smooth" });
   }
 
   function reset() {
     setEditingId(null);
     setForm(emptyForm);
+    setPhoto(null);
+    setPhotoPreview(null);
   }
 
   async function save() {
     setBusy(true);
+    const data = new FormData();
+    if (editingId) data.set("id", String(editingId));
+    data.set("displayName", form.display_name);
+    data.set("competition", form.competition);
+    data.set("title", form.title);
+    data.set("seasonLabel", form.season_label);
+    data.set("bio", form.bio);
+    data.set("existingPhotoUrl", form.photo_url ?? "");
+    data.set("videoUrl", form.video_url ?? "");
+    data.set("socialUrl", form.social_url ?? "");
+    data.set("featured", String(form.featured));
+    data.set("published", String(form.published));
+    data.set("wonAt", form.won_at ?? "");
+    data.set("displayOrder", String(form.display_order));
+    if (photo) data.set("photo", photo);
     const response = await fetch("/api/admin/winners", {
       method: editingId ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: editingId,
-        displayName: form.display_name,
-        competition: form.competition,
-        title: form.title,
-        seasonLabel: form.season_label,
-        bio: form.bio,
-        photoUrl: form.photo_url,
-        videoUrl: form.video_url,
-        socialUrl: form.social_url,
-        featured: form.featured,
-        published: form.published,
-        wonAt: form.won_at,
-        displayOrder: form.display_order,
-      }),
+      body: data,
     });
     const result = (await response.json()) as { message?: string };
     setMessage(result.message ?? "Winner saved.");
@@ -144,7 +150,28 @@ export default function AdminWinners() {
         <label className="form-field"><span>Winner title</span><input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Grand Champion" /></label>
         <label className="form-field"><span>Season or event</span><input value={form.season_label} onChange={(event) => setForm({ ...form, season_label: event.target.value })} placeholder="Season One · July 2026" /></label>
         <label className="form-field lg:col-span-2"><span>Small bio</span><textarea rows={5} maxLength={600} value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} placeholder="Tell the community what makes this winner special..." /></label>
-        <label className="form-field"><span>Photo URL</span><input type="url" value={form.photo_url ?? ""} onChange={(event) => setForm({ ...form, photo_url: event.target.value || null })} placeholder="https://..." /><small>Use the public URL of their approved profile photo.</small></label>
+        <label className="form-field">
+          <span>Winner photo</span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="profile-file-input"
+            onChange={(event) => {
+              const nextPhoto = event.target.files?.[0] ?? null;
+              setPhoto(nextPhoto);
+              setPhotoPreview(nextPhoto ? URL.createObjectURL(nextPhoto) : form.photo_url);
+            }}
+          />
+          <small>JPG, PNG, or WebP. Maximum 5 MB.</small>
+        </label>
+        <div className="winner-admin-preview">
+          {photoPreview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photoPreview} alt="Winner photo preview" />
+          ) : (
+            <span>Photo preview</span>
+          )}
+        </div>
         <label className="form-field"><span>Performance video</span><input type="url" value={form.video_url ?? ""} onChange={(event) => setForm({ ...form, video_url: event.target.value || null })} placeholder="YouTube or other video link" /><small>YouTube videos play directly on the website.</small></label>
         <label className="form-field"><span>Artist profile or social link</span><input type="url" value={form.social_url ?? ""} onChange={(event) => setForm({ ...form, social_url: event.target.value || null })} placeholder="https://..." /></label>
         <label className="form-field"><span>Date won</span><input type="date" value={form.won_at ?? ""} onChange={(event) => setForm({ ...form, won_at: event.target.value || null })} /></label>
@@ -179,4 +206,3 @@ export default function AdminWinners() {
     </section>
   );
 }
-

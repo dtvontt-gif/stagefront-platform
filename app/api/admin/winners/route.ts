@@ -1,4 +1,5 @@
 import { requirePermission, serviceConfiguration } from "@/lib/stagefront-auth";
+import { uploadWinnerImage, validateProfileImage } from "@/lib/profile-images";
 
 function headers(key: string) {
   return { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
@@ -57,6 +58,34 @@ function payload(body: Record<string, unknown>) {
   };
 }
 
+async function winnerRequest(request: Request) {
+  const form = await request.formData().catch(() => null);
+  if (!form) return null;
+  const photoEntry = form.get("photo");
+  const photo = photoEntry instanceof File && photoEntry.size ? photoEntry : null;
+  const imageError = validateProfileImage(photo);
+  if (imageError) return { error: imageError };
+  const values = payload({
+    displayName: form.get("displayName"),
+    competition: form.get("competition"),
+    title: form.get("title"),
+    seasonLabel: form.get("seasonLabel"),
+    bio: form.get("bio"),
+    photoUrl: form.get("existingPhotoUrl"),
+    videoUrl: form.get("videoUrl"),
+    socialUrl: form.get("socialUrl"),
+    featured: form.get("featured") === "true",
+    published: form.get("published") === "true",
+    wonAt: form.get("wonAt"),
+    displayOrder: form.get("displayOrder"),
+  });
+  return {
+    id: Number(form.get("id")),
+    photo,
+    values,
+  };
+}
+
 export async function GET() {
   const admin = await requirePermission("contests");
   const config = serviceConfiguration();
@@ -76,9 +105,20 @@ export async function POST(request: Request) {
   const config = serviceConfiguration();
   if (!admin) return Response.json({ message: "Administrator access required." }, { status: 403 });
   if (!config) return Response.json({ message: "Winner spotlights are not configured." }, { status: 503 });
-  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-  const values = body ? payload(body) : null;
+  const input = await winnerRequest(request);
+  if (!input || "error" in input) {
+    return Response.json({ message: input?.error ?? "Complete the winner details." }, { status: 400 });
+  }
+  const values = input.values;
   if (!values) return Response.json({ message: "Complete the winner details with valid links." }, { status: 400 });
+  if (input.photo) {
+    try {
+      const upload = await uploadWinnerImage(config, input.photo);
+      values.photo_url = upload.url;
+    } catch {
+      return Response.json({ message: "The winner photo could not be uploaded." }, { status: 502 });
+    }
+  }
 
   if (values.featured) {
     await fetch(`${config.url}/rest/v1/stagefront_winners?featured=eq.true`, {
@@ -102,11 +142,22 @@ export async function PATCH(request: Request) {
   const config = serviceConfiguration();
   if (!admin) return Response.json({ message: "Administrator access required." }, { status: 403 });
   if (!config) return Response.json({ message: "Winner spotlights are not configured." }, { status: 503 });
-  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-  const id = Number(body?.id);
-  const values = body ? payload(body) : null;
+  const input = await winnerRequest(request);
+  if (!input || "error" in input) {
+    return Response.json({ message: input?.error ?? "Enter valid winner details." }, { status: 400 });
+  }
+  const id = input.id;
+  const values = input.values;
   if (!Number.isSafeInteger(id) || !values) {
     return Response.json({ message: "Enter valid winner details." }, { status: 400 });
+  }
+  if (input.photo) {
+    try {
+      const upload = await uploadWinnerImage(config, input.photo);
+      values.photo_url = upload.url;
+    } catch {
+      return Response.json({ message: "The winner photo could not be uploaded." }, { status: 502 });
+    }
   }
   if (values.featured) {
     await fetch(`${config.url}/rest/v1/stagefront_winners?featured=eq.true&id=neq.${id}`, {
@@ -141,4 +192,3 @@ export async function DELETE(request: Request) {
     ? Response.json({ message: "Winner spotlight removed." })
     : Response.json({ message: "Winner spotlight could not be removed." }, { status: 502 });
 }
-

@@ -251,3 +251,6 @@ StageFront honors Box Battle and Golden Voices champions in the homepage
   in a separate tab.
 - Winner photos and videos must only be published with the performer’s
   permission.
+- Winner photos are uploaded through the admin form to the existing
+  `stagefront-profile-images` bucket under the `winners/` folder. Accepted
+  formats are JPG, PNG, and WebP with a 5 MB limit.

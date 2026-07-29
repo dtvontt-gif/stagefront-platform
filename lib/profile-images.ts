@@ -46,6 +46,33 @@ export async function uploadProfileImage(
   return path;
 }
 
+export async function uploadWinnerImage(
+  config: { url: string; serviceKey: string },
+  file: File,
+) {
+  const extension = extensions[file.type];
+  if (!extension) throw new Error("Unsupported image type.");
+  const path = `winners/${crypto.randomUUID()}.${extension}`;
+  const response = await fetch(
+    `${config.url}/storage/v1/object/${PROFILE_BUCKET}/${path}`,
+    {
+      method: "POST",
+      headers: {
+        apikey: config.serviceKey,
+        Authorization: `Bearer ${config.serviceKey}`,
+        "Content-Type": file.type,
+        "x-upsert": "false",
+      },
+      body: await file.arrayBuffer(),
+    },
+  );
+  if (!response.ok) throw new Error(await response.text());
+  return {
+    path,
+    url: profileImageUrl(config.url, path),
+  };
+}
+
 export async function deleteProfileImage(
   config: { url: string; serviceKey: string },
   path?: string | null,
