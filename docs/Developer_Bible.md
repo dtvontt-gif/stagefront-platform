@@ -233,3 +233,21 @@ connected and the Caster.fm dashboard reports that the broadcast is On Air.
 - Use descriptive names such as `stagefront-logo-gold.png`.
 - Add dimensions only when a platform requires a specific size.
 - Do not use spaces, duplicate punctuation, or names such as `final-final`.
+# Winner Spotlights
+
+StageFront honors Box Battle and Golden Voices champions in the homepage
+`#winners` section.
+
+- Public component: `components/WinnersSpotlight.tsx`
+- Admin manager: `components/AdminWinners.tsx`
+- Public data: `app/api/winners/route.ts`
+- Admin data: `app/api/admin/winners/route.ts`
+- Database setup: `supabase/008_contest_winners.sql`
+- Administrators with the `contests` permission can add, edit, feature,
+  publish, or remove a winner.
+- Only one winner is featured at a time. Featuring a new winner automatically
+  removes the previous featured flag without deleting either winner.
+- YouTube links play inside StageFront. Other approved HTTPS video links open
+  in a separate tab.
+- Winner photos and videos must only be published with the performer’s
+  permission.

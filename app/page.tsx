@@ -5,6 +5,7 @@ import HomeSections from "@/components/HomeSections";
 import LiveNowSection from "@/components/LiveNowSection";
 import Navbar from "@/components/Navbar";
 import SupportStageFront from "@/components/SupportStageFront";
+import WinnersSpotlight from "@/components/WinnersSpotlight";
 
 export default function Home() {
   return (
@@ -13,6 +14,7 @@ export default function Home() {
       <Hero />
       <LiveNowSection />
       <HomeSections />
+      <WinnersSpotlight />
       <SupportStageFront />
       <FoundersWall />
       <Footer />

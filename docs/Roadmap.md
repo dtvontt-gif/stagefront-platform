@@ -58,3 +58,9 @@ Version: 1.1
 - Embedded or simulcast StageFront live viewing after platform and rights review
 - Mobile apps using the shared backend
 - Creator tools
+# v1.7 — Winner Spotlights
+
+- Box Battle and Golden Voices winner gallery
+- Featured champion with photo, bio, social profile, and performance video
+- Admin winner management and visibility controls
+- Supabase-backed winner archive
