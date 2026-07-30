@@ -254,3 +254,6 @@ StageFront honors Box Battle and Golden Voices champions in the homepage
 - Winner photos are uploaded through the admin form to the existing
   `stagefront-profile-images` bucket under the `winners/` folder. Accepted
   formats are JPG, PNG, and WebP with a 5 MB limit.
+- The complete winner archive lives at `/winners`; the Wall of Founders lives
+  at `/founders`. The homepage contains compact links to these pages instead of
+  rendering every winner and up to 1,000 founder profiles.

@@ -6,6 +6,8 @@ const footerLinks = [
   { label: "Live Queue", href: "/queue" },
   { label: "Discover", href: "/#discover" },
   { label: "Golden Voices", href: "/golden-voices" },
+  { label: "Contest Winners", href: "/winners" },
+  { label: "Wall of Founders", href: "/founders" },
   { label: "Original Artists", href: "/#original-artists" },
   { label: "Founding Members", href: "/join" },
   { label: "Community", href: "/#community" },

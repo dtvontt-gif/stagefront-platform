@@ -1031,6 +1031,80 @@ h6 {
   object-fit: cover;
 }
 
+.archive-card {
+  position: relative;
+  display: grid;
+  min-height: 22rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 2rem;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244, 180, 0, 0.13), transparent 48%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012)),
+    #0b0b0f;
+  padding: clamp(2rem, 6vw, 3.5rem);
+  transition: border-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+}
+
+.archive-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(244, 180, 0, 0.42);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.35);
+}
+
+.archive-symbol {
+  position: absolute;
+  right: 1.5rem;
+  top: 0.5rem;
+  color: rgba(244, 180, 0, 0.09);
+  font-family: "Montserrat", "Arial Black", sans-serif;
+  font-size: clamp(6rem, 18vw, 11rem);
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.archive-card > div {
+  position: relative;
+  align-self: end;
+  max-width: 32rem;
+}
+
+.archive-card h3 {
+  margin-top: 0.8rem;
+  font-family: "Montserrat", "Arial Black", sans-serif;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.archive-card p:not(.section-kicker) {
+  margin-top: 1rem;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.75;
+}
+
+.archive-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 1.6rem;
+  color: var(--stage-gold);
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.archive-action span {
+  transition: transform 180ms ease;
+}
+
+.archive-card:hover .archive-action span {
+  transform: translateX(4px);
+}
+
 @media (min-width: 760px) {
   .winner-feature { grid-template-columns: minmax(18rem, 0.82fr) 1.18fr; }
   .winner-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
