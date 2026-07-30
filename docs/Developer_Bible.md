@@ -257,3 +257,17 @@ StageFront honors Box Battle and Golden Voices champions in the homepage
 - The complete winner archive lives at `/winners`; the Wall of Founders lives
   at `/founders`. The homepage contains compact links to these pages instead of
   rendering every winner and up to 1,000 founder profiles.
+# Original Artist Showcase
+
+- Public discovery page: `/originals`
+- Authenticated submission page: `/originals/submit`
+- Artists upload MP3, M4A, WAV, or AAC files up to 50 MB directly to
+  Supabase Storage using a temporary signed upload URL.
+- Every song is `pending` until staff approves it in the admin dashboard.
+- Artists provide a stage name, song title, genre, bio, and the story behind
+  the music.
+- Public entries include an audio player and the artist’s story.
+- Storage bucket: `stagefront-original-music`
+- Database setup: `supabase/009_original_artists.sql`
+- StageFront must not publish music unless the submitting artist owns or
+  controls the necessary rights.

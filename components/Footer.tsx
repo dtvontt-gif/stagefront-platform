@@ -8,7 +8,7 @@ const footerLinks = [
   { label: "Golden Voices", href: "/golden-voices" },
   { label: "Contest Winners", href: "/winners" },
   { label: "Wall of Founders", href: "/founders" },
-  { label: "Original Artists", href: "/#original-artists" },
+  { label: "Original Artists", href: "/originals" },
   { label: "Founding Members", href: "/join" },
   { label: "Community", href: "/#community" },
   { label: "Support StageFront", href: "/#support" },

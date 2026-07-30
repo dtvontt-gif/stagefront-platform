@@ -64,3 +64,9 @@ Version: 1.1
 - Featured champion with photo, bio, social profile, and performance video
 - Admin winner management and visibility controls
 - Supabase-backed winner archive
+# v1.8 — Original Artist Showcase
+
+- Secure original-song uploads
+- Artist bio and story-behind-the-music submissions
+- Staff approval and featured-original controls
+- Public original music discovery page and audio player

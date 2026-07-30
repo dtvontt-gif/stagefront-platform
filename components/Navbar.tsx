@@ -11,7 +11,7 @@ const navigation = [
   { label: "Hosts", href: "/hosts" },
   { label: "Golden Voices", href: "/golden-voices" },
   { label: "Winners", href: "/winners" },
-  { label: "Original Artists", href: "/#original-artists" },
+  { label: "Original Artists", href: "/originals" },
   { label: "Community", href: "/#community" },
   { label: "Founders", href: "/founders" },
   { label: "Support", href: "/#support" },

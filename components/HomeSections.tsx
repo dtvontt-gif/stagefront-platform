@@ -15,7 +15,7 @@ const experiences = [
     title: "Artist Showcase",
     description:
       "A dedicated home for original songs, artist stories, and the independent talent fans should know next.",
-    href: "#original-artists",
+    href: "/originals",
   },
   {
     number: "03",

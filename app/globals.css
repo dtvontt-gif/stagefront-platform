@@ -1105,6 +1105,55 @@ h6 {
   transform: translateX(4px);
 }
 
+.originals-showcase,
+.original-submit-section {
+  min-height: 75vh;
+  padding: clamp(5rem, 10vw, 8rem) 1.25rem;
+  background:
+    radial-gradient(circle at 80% 0%, rgba(244,180,0,.11), transparent 34rem),
+    #070708;
+}
+.originals-heading { display: flex; flex-direction: column; gap: 2rem; }
+.originals-heading h1,
+.original-submit-section h1 {
+  margin-top: .8rem; max-width: 54rem; font-family: "Montserrat","Arial Black",sans-serif;
+  font-size: clamp(2.8rem,8vw,6rem); font-weight: 900; letter-spacing: -.06em; line-height: .92; text-transform: uppercase;
+}
+.originals-heading > div > p:last-child,
+.original-submit-section > div > div:first-child > p {
+  max-width: 45rem; margin-top: 1.5rem; color: rgba(255,255,255,.58); line-height: 1.8;
+}
+.originals-grid { display: grid; gap: 1.25rem; margin-top: 3.5rem; }
+.original-song-card {
+  position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,.1); border-radius: 2rem;
+  background: linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.012)),#0b0b0f;
+  padding: clamp(1.7rem,5vw,3rem);
+}
+.original-song-featured { border-color: rgba(244,180,0,.42); box-shadow: 0 24px 80px rgba(0,0,0,.38); }
+.original-song-mark {
+  position: absolute; right: 1rem; top: -.6rem; color: rgba(244,180,0,.06);
+  font-family: "Montserrat","Arial Black",sans-serif; font-size: 8rem; font-weight: 900; pointer-events: none;
+}
+.original-song-card h2 { margin-top: 1.4rem; font-family: "Montserrat","Arial Black",sans-serif; font-size: clamp(2rem,5vw,3.4rem); font-weight: 900; text-transform: uppercase; }
+.original-artist-name { margin-top: .45rem; color: var(--stage-gold); font-weight: 800; }
+.original-bio { max-width: 48rem; margin-top: 1.25rem; color: rgba(255,255,255,.55); line-height: 1.75; }
+.original-audio { width: 100%; margin-top: 1.6rem; accent-color: var(--stage-gold); }
+.original-story { margin-top: 1.8rem; border-left: 2px solid rgba(244,180,0,.55); padding-left: 1.25rem; }
+.original-story > p:last-child { margin-top: .55rem; color: rgba(255,255,255,.68); line-height: 1.85; white-space: pre-wrap; }
+.originals-empty { margin-top: 3.5rem; border: 1px dashed rgba(244,180,0,.28); border-radius: 2rem; padding: 3rem 2rem; text-align: center; }
+.originals-empty h2 { margin-top: .8rem; font-family: "Montserrat","Arial Black",sans-serif; font-size: clamp(1.8rem,5vw,3rem); font-weight: 900; text-transform: uppercase; }
+.originals-empty > p:not(.section-kicker) { margin: 1rem auto 0; max-width: 36rem; color: rgba(255,255,255,.5); line-height: 1.7; }
+.original-submit-form { display: grid; gap: 1.3rem; border: 1px solid rgba(244,180,0,.2); border-radius: 2rem; background: rgba(255,255,255,.03); padding: clamp(1.5rem,5vw,3rem); }
+.original-rights-check { display: flex; align-items: flex-start; gap: .8rem; color: rgba(255,255,255,.65); font-size: .85rem; line-height: 1.6; }
+.original-rights-check input { margin-top: .2rem; accent-color: var(--stage-gold); }
+.original-review-note { display: grid; gap: .5rem; margin-top: 2rem; border-left: 2px solid var(--stage-gold); padding-left: 1.2rem; color: rgba(255,255,255,.5); }
+.original-review-note strong { color: white; }
+@media (min-width: 760px) {
+  .originals-heading { flex-direction: row; align-items: flex-end; justify-content: space-between; }
+  .originals-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .original-song-featured { grid-column: 1 / -1; }
+}
+
 @media (min-width: 760px) {
   .winner-feature { grid-template-columns: minmax(18rem, 0.82fr) 1.18fr; }
   .winner-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }

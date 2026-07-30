@@ -6,6 +6,7 @@ import AdminQueue from "@/components/AdminQueue";
 import AdminStaff from "@/components/AdminStaff";
 import AdminAudioStation from "@/components/AdminAudioStation";
 import AdminWinners from "@/components/AdminWinners";
+import AdminOriginals from "@/components/AdminOriginals";
 import { staffAccess } from "@/lib/stagefront-auth";
 
 export const metadata = {
@@ -43,6 +44,7 @@ export default async function AdminPage() {
       {access.permissions.includes("queue") ? <><AdminQueue /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
       {access.permissions.includes("contests") ? <><AdminGoldenVoices /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
       {access.permissions.includes("contests") ? <><AdminWinners /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
+      {access.permissions.includes("contests") ? <><AdminOriginals /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
       {access.permissions.includes("staff") ? <AdminStaff /> : null}
     </main>
   );
