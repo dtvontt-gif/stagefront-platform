@@ -13,9 +13,16 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     email?: unknown;
     password?: unknown;
+    next?: unknown;
   } | null;
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const password = typeof body?.password === "string" ? body.password : "";
+  const requestedDestination =
+    typeof body?.next === "string" &&
+    body.next.startsWith("/") &&
+    !body.next.startsWith("//")
+      ? body.next
+      : null;
   if (!email || password.length < 8) {
     return Response.json({ message: "Enter your email and password." }, { status: 400 });
   }
@@ -54,6 +61,8 @@ export async function POST(request: Request) {
 
   return Response.json({
     message: "Welcome back to StageFront.",
-    destination: isAdministrator(session.user?.email) ? "/admin" : "/",
+    destination:
+      requestedDestination ??
+      (isAdministrator(session.user?.email) ? "/admin" : "/"),
   });
 }

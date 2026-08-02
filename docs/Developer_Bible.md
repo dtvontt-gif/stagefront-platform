@@ -271,3 +271,12 @@ StageFront honors Box Battle and Golden Voices champions in the homepage
 - Database setup: `supabase/009_original_artists.sql`
 - StageFront must not publish music unless the submitting artist owns or
   controls the necessary rights.
+# Backstage Pass
+
+- `/backstage` is the single secure staff entrance linked from desktop and
+  mobile navigation.
+- Signed-out visitors are sent to `/sign-in?next=/backstage` and returned to
+  the backstage check immediately after signing in.
+- Approved owners, managers, and moderators are redirected to `/admin`.
+- Signed-in members without an active staff role see an access-denied page and
+  never receive admin dashboard data.

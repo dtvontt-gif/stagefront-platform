@@ -19,6 +19,10 @@ const navigation = [
   { label: "About", href: "/#about" },
 ];
 
+const desktopNavigation = navigation.filter((item) =>
+  ["Live", "Queue", "Hosts", "Golden Voices", "Winners", "Original Artists", "Founders"].includes(item.label),
+);
+
 export default async function Navbar() {
   const [user, staff] = await Promise.all([authenticatedUser(), staffAccess()]);
   return (
@@ -42,12 +46,12 @@ export default async function Navbar() {
           />
         </Link>
 
-        <div className="hidden items-center gap-7 lg:flex">
-          {navigation.map((item) => (
+        <div className="hidden items-center gap-4 lg:flex">
+          {desktopNavigation.map((item) => (
             <a
               key={item.href}
               href={item.href}
-              className="text-sm font-medium text-white/70 transition hover:text-[#f4b400] focus-visible:text-[#f4b400]"
+              className="text-xs font-semibold text-white/70 transition hover:text-[#f4b400] focus-visible:text-[#f4b400] xl:text-sm"
             >
               {item.label}
             </a>
@@ -55,6 +59,12 @@ export default async function Navbar() {
         </div>
 
         <div className="hidden items-center gap-3 lg:flex">
+          <a
+            href="/backstage"
+            className="rounded-full border border-[#f4b400]/45 bg-[#f4b400]/[0.06] px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider text-[#f4b400] transition hover:border-[#f4b400] hover:bg-[#f4b400]/[0.12]"
+          >
+            Backstage Pass
+          </a>
           {user ? (
             <>
               <a href="/profile" className="hidden text-sm font-semibold text-white/80 transition hover:text-white sm:inline-flex">My profile</a>

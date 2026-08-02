@@ -12,10 +12,15 @@ export default function AccountForm() {
     setBusy(true);
     setMessage("");
     const form = new FormData(event.currentTarget);
+    const requestedDestination = new URLSearchParams(window.location.search).get("next");
     const response = await fetch(`/api/auth/${mode}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: form.get("email"), password: form.get("password") }),
+      body: JSON.stringify({
+        email: form.get("email"),
+        password: form.get("password"),
+        next: requestedDestination,
+      }),
     });
     const result = (await response.json()) as { message?: string; destination?: string };
     setBusy(false);

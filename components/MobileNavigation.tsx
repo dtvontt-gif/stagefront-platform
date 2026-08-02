@@ -39,6 +39,9 @@ export default function MobileNavigation({
             </nav>
             <div className="my-3 h-px bg-white/10" />
             <div className="grid gap-2">
+              <a href="/backstage" className="rounded-xl border border-[#f4b400]/45 bg-[#f4b400]/[0.06] px-4 py-3.5 text-center text-sm font-black uppercase tracking-wider text-[#f4b400]">
+                Backstage Pass
+              </a>
               {signedIn ? (
                 <>
                   <a href="/profile" className="rounded-xl bg-[#f4b400] px-4 py-3.5 text-center text-sm font-black text-black">My Profile</a>
