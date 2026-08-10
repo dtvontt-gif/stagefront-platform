@@ -19,8 +19,8 @@ export default function SignInPage() {
             <span className="block text-stage-gold">the StageFront.</span>
           </h1>
           <p className="mt-7 text-base leading-8 text-white/60">
-            Sign in to manage your StageFront account. New members can create an
-            account using the same email used for Founding Member registration.
+            Sign in to manage your singing profile, discover members, and handle
+            connection requests. New members can create a profile in one step.
           </p>
         </div>
         <AccountForm />

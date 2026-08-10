@@ -1,0 +1,2 @@
+import Navbar from"@/components/Navbar";import PublicMemberProfile from"@/components/PublicMemberProfile";
+export default async function SingerPage({params}:PageProps<"/singers/[username]">){const{username}=await params;return <main className="min-h-screen bg-[#070708] px-5 pb-24 pt-32 text-white sm:px-8"><Navbar/><div className="mx-auto max-w-7xl"><PublicMemberProfile username={username}/></div></main>}

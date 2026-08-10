@@ -23,12 +23,12 @@ export function profileImageUrl(supabaseUrl: string, path?: string | null) {
 
 export async function uploadProfileImage(
   config: { url: string; serviceKey: string },
-  founderNumber: number,
+  profileId: string | number,
   file: File,
 ) {
   const extension = extensions[file.type];
   if (!extension) throw new Error("Unsupported image type.");
-  const path = `${founderNumber}/${crypto.randomUUID()}.${extension}`;
+  const path = `${profileId}/${crypto.randomUUID()}.${extension}`;
   const response = await fetch(
     `${config.url}/storage/v1/object/${PROFILE_BUCKET}/${path}`,
     {

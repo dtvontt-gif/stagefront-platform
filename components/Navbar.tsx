@@ -12,6 +12,8 @@ const navigation = [
   { label: "Golden Voices", href: "/golden-voices" },
   { label: "Winners", href: "/winners" },
   { label: "Original Artists", href: "/originals" },
+  { label: "Members", href: "/members" },
+  { label: "Connections", href: "/connections" },
   { label: "Community", href: "/#community" },
   { label: "Founders", href: "/founders" },
   { label: "Support", href: "/#support" },
@@ -20,7 +22,7 @@ const navigation = [
 ];
 
 const desktopNavigation = navigation.filter((item) =>
-  ["Live", "Queue", "Hosts", "Golden Voices", "Winners", "Original Artists", "Founders"].includes(item.label),
+  ["Live", "Queue", "Hosts", "Golden Voices", "Original Artists", "Members", "Founders"].includes(item.label),
 );
 
 export default async function Navbar() {

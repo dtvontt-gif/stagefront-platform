@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Navbar from "@/components/Navbar";
-import ProfileEditor from "@/components/ProfileEditor";
+import SocialProfileEditor from "@/components/SocialProfileEditor";
 
 export const metadata: Metadata = {
   title: "My Profile | StageFront",
@@ -17,7 +17,7 @@ export default function ProfilePage() {
         <h1 className="mt-4 font-display text-5xl font-black uppercase sm:text-7xl">My <span className="text-stage-gold">profile.</span></h1>
         <p className="mb-12 mt-5 max-w-2xl text-white/55">Upload your portrait and StageFront will place you inside the signature stage frame with your permanent member number.</p>
         <Suspense fallback={<p className="text-white/60">Loading your profile...</p>}>
-          <ProfileEditor />
+          <SocialProfileEditor />
         </Suspense>
       </div>
     </main>
