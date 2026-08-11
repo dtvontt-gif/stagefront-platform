@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import ContentComments from "@/components/ContentComments";
 
 type Winner = {
   id: number;
@@ -151,6 +152,10 @@ export default function WinnersSpotlight() {
                 )}
               </div>
             ) : null}
+
+            <div className="mx-auto mt-6 max-w-[68rem]">
+              <ContentComments contentType="winner" contentId={selected.id} heading={`Celebrate ${selected.display_name}`} />
+            </div>
 
             {winners.length > 1 ? (
               <div className="winner-gallery" aria-label="More StageFront winners">

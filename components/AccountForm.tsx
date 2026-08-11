@@ -58,7 +58,7 @@ export default function AccountForm() {
             <input name="username" required minLength={3} maxLength={24} pattern="[A-Za-z0-9_]+" placeholder="your_stage_name" className="mt-2 w-full rounded-2xl border border-white/15 bg-black/50 px-4 py-3.5 text-white outline-none focus:border-[#f4b400]" />
           </label>
         </> : null}
-        {mode !== "forgot" ? <label className="block text-sm font-semibold text-white/80">
+        <label className="block text-sm font-semibold text-white/80">
           Email
           <input
             name="email"
@@ -67,8 +67,8 @@ export default function AccountForm() {
             required
             className="mt-2 w-full rounded-2xl border border-white/15 bg-black/50 px-4 py-3.5 text-white outline-none focus:border-[#f4b400]"
           />
-        </label> : null}
-        <label className="block text-sm font-semibold text-white/80">
+        </label>
+        {mode !== "forgot" ? <label className="block text-sm font-semibold text-white/80">
           Password
           <input
             name="password"
@@ -78,7 +78,7 @@ export default function AccountForm() {
             required
             className="mt-2 w-full rounded-2xl border border-white/15 bg-black/50 px-4 py-3.5 text-white outline-none focus:border-[#f4b400]"
           />
-        </label>
+        </label> : null}
         <button
           type="submit"
           disabled={busy}

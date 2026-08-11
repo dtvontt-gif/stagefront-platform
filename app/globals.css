@@ -1148,6 +1148,13 @@ h6 {
 .original-rights-check input { margin-top: .2rem; accent-color: var(--stage-gold); }
 .original-review-note { display: grid; gap: .5rem; margin-top: 2rem; border-left: 2px solid var(--stage-gold); padding-left: 1.2rem; color: rgba(255,255,255,.5); }
 .original-review-note strong { color: white; }
+.content-comments { margin-top: 2rem; border-top: 1px solid rgba(255,255,255,.1); padding-top: 1.5rem; }
+.content-comments h3 { font-family: "Montserrat","Arial Black",sans-serif; font-size: 1.1rem; font-weight: 900; text-transform: uppercase; }
+.content-comments > div:first-child > span { color: rgba(255,255,255,.35); font-size: .72rem; font-weight: 800; }
+.content-comments form input { min-width: 0; flex: 1; border: 1px solid rgba(255,255,255,.14); border-radius: 999px; background: rgba(0,0,0,.28); padding: .8rem 1rem; color: white; outline: none; }
+.content-comments form input:focus { border-color: var(--stage-gold); }
+.content-comments form button { border: 1px solid rgba(244,180,0,.55); border-radius: 999px; padding: .75rem 1rem; color: var(--stage-gold); font-size: .72rem; font-weight: 900; }
+.content-comments form button:hover { background: var(--stage-gold); color: #09090b; }
 @media (min-width: 760px) {
   .originals-heading { flex-direction: row; align-items: flex-end; justify-content: space-between; }
   .originals-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }

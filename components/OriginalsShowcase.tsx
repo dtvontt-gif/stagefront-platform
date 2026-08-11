@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ContentComments from "@/components/ContentComments";
 
 type Song = {
   id: number;
@@ -65,6 +66,7 @@ export default function OriginalsShowcase() {
                   <p className="section-kicker">Behind the music</p>
                   <p>{song.story}</p>
                 </div>
+                <ContentComments contentType="original" contentId={song.id} heading={`Talk about ${song.song_title}`} />
               </div>
             </article>
           ))}
