@@ -4,6 +4,9 @@ Prototype route: `/create/video`
 
 ## Server environment
 
+The preferred Vercel variable name is `BYTEPLUS_MODELARK_API_KEY`. The server
+also accepts the existing lowercase `byteplus_modelark_api_key` name.
+
 Required in Vercel:
 
 - `BYTEPLUS_MODELARK_API_KEY` — server-only ModelArk API key.

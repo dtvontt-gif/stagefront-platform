@@ -8,7 +8,9 @@ export async function GET(
   context: RouteContext<"/api/video/status/[id]">,
 ) {
   try {
-    const apiKey = process.env.BYTEPLUS_MODELARK_API_KEY;
+    const apiKey =
+      process.env.BYTEPLUS_MODELARK_API_KEY ||
+      process.env.byteplus_modelark_api_key;
     if (!apiKey) {
       return NextResponse.json({ error: "ModelArk API key is missing." }, { status: 503 });
     }

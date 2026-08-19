@@ -10,7 +10,9 @@ function buildPrompt(idea: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = process.env.BYTEPLUS_MODELARK_API_KEY;
+    const apiKey =
+      process.env.BYTEPLUS_MODELARK_API_KEY ||
+      process.env.byteplus_modelark_api_key;
     if (!apiKey) {
       return NextResponse.json(
         { error: "Seedance is not connected yet. The ModelArk API key is missing." },
