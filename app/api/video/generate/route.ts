@@ -4,8 +4,8 @@ const CREATE_TASK_URL =
   "https://ark.ap-southeast.bytepluses.com/api/v3/contents/generations/tasks";
 const MODEL = "seedance-1-0-pro-250528";
 
-function buildPrompt(idea: string, duration: number) {
-  return `Create a polished cinematic vertical social video from this idea: ${idea}\nKeep the subject visually consistent, use natural motion, cinematic lighting, realistic physics, a strong opening frame, and a clean hero ending. Do not add captions, logos, watermarks, or on-screen text unless explicitly requested. --resolution 720p --duration ${duration} --camerafixed false`;
+function buildPrompt(idea: string) {
+  return `Create a polished cinematic vertical social video from this idea: ${idea}\nKeep the subject visually consistent, use natural motion, cinematic lighting, realistic physics, a strong opening frame, and a clean hero ending. Do not add captions, logos, watermarks, or on-screen text unless explicitly requested.`;
 }
 
 export async function POST(request: NextRequest) {
@@ -26,12 +26,15 @@ export async function POST(request: NextRequest) {
     if (!idea) {
       return NextResponse.json({ error: "Describe your video idea first." }, { status: 400 });
     }
+    if (idea.length > 2000) {
+      return NextResponse.json({ error: "Keep the video idea under 2,000 characters." }, { status: 400 });
+    }
     if (!Number.isInteger(duration) || duration < 2 || duration > 12) {
       return NextResponse.json({ error: "Duration must be between 2 and 12 seconds." }, { status: 400 });
     }
 
     const content: Array<Record<string, unknown>> = [
-      { type: "text", text: buildPrompt(idea, duration) },
+      { type: "text", text: buildPrompt(idea) },
     ];
 
     if (referenceUrl) {
@@ -53,7 +56,14 @@ export async function POST(request: NextRequest) {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ model: MODEL, content }),
+      body: JSON.stringify({
+        model: MODEL,
+        content,
+        resolution: "720p",
+        ratio: "9:16",
+        duration,
+        camera_fixed: false,
+      }),
       cache: "no-store",
     });
 

@@ -11,6 +11,7 @@ type Job = {
   resolution?: string | null;
   ratio?: string | null;
   duration?: number | null;
+  error?: string | null;
 };
 
 const TERMINAL = new Set(["succeeded", "failed", "cancelled", "expired"]);
@@ -26,20 +27,36 @@ export default function VideoStudioPage() {
   useEffect(() => {
     if (!job?.id || TERMINAL.has(job.status)) return;
 
-    const timer = window.setInterval(async () => {
+    const jobId = job.id;
+    let cancelled = false;
+    let timer: number | undefined;
+
+    async function checkStatus() {
       try {
-        const response = await fetch(`/api/video/status/${encodeURIComponent(job.id)}`, {
+        const response = await fetch(`/api/video/status/${encodeURIComponent(jobId)}`, {
           cache: "no-store",
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Could not check generation status.");
-        setJob(data);
+        if (!cancelled) {
+          setJob(data);
+          setError("");
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Could not check generation status.");
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Could not check generation status.");
+        }
       }
-    }, 5000);
 
-    return () => window.clearInterval(timer);
+      if (!cancelled) timer = window.setTimeout(checkStatus, 5000);
+    }
+
+    timer = window.setTimeout(checkStatus, 1000);
+
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
   }, [job?.id, job?.status]);
 
   async function generate(event: FormEvent) {
@@ -83,6 +100,7 @@ export default function VideoStudioPage() {
             <span className="text-sm font-black uppercase tracking-wide">Your idea</span>
             <textarea
               required
+              maxLength={2000}
               value={idea}
               onChange={(e) => setIdea(e.target.value)}
               rows={6}
@@ -146,8 +164,12 @@ export default function VideoStudioPage() {
                 </div>
               )}
 
+              {job.status === "succeeded" && !job.videoUrl && (
+                <p className="mt-4 text-sm text-white/70">Seedance finished the task but did not return a playable video URL. Try the generation again.</p>
+              )}
+
               {["failed", "cancelled", "expired"].includes(job.status) && (
-                <p className="mt-4 text-sm text-white/70">This generation did not complete. Adjust the idea or reference image and try again.</p>
+                <p className="mt-4 text-sm text-white/70">{job.error || "This generation did not complete. Adjust the idea or reference image and try again."}</p>
               )}
             </div>
           )}

@@ -5,7 +5,7 @@ const TASK_URL =
 
 export async function GET(
   _request: NextRequest,
-  context: { params: Promise<{ id: string }> },
+  context: RouteContext<"/api/video/status/[id]">,
 ) {
   try {
     const apiKey = process.env.BYTEPLUS_MODELARK_API_KEY;
@@ -43,6 +43,7 @@ export async function GET(
       resolution: data.resolution || null,
       ratio: data.ratio || null,
       duration: data.duration || null,
+      error: data?.error?.message || data?.message || null,
     });
   } catch (error) {
     console.error("Video status route failed", error);

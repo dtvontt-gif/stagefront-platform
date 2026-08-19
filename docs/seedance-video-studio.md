@@ -15,7 +15,7 @@ Do not prefix the API key with `NEXT_PUBLIC_`.
 ## Current build
 
 - Idea-to-video form
-- TikTok-style vertical prompting
+- Explicit 9:16, 720p vertical output settings
 - 2–12 second duration selector
 - Text-to-video generation
 - Optional first-frame HTTPS image URL for image-to-video
