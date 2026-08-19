@@ -7,6 +7,7 @@ import MobileNavigation from "@/components/MobileNavigation";
 const navigation = [
   { label: "Live", href: "/live" },
   { label: "Queue", href: "/queue" },
+  { label: "Create", href: "/create/video" },
   { label: "Discover", href: "/#discover" },
   { label: "Hosts", href: "/hosts" },
   { label: "Golden Voices", href: "/golden-voices" },
@@ -22,7 +23,7 @@ const navigation = [
 ];
 
 const desktopNavigation = navigation.filter((item) =>
-  ["Live", "Queue", "Hosts", "Golden Voices", "Original Artists", "Members", "Community"].includes(item.label),
+  ["Live", "Queue", "Create", "Hosts", "Golden Voices", "Original Artists", "Community"].includes(item.label),
 );
 
 export default async function Navbar() {

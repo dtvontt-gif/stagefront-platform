@@ -1,5 +1,3 @@
-import { cookies } from "next/headers";
-
 export const ACCESS_COOKIE = "stagefront_access_token";
 export const REFRESH_COOKIE = "stagefront_refresh_token";
 
@@ -37,8 +35,13 @@ export function isAdministrator(email?: string) {
 
 export async function authenticatedUser(): Promise<SupabaseUser | null> {
   const config = supabaseConfiguration();
+  if (!config) return null;
+
+  // Keep next/headers out of the module's top-level dependency graph so this
+  // shared auth helper does not force every importer into a server-only bundle.
+  const { cookies } = await import("next/headers");
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
-  if (!config || !token) return null;
+  if (!token) return null;
 
   const response = await fetch(`${config.url}/auth/v1/user`, {
     headers: { apikey: config.anonKey, Authorization: `Bearer ${token}` },
