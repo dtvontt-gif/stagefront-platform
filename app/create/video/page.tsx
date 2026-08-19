@@ -1,22 +1,46 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 type Job = {
   id: string;
   status: string;
+  videoUrl?: string | null;
+  resolution?: string | null;
+  ratio?: string | null;
+  duration?: number | null;
 };
+
+const TERMINAL = new Set(["succeeded", "failed", "cancelled", "expired"]);
 
 export default function VideoStudioPage() {
   const [idea, setIdea] = useState("");
-  const [duration, setDuration] = useState("10");
-  const [quality, setQuality] = useState("best");
+  const [duration, setDuration] = useState("5");
   const [referenceUrl, setReferenceUrl] = useState("");
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!job?.id || TERMINAL.has(job.status)) return;
+
+    const timer = window.setInterval(async () => {
+      try {
+        const response = await fetch(`/api/video/status/${encodeURIComponent(job.id)}`, {
+          cache: "no-store",
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Could not check generation status.");
+        setJob(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not check generation status.");
+      }
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, [job?.id, job?.status]);
 
   async function generate(event: FormEvent) {
     event.preventDefault();
@@ -28,7 +52,7 @@ export default function VideoStudioPage() {
       const response = await fetch("/api/video/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea, duration: Number(duration), quality, referenceUrl }),
+        body: JSON.stringify({ idea, duration: Number(duration), referenceUrl }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not start generation.");
@@ -40,6 +64,8 @@ export default function VideoStudioPage() {
     }
   }
 
+  const working = job && !TERMINAL.has(job.status);
+
   return (
     <main className="min-h-screen bg-[#070708] text-white">
       <Navbar />
@@ -49,7 +75,7 @@ export default function VideoStudioPage() {
           AI Video <span className="text-[#f4b400]">Studio</span>
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-7 text-white/60">
-          Describe the moment. StageFront turns your idea into a vertical short and sends it to the connected video model.
+          Describe the moment. StageFront sends it securely to Seedance and automatically checks until your vertical short is ready.
         </p>
 
         <form onSubmit={generate} className="mt-12 grid gap-6 rounded-3xl border border-white/10 bg-[#0b0b0f] p-6 sm:p-8">
@@ -67,46 +93,64 @@ export default function VideoStudioPage() {
 
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="grid gap-2">
-              <span className="text-sm font-black uppercase tracking-wide">Reference image URL</span>
+              <span className="text-sm font-black uppercase tracking-wide">First-frame image URL</span>
               <input
                 value={referenceUrl}
                 onChange={(e) => setReferenceUrl(e.target.value)}
                 placeholder="Optional HTTPS image URL"
                 className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 outline-none focus:border-[#f4b400]/70"
               />
+              <span className="text-xs leading-5 text-white/40">Leave blank for text-to-video. Add an HTTPS image when you want Seedance to animate a starting frame.</span>
             </label>
             <label className="grid gap-2">
               <span className="text-sm font-black uppercase tracking-wide">Length</span>
               <select value={duration} onChange={(e) => setDuration(e.target.value)} className="rounded-xl border border-white/10 bg-[#111114] px-4 py-3">
-                <option value="5">5 seconds</option>
-                <option value="10">10 seconds</option>
-                <option value="15">15 seconds</option>
+                {[2, 3, 4, 5, 6, 8, 10, 12].map((seconds) => (
+                  <option key={seconds} value={seconds}>{seconds} seconds</option>
+                ))}
               </select>
             </label>
           </div>
 
-          <div className="grid gap-2">
-            <span className="text-sm font-black uppercase tracking-wide">Generation mode</span>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {[["best", "Best", "Highest quality"], ["fast", "Fast", "Balanced speed"], ["cheap", "Saver", "Lower cost"]].map(([value, label, copy]) => (
-                <button key={value} type="button" onClick={() => setQuality(value)} className={`rounded-2xl border p-4 text-left transition ${quality === value ? "border-[#f4b400] bg-[#f4b400]/10" : "border-white/10 bg-white/[0.02]"}`}>
-                  <strong className="block uppercase">{label}</strong>
-                  <span className="mt-1 block text-xs text-white/50">{copy}</span>
-                </button>
-              ))}
-            </div>
+          <div className="rounded-2xl border border-white/10 bg-black/25 p-4 text-sm leading-6 text-white/60">
+            Output is directed as a TikTok-style vertical short. The BytePlus API key stays on the server and is never sent to the browser.
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-black/25 p-4 text-sm text-white/60">
-            TikTok format is locked to <strong className="text-white">9:16 vertical</strong>. The API key stays on the server and is never sent to the browser.
-          </div>
-
-          <button disabled={loading} className="rounded-full bg-[#f4b400] px-7 py-4 font-black uppercase tracking-wide text-black disabled:opacity-50">
-            {loading ? "Starting…" : "Generate video"}
+          <button disabled={loading || Boolean(working)} className="rounded-full bg-[#f4b400] px-7 py-4 font-black uppercase tracking-wide text-black disabled:opacity-50">
+            {loading ? "Starting…" : working ? "Generating…" : "Generate video"}
           </button>
 
           {error && <p className="rounded-xl border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-200">{error}</p>}
-          {job && <div className="rounded-xl border border-[#f4b400]/30 bg-[#f4b400]/10 p-4"><strong>Generation started.</strong><p className="mt-1 text-sm text-white/60">Job {job.id} · {job.status}</p></div>}
+
+          {job && (
+            <div className="rounded-2xl border border-[#f4b400]/30 bg-[#f4b400]/10 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <strong className="uppercase">{job.status === "succeeded" ? "Video ready" : "Generation status"}</strong>
+                  <p className="mt-1 text-sm text-white/60">Job {job.id} · {job.status}</p>
+                </div>
+                {working && <span className="text-xs font-black uppercase tracking-[0.2em] text-[#f4b400]">Checking every 5 sec</span>}
+              </div>
+
+              {job.status === "succeeded" && job.videoUrl && (
+                <div className="mt-5 grid gap-4">
+                  <video src={job.videoUrl} controls playsInline className="mx-auto max-h-[70vh] w-full max-w-sm rounded-2xl bg-black" />
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-white/50">
+                    {job.resolution && <span>{job.resolution}</span>}
+                    {job.ratio && <span>{job.ratio}</span>}
+                    {job.duration && <span>{job.duration}s</span>}
+                  </div>
+                  <a href={job.videoUrl} target="_blank" rel="noreferrer" className="inline-flex w-fit rounded-full border border-[#f4b400]/50 px-5 py-3 text-sm font-black uppercase text-[#f4b400]">
+                    Open finished MP4
+                  </a>
+                </div>
+              )}
+
+              {["failed", "cancelled", "expired"].includes(job.status) && (
+                <p className="mt-4 text-sm text-white/70">This generation did not complete. Adjust the idea or reference image and try again.</p>
+              )}
+            </div>
+          )}
         </form>
       </section>
       <Footer />
