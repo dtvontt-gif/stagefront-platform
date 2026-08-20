@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import Image from "next/image";
 
 type Job = {
   id: string;
@@ -14,11 +15,15 @@ type Job = {
 };
 
 const TERMINAL = new Set(["succeeded", "failed", "cancelled", "expired"]);
+const MAX_IMAGE_BYTES = 2_500_000;
+const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export default function VideoStudioPage() {
   const [idea, setIdea] = useState("");
   const [duration, setDuration] = useState("5");
   const [referenceUrl, setReferenceUrl] = useState("");
+  const [referenceImage, setReferenceImage] = useState("");
+  const [referenceName, setReferenceName] = useState("");
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -58,6 +63,36 @@ export default function VideoStudioPage() {
     };
   }, [job?.id, job?.status]);
 
+  function chooseImage(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    setError("");
+    if (!file) return;
+    if (!IMAGE_TYPES.has(file.type)) {
+      setError("Choose a JPG, PNG, or WebP image.");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setError("Choose an image smaller than 2.5 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setReferenceImage(String(reader.result || ""));
+      setReferenceName(file.name);
+      setReferenceUrl("");
+    };
+    reader.onerror = () => setError("That image could not be opened. Try another one.");
+    reader.readAsDataURL(file);
+  }
+
+  function removeImage() {
+    setReferenceImage("");
+    setReferenceName("");
+  }
+
   async function generate(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
@@ -68,7 +103,11 @@ export default function VideoStudioPage() {
       const response = await fetch("/api/video/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea, duration: Number(duration), referenceUrl }),
+        body: JSON.stringify({
+          idea,
+          duration: Number(duration),
+          referenceUrl: referenceImage || referenceUrl,
+        }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not start generation.");
@@ -107,24 +146,54 @@ export default function VideoStudioPage() {
           </label>
 
           <div className="grid gap-5 sm:grid-cols-2">
-            <label className="grid gap-2">
-              <span className="text-sm font-black uppercase tracking-wide">First-frame image URL</span>
+            <div className="grid gap-3">
+              <span className="text-sm font-black uppercase tracking-wide">Upload a starting image</span>
+              <label className="relative grid min-h-40 cursor-pointer place-items-center overflow-hidden rounded-2xl border border-dashed border-[#f4b400]/45 bg-[#f4b400]/5 p-4 text-center transition hover:border-[#f4b400]">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={chooseImage}
+                  className="sr-only"
+                />
+                {referenceImage ? (
+                  <Image src={referenceImage} alt="Selected starting frame" fill unoptimized sizes="(max-width: 640px) 100vw, 50vw" className="object-contain p-3" />
+                ) : (
+                  <span>
+                    <strong className="block text-[#f4b400]">Choose photo</strong>
+                    <span className="mt-1 block text-xs leading-5 text-white/45">JPG, PNG, or WebP · up to 2.5 MB</span>
+                  </span>
+                )}
+              </label>
+              {referenceImage && (
+                <div className="flex items-center justify-between gap-3 text-xs text-white/55">
+                  <span className="truncate">{referenceName}</span>
+                  <button type="button" onClick={removeImage} className="font-black uppercase text-[#f4b400]">Remove</button>
+                </div>
+              )}
+              <span className="text-xs leading-5 text-white/40">Optional. Runway uses this photo as the first frame and follows your text instructions.</span>
+            </div>
+            <div className="grid content-start gap-5">
+              <label className="grid gap-2">
+                <span className="text-sm font-black uppercase tracking-wide">Or use an image URL</span>
               <input
                 value={referenceUrl}
-                onChange={(e) => setReferenceUrl(e.target.value)}
+                onChange={(e) => {
+                  setReferenceUrl(e.target.value);
+                  if (e.target.value) removeImage();
+                }}
                 placeholder="Optional HTTPS image URL"
                 className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 outline-none focus:border-[#f4b400]/70"
               />
-              <span className="text-xs leading-5 text-white/40">Leave blank for text-to-video. Add an HTTPS image when you want Runway to animate a starting frame.</span>
-            </label>
-            <label className="grid gap-2">
-              <span className="text-sm font-black uppercase tracking-wide">Length</span>
-              <select value={duration} onChange={(e) => setDuration(e.target.value)} className="rounded-xl border border-white/10 bg-[#111114] px-4 py-3">
-                {[2, 3, 4, 5, 6, 8, 10].map((seconds) => (
-                  <option key={seconds} value={seconds}>{seconds} seconds</option>
-                ))}
-              </select>
-            </label>
+              </label>
+              <label className="grid gap-2">
+                <span className="text-sm font-black uppercase tracking-wide">Length</span>
+                <select value={duration} onChange={(e) => setDuration(e.target.value)} className="rounded-xl border border-white/10 bg-[#111114] px-4 py-3">
+                  {[2, 3, 4, 5, 6, 8, 10].map((seconds) => (
+                    <option key={seconds} value={seconds}>{seconds} seconds</option>
+                  ))}
+                </select>
+              </label>
+            </div>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-black/25 p-4 text-sm leading-6 text-white/60">

@@ -10,7 +10,7 @@ The studio uses Runway Gen-4.5 for text-to-video and optional image-to-video. By
 
 ## API flow
 
-1. `POST /api/video/generate` validates the idea, duration, and optional HTTPS first-frame image URL.
+1. `POST /api/video/generate` validates the idea, duration, and optional first-frame image. The UI accepts a JPG, PNG, or WebP upload up to 2.5 MB, or an HTTPS image URL.
 2. The server calls Runway text-to-video or image-to-video and returns the task ID.
 3. The browser polls `GET /api/video/status/[id]` every five seconds.
 4. The server retrieves the Runway task and normalizes its status for the UI.

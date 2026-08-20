@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const MODEL = "gen4.5" as const;
 const RATIO = "720:1280" as const;
+const MAX_DATA_URI_LENGTH = 3_400_000;
 
 function buildPrompt(idea: string) {
   const direction =
@@ -49,15 +50,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Duration must be between 2 and 10 seconds." }, { status: 400 });
     }
 
-    if (referenceUrl) {
-      let parsed: URL;
+    if (referenceUrl.startsWith("data:")) {
+      if (
+        referenceUrl.length > MAX_DATA_URI_LENGTH ||
+        !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(referenceUrl)
+      ) {
+        return NextResponse.json({ error: "Upload a valid JPG, PNG, or WebP image under 2.5 MB." }, { status: 400 });
+      }
+    } else if (referenceUrl) {
       try {
-        parsed = new URL(referenceUrl);
+        const parsed = new URL(referenceUrl);
+        if (parsed.protocol !== "https:") throw new Error("Not HTTPS");
       } catch {
         return NextResponse.json({ error: "Reference image must be a valid HTTPS URL." }, { status: 400 });
-      }
-      if (parsed.protocol !== "https:") {
-        return NextResponse.json({ error: "Reference image must use HTTPS." }, { status: 400 });
       }
     }
 
