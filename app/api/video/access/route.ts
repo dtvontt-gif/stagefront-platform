@@ -3,7 +3,7 @@ import { ownerHasFreeVideoAccess, videoCreditBalance, VIDEO_PACKS } from "@/lib/
 
 export async function GET() {
   const user = await authenticatedUser();
-  const packs = Object.entries(VIDEO_PACKS).map(([id, pack]) => ({ id, ...pack }));
+  const packs = VIDEO_PACKS;
   if (!user?.email) return Response.json({ signedIn: false, owner: false, credits: 0, packs });
   const owner = ownerHasFreeVideoAccess(user.email);
   try {
