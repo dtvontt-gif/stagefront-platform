@@ -4,6 +4,7 @@ import Link from "next/link";
 const footerLinks = [
   { label: "Watch Live", href: "/live" },
   { label: "Live Queue", href: "/queue" },
+  { label: "AI Video Studio", href: "/create/video" },
   { label: "Discover", href: "/#discover" },
   { label: "Golden Voices", href: "/golden-voices" },
   { label: "Contest Winners", href: "/winners" },
