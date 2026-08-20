@@ -60,6 +60,12 @@ export default function Hero() {
           >
             Request Custom Karaoke
           </a>
+          <a
+            href="/create/video"
+            className="rounded-full border border-[#f4b400] bg-[#f4b400]/10 px-8 py-4 text-sm font-extrabold text-[#ffd05a] backdrop-blur-sm transition hover:-translate-y-1 hover:bg-[#f4b400] hover:text-[#0b0b0f] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#f4b400] sm:text-base"
+          >
+            AI Video Studio
+          </a>
         </div>
       </div>
 
