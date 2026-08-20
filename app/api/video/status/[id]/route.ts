@@ -14,7 +14,7 @@ export async function GET(
   _request: NextRequest,
   context: RouteContext<"/api/video/status/[id]">,
 ) {
-  const apiKey = process.env.RUNWAYML_API_SECRET;
+  const apiKey = process.env.RUNWAYML_API_SECRET?.trim();
   if (!apiKey) {
     return NextResponse.json({ error: "RUNWAYML_API_SECRET is missing." }, { status: 503 });
   }

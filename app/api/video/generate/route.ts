@@ -27,7 +27,7 @@ function providerError(error: unknown) {
 }
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.RUNWAYML_API_SECRET;
+  const apiKey = process.env.RUNWAYML_API_SECRET?.trim();
   if (!apiKey) {
     return NextResponse.json(
       { error: "Runway is not connected yet. RUNWAYML_API_SECRET is missing." },
