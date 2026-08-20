@@ -2,6 +2,7 @@
 
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 type Job = {
   id: string;
@@ -12,6 +13,13 @@ type Job = {
   duration?: number | null;
   progress?: number | null;
   error?: string | null;
+};
+
+type Access = {
+  signedIn: boolean;
+  owner: boolean;
+  credits: number;
+  packs: Record<string, { credits: number; amount: number; label: string }>;
 };
 
 const TERMINAL = new Set(["succeeded", "failed", "cancelled", "expired"]);
@@ -27,6 +35,25 @@ export default function VideoStudioPage() {
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [access, setAccess] = useState<Access | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState("");
+  const [notice, setNotice] = useState("");
+
+  async function loadAccess() {
+    const response = await fetch("/api/video/access", { cache: "no-store" });
+    if (response.ok) setAccess(await response.json());
+  }
+
+  useEffect(() => {
+    void loadAccess();
+    const checkout = new URLSearchParams(window.location.search).get("checkout");
+    if (checkout === "success") {
+      setNotice("Payment received. Your credits will appear in a moment.");
+      const timers = [1500, 3500, 7000].map((delay) => window.setTimeout(() => void loadAccess(), delay));
+      return () => timers.forEach(window.clearTimeout);
+    }
+    if (checkout === "cancelled") setNotice("Checkout was cancelled. You were not charged.");
+  }, []);
 
   useEffect(() => {
     if (!job?.id || TERMINAL.has(job.status)) return;
@@ -112,10 +139,29 @@ export default function VideoStudioPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not start generation.");
       setJob(data);
+      if (access && !access.owner) setAccess({ ...access, credits: Math.max(0, access.credits - 1) });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start generation.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function checkout(pack: string) {
+    setCheckoutLoading(pack);
+    setError("");
+    try {
+      const response = await fetch("/api/video/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pack }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not open checkout.");
+      window.location.assign(data.url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not open checkout.");
+      setCheckoutLoading("");
     }
   }
 
@@ -130,6 +176,35 @@ export default function VideoStudioPage() {
         <p className="mt-5 max-w-2xl text-base leading-7 text-white/60">
           Describe the moment. StageFront sends it securely to Runway and automatically checks until your vertical short is ready.
         </p>
+
+        <div className="mt-8 rounded-3xl border border-white/10 bg-[#0b0b0f] p-6">
+          {!access ? (
+            <p className="text-sm text-white/55">Checking video access…</p>
+          ) : !access.signedIn ? (
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <p className="text-sm text-white/65">Sign in to create AI videos and purchase credits.</p>
+              <Link href="/sign-in?next=/create/video" className="rounded-full bg-[#f4b400] px-5 py-3 text-sm font-black uppercase text-black">Sign in</Link>
+            </div>
+          ) : access.owner ? (
+            <p className="font-black uppercase text-[#f4b400]">Owner access · Unlimited videos</p>
+          ) : (
+            <div className="grid gap-5">
+              <div>
+                <p className="font-black uppercase text-[#f4b400]">{access.credits} video credit{access.credits === 1 ? "" : "s"}</p>
+                <p className="mt-1 text-sm text-white/50">One credit creates one video at any available length.</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {Object.entries(access.packs).map(([id, pack]) => (
+                  <button key={id} type="button" onClick={() => checkout(id)} disabled={Boolean(checkoutLoading)} className="rounded-2xl border border-[#f4b400]/40 p-4 text-left transition hover:border-[#f4b400] disabled:opacity-50">
+                    <strong className="block uppercase">{pack.label}</strong>
+                    <span className="mt-1 block text-[#f4b400]">${(pack.amount / 100).toFixed(2)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {notice && <p className="mt-4 text-sm text-white/65">{notice}</p>}
+        </div>
 
         <form onSubmit={generate} className="mt-12 grid gap-6 rounded-3xl border border-white/10 bg-[#0b0b0f] p-6 sm:p-8">
           <label className="grid gap-2">
@@ -200,7 +275,7 @@ export default function VideoStudioPage() {
             Output is directed as a TikTok-style vertical MP4. Your Runway API key stays on the server and is never sent to the browser.
           </div>
 
-          <button disabled={loading || Boolean(working)} className="rounded-full bg-[#f4b400] px-7 py-4 font-black uppercase tracking-wide text-black disabled:opacity-50">
+          <button disabled={loading || Boolean(working) || !access?.signedIn || (!access.owner && access.credits < 1)} className="rounded-full bg-[#f4b400] px-7 py-4 font-black uppercase tracking-wide text-black disabled:opacity-50">
             {loading ? "Starting…" : working ? "Generating…" : "Generate video"}
           </button>
 

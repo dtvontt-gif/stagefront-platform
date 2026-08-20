@@ -1,5 +1,7 @@
 import RunwayML, { APIError } from "@runwayml/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { authenticatedUser } from "@/lib/stagefront-auth";
+import { consumeVideoCredit, grantVideoCredits, ownerHasFreeVideoAccess } from "@/lib/video-credits";
 
 const MODEL = "gen4.5" as const;
 const RATIO = "720:1280" as const;
@@ -28,6 +30,10 @@ function providerError(error: unknown) {
 }
 
 export async function POST(request: NextRequest) {
+  const user = await authenticatedUser();
+  if (!user?.email) {
+    return NextResponse.json({ error: "Sign in before generating a video." }, { status: 401 });
+  }
   const apiKey = process.env.RUNWAYML_API_SECRET?.trim();
   if (!apiKey) {
     return NextResponse.json(
@@ -36,6 +42,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  let reservation = "";
   try {
     const body = await request.json();
     const idea = String(body.idea || "").trim();
@@ -66,6 +73,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (!ownerHasFreeVideoAccess(user.email)) {
+      reservation = `generation:${crypto.randomUUID()}`;
+      const consumed = await consumeVideoCredit(user.id, reservation);
+      if (!consumed) {
+        return NextResponse.json({ error: "Purchase a video credit before generating." }, { status: 402 });
+      }
+    }
+
     const runway = new RunwayML({ apiKey });
     const common = {
       model: MODEL,
@@ -84,6 +99,15 @@ export async function POST(request: NextRequest) {
       estimatedCredits: task.estimatedCost?.credits ?? null,
     });
   } catch (error) {
+    if (reservation) {
+      try {
+        await grantVideoCredits(user.id, 1, "generation_refund", `refund:${reservation}`, {
+          reason: error instanceof Error ? error.message : "generation_start_failed",
+        });
+      } catch (refundError) {
+        console.error("Video credit refund failed", refundError);
+      }
+    }
     return providerError(error);
   }
 }
