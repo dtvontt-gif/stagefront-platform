@@ -1,53 +1,50 @@
+import RunwayML, { APIError } from "@runwayml/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-const TASK_URL =
-  "https://ark.ap-southeast.bytepluses.com/api/v3/contents/generations/tasks";
+const STATUS = {
+  PENDING: "pending",
+  THROTTLED: "pending",
+  RUNNING: "running",
+  SUCCEEDED: "succeeded",
+  FAILED: "failed",
+  CANCELLED: "cancelled",
+} as const;
 
 export async function GET(
   _request: NextRequest,
   context: RouteContext<"/api/video/status/[id]">,
 ) {
+  const apiKey = process.env.RUNWAYML_API_SECRET;
+  if (!apiKey) {
+    return NextResponse.json({ error: "RUNWAYML_API_SECRET is missing." }, { status: 503 });
+  }
+
   try {
-    const apiKey =
-      process.env.BYTEPLUS_MODELARK_API_KEY ||
-      process.env.byteplus_modelark_api_key;
-    if (!apiKey) {
-      return NextResponse.json({ error: "ModelArk API key is missing." }, { status: 503 });
-    }
-
     const { id } = await context.params;
-    if (!/^cgt-[A-Za-z0-9_-]+$/.test(id)) {
-      return NextResponse.json({ error: "Invalid task ID." }, { status: 400 });
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+      return NextResponse.json({ error: "Invalid Runway task ID." }, { status: 400 });
     }
 
-    const upstream = await fetch(`${TASK_URL}/${encodeURIComponent(id)}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    });
-
-    const data = await upstream.json().catch(() => ({}));
-    if (!upstream.ok) {
-      console.error("Seedance status failed", upstream.status, data);
-      return NextResponse.json(
-        { error: data?.error?.message || data?.message || "Could not check video status." },
-        { status: upstream.status >= 400 && upstream.status < 500 ? 400 : 502 },
-      );
-    }
+    const task = await new RunwayML({ apiKey }).tasks.retrieve(id);
+    const succeeded = task.status === "SUCCEEDED";
+    const failed = task.status === "FAILED";
 
     return NextResponse.json({
-      id: data.id || id,
-      status: data.status || "unknown",
-      videoUrl: data?.content?.video_url || null,
-      resolution: data.resolution || null,
-      ratio: data.ratio || null,
-      duration: data.duration || null,
-      error: data?.error?.message || data?.message || null,
+      id: task.id,
+      status: STATUS[task.status],
+      videoUrl: succeeded ? task.output[0] ?? null : null,
+      progress: task.status === "RUNNING" ? task.progress : null,
+      error: failed ? task.failure : null,
     });
   } catch (error) {
+    if (error instanceof APIError) {
+      console.error("Runway status failed", error.status, error.message);
+      const status = error.status === 404 ? 404 : error.status === 429 ? 429 : 502;
+      return NextResponse.json(
+        { error: error.status === 404 ? "Runway task not found." : "Could not check Runway video status." },
+        { status },
+      );
+    }
     console.error("Video status route failed", error);
     return NextResponse.json({ error: "Could not check video status." }, { status: 500 });
   }

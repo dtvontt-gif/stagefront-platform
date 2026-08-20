@@ -9,6 +9,7 @@ type Job = {
   resolution?: string | null;
   ratio?: string | null;
   duration?: number | null;
+  progress?: number | null;
   error?: string | null;
 };
 
@@ -88,7 +89,7 @@ export default function VideoStudioPage() {
           AI Video <span className="text-[#f4b400]">Studio</span>
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-7 text-white/60">
-          Describe the moment. StageFront sends it securely to Seedance and automatically checks until your vertical short is ready.
+          Describe the moment. StageFront sends it securely to Runway and automatically checks until your vertical short is ready.
         </p>
 
         <form onSubmit={generate} className="mt-12 grid gap-6 rounded-3xl border border-white/10 bg-[#0b0b0f] p-6 sm:p-8">
@@ -96,7 +97,7 @@ export default function VideoStudioPage() {
             <span className="text-sm font-black uppercase tracking-wide">Your idea</span>
             <textarea
               required
-              maxLength={2000}
+              maxLength={800}
               value={idea}
               onChange={(e) => setIdea(e.target.value)}
               rows={6}
@@ -114,12 +115,12 @@ export default function VideoStudioPage() {
                 placeholder="Optional HTTPS image URL"
                 className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 outline-none focus:border-[#f4b400]/70"
               />
-              <span className="text-xs leading-5 text-white/40">Leave blank for text-to-video. Add an HTTPS image when you want Seedance to animate a starting frame.</span>
+              <span className="text-xs leading-5 text-white/40">Leave blank for text-to-video. Add an HTTPS image when you want Runway to animate a starting frame.</span>
             </label>
             <label className="grid gap-2">
               <span className="text-sm font-black uppercase tracking-wide">Length</span>
               <select value={duration} onChange={(e) => setDuration(e.target.value)} className="rounded-xl border border-white/10 bg-[#111114] px-4 py-3">
-                {[2, 3, 4, 5, 6, 8, 10, 12].map((seconds) => (
+                {[2, 3, 4, 5, 6, 8, 10].map((seconds) => (
                   <option key={seconds} value={seconds}>{seconds} seconds</option>
                 ))}
               </select>
@@ -127,7 +128,7 @@ export default function VideoStudioPage() {
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-black/25 p-4 text-sm leading-6 text-white/60">
-            Output is directed as a TikTok-style vertical short. The BytePlus API key stays on the server and is never sent to the browser.
+            Output is directed as a TikTok-style vertical MP4. Your Runway API key stays on the server and is never sent to the browser.
           </div>
 
           <button disabled={loading || Boolean(working)} className="rounded-full bg-[#f4b400] px-7 py-4 font-black uppercase tracking-wide text-black disabled:opacity-50">
@@ -141,7 +142,7 @@ export default function VideoStudioPage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <strong className="uppercase">{job.status === "succeeded" ? "Video ready" : "Generation status"}</strong>
-                  <p className="mt-1 text-sm text-white/60">Job {job.id} · {job.status}</p>
+                  <p className="mt-1 text-sm text-white/60">Job {job.id} · {job.status}{typeof job.progress === "number" ? ` · ${Math.round(job.progress * 100)}%` : ""}</p>
                 </div>
                 {working && <span className="text-xs font-black uppercase tracking-[0.2em] text-[#f4b400]">Checking every 5 sec</span>}
               </div>
@@ -161,7 +162,7 @@ export default function VideoStudioPage() {
               )}
 
               {job.status === "succeeded" && !job.videoUrl && (
-                <p className="mt-4 text-sm text-white/70">Seedance finished the task but did not return a playable video URL. Try the generation again.</p>
+                <p className="mt-4 text-sm text-white/70">Runway finished the task but did not return a playable video URL. Try the generation again.</p>
               )}
 
               {["failed", "cancelled", "expired"].includes(job.status) && (
