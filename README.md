@@ -7,8 +7,17 @@ The full original StageFront platform is preserved on `karaoke-stage1-stable`. D
 ## Current foundation
 
 - Versioned master project schema: `lib/karaoke-v2/project-schema.ts`
-- Isolated discovery API: `GET /api/karaoke-v2`
+- Authenticated project and upload APIs under `/api/karaoke-v2`
+- Private source-audio storage with ownership policies
+- Project creation, immutable initial revision, job tracking, and asset records
+- Sign-in and `/studio` upload experience
 - Architecture audit: `docs/karaoke-v2-keep-replace-map.md`
+
+## Supabase setup
+
+1. Run `supabase/001_karaoke_v2_foundation.sql` in the Supabase SQL editor.
+2. Copy `.env.example` to `.env.local` and provide the existing project's URL and anon key.
+3. Ensure the intended StageFront users already exist in Supabase Auth.
 
 ## Local development
 
@@ -16,3 +25,5 @@ The full original StageFront platform is preserved on `karaoke-stage1-stable`. D
 npm install
 npm run dev
 ```
+
+This milestone queues a preparation job after upload. It does not yet run vocal separation, transcription, alignment, or rendering.

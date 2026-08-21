@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { KARAOKE_PROJECT_SCHEMA } from "@/lib/karaoke-v2/project-schema";
 
 export default function Home() {
@@ -11,6 +12,7 @@ export default function Home() {
         <div><dt>Project schema</dt><dd>{KARAOKE_PROJECT_SCHEMA}</dd></div>
         <div><dt>API namespace</dt><dd>/api/karaoke-v2</dd></div>
       </dl>
+      <Link className="button-link" href="/studio">Open the studio</Link>
     </main>
   );
 }

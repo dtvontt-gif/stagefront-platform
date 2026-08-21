@@ -9,3 +9,28 @@ h1 { margin: .5rem 0 0; font-size: clamp(3rem, 9vw, 6rem); line-height: .95; }
 dl { display: grid; gap: 1rem; margin-top: 3rem; }
 dl div { border: 1px solid #ffffff1f; border-radius: 1rem; padding: 1rem; }
 dd { margin: .4rem 0 0; overflow-wrap: anywhere; }
+
+.button-link, button { display: inline-flex; justify-content: center; border: 0; border-radius: 999px; padding: .85rem 1.2rem; background: #f4b400; color: #09090b; font: inherit; font-weight: 800; cursor: pointer; text-decoration: none; }
+.button-link { margin-top: 2rem; }
+button:disabled { cursor: wait; opacity: .55; }
+button.secondary { border: 1px solid #ffffff30; background: transparent; color: #fff; }
+.panel { border: 1px solid #ffffff1f; border-radius: 1.25rem; background: #0d0d10; padding: 1.25rem; }
+.form { display: grid; gap: 1rem; margin-top: 2rem; }
+.form h2 { margin: 0; }
+.form label { display: grid; gap: .45rem; font-weight: 700; }
+.form input { min-width: 0; border: 1px solid #ffffff26; border-radius: .75rem; background: #050506; padding: .85rem; color: #fff; font: inherit; }
+.form small, .muted, .studio-header p, .project p { color: #ffffff8c; }
+.error { color: #fca5a5; }
+.success { color: #86efac; }
+.studio { width: min(62rem, calc(100% - 2rem)); padding-top: 4rem; }
+.studio-header, .project { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.studio-header h1 { font-size: clamp(2.5rem, 7vw, 5rem); }
+.projects { display: grid; gap: .8rem; margin-top: 3rem; }
+.project strong { font-size: 1.1rem; }
+.project p { margin: .3rem 0 0; }
+.status { border-radius: 999px; padding: .45rem .7rem; background: #ffffff14; color: #ffffffb3; font-size: .72rem; font-weight: 800; text-transform: uppercase; }
+.status-queued { background: #f4b40022; color: #f4b400; }
+.status-running { background: #3b82f622; color: #93c5fd; }
+.status-succeeded, .status-ready { background: #22c55e22; color: #86efac; }
+.status-failed { background: #ef444422; color: #fca5a5; }
+@media (max-width: 38rem) { .studio-header, .project { align-items: flex-start; flex-direction: column; } }
