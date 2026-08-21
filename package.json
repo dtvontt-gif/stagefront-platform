@@ -1,5 +1,5 @@
 {
-  "name": "stagefront-platform",
+  "name": "stagefront-karaoke-engine-v2",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,11 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@runwayml/sdk": "^4.15.0",
     "next": "16.2.11",
     "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "stripe": "^22.5.0"
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
