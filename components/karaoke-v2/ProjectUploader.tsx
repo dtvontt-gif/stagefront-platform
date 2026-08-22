@@ -9,7 +9,11 @@ const FALLBACK_MIME: Record<string, string> = {
   mp3: "audio/mpeg", wav: "audio/wav", flac: "audio/flac", m4a: "audio/mp4", mp4: "audio/mp4",
 };
 
-export default function ProjectUploader({ email }: { email: string }) {
+export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }: {
+  email: string;
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+}) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [working, setWorking] = useState(false);
@@ -57,10 +61,7 @@ export default function ProjectUploader({ email }: { email: string }) {
       const signed = await signResponse.json();
       if (!signResponse.ok) throw new Error(signed.error || "Could not prepare upload.");
 
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      if (!url || !key) throw new Error("Supabase browser configuration is missing.");
-      const client = createClient(url, key, { auth: { persistSession: false } });
+      const client = createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false } });
       const { error: uploadError } = await client.storage
         .from(signed.bucket)
         .uploadToSignedUrl(signed.path, signed.token, file, { contentType: mimeType });

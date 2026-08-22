@@ -16,7 +16,7 @@ The full original StageFront platform is preserved on `karaoke-stage1-stable`. D
 ## Supabase setup
 
 1. Run `supabase/001_karaoke_v2_foundation.sql` in the Supabase SQL editor.
-2. Copy `.env.example` to `.env.local` and provide the existing project's URL and anon key.
+2. Copy `.env.example` to `.env.local` and provide the existing project's URL and anon key. These use the same `SUPABASE_URL` and `SUPABASE_ANON_KEY` names as Stage 1.
 3. Ensure the intended StageFront users already exist in Supabase Auth.
 
 ## Local development
