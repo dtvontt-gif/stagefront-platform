@@ -2,7 +2,15 @@ import { NextResponse } from "next/server";
 import { karaokeSession } from "@/lib/karaoke-v2/auth";
 import { KARAOKE_SOURCE_BUCKET, supabaseForUser } from "@/lib/karaoke-v2/supabase";
 
-const AUDIO_TYPES = new Set(["audio/mpeg", "audio/wav", "audio/x-wav", "audio/flac", "audio/mp4", "audio/x-m4a"]);
+const AUDIO_TYPES = new Set([
+  "audio/mpeg",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/flac",
+  "audio/mp4",
+  "audio/x-m4a",
+  "video/mp4",
+]);
 const MAX_BYTES = 250 * 1024 * 1024;
 
 export async function POST(request: Request, context: RouteContext<"/api/karaoke-v2/projects/[id]/upload-url">) {

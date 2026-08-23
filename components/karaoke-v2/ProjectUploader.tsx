@@ -8,6 +8,10 @@ type Job = { id: string; project_id: string; status: string; progress: number | 
 const FALLBACK_MIME: Record<string, string> = {
   mp3: "audio/mpeg", wav: "audio/wav", flac: "audio/flac", m4a: "audio/mp4", mp4: "audio/mp4",
 };
+const SOURCE_TYPES = new Set([
+  "audio/mpeg", "audio/wav", "audio/x-wav", "audio/flac", "audio/mp4", "audio/x-m4a", "video/mp4",
+]);
+const MAX_SOURCE_BYTES = 250 * 1024 * 1024;
 
 export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }: {
   email: string;
@@ -41,6 +45,11 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
       const form = new FormData(formElement);
       const file = form.get("audio");
       if (!(file instanceof File) || !file.size) throw new Error("Choose an audio file.");
+      const extension = file.name.split(".").pop()?.toLowerCase();
+      const mimeType = file.type || FALLBACK_MIME[extension || ""] || "";
+      if (!SOURCE_TYPES.has(mimeType) || file.size > MAX_SOURCE_BYTES) {
+        throw new Error("Choose an MP3, WAV, FLAC, M4A, or MP4 file under 250 MB.");
+      }
 
       const createResponse = await fetch("/api/karaoke-v2/projects", {
         method: "POST",
@@ -51,8 +60,6 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
       if (!createResponse.ok) throw new Error(created.error || "Could not create project.");
       const projectId = created.project.id as string;
 
-      const extension = file.name.split(".").pop()?.toLowerCase();
-      const mimeType = file.type || FALLBACK_MIME[extension || ""] || "";
       const signResponse = await fetch(`/api/karaoke-v2/projects/${projectId}/upload-url`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

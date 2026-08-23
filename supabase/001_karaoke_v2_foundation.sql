@@ -99,7 +99,7 @@ values (
   'karaoke-v2-source',
   false,
   262144000,
-  array['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/flac', 'audio/mp4', 'audio/x-m4a']
+  array['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/flac', 'audio/mp4', 'audio/x-m4a', 'video/mp4']
 )
 on conflict (id) do update set
   public = excluded.public,
