@@ -1,12 +1,22 @@
 import { NextResponse } from "next/server";
 import { isAuthorizedWorker, KARAOKE_SOURCE_BUCKET, KARAOKE_STEMS_BUCKET, supabaseService } from "@/lib/karaoke-v2/supabase";
 
+type ClaimedJob = {
+  job_id: string;
+  project_id: string;
+  owner_id: string;
+  attempts: number;
+  source_storage_key: string;
+  source_mime_type: string;
+};
+
 export async function POST(request: Request) {
   if (!isAuthorizedWorker(request)) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const client = supabaseService();
-  const { data: job, error } = await client.rpc("karaoke_v2_claim_separation_job").maybeSingle();
+  const { data, error } = await client.rpc("karaoke_v2_claim_separation_job").maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!job) return new NextResponse(null, { status: 204 });
+  if (!data) return new NextResponse(null, { status: 204 });
+  const job = data as ClaimedJob;
 
   const { data: source, error: sourceError } = await client.storage
     .from(KARAOKE_SOURCE_BUCKET)
