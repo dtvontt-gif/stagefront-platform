@@ -74,7 +74,10 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
       const client = createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false } });
       const { error: uploadError } = await client.storage
         .from(signed.bucket)
-        .uploadToSignedUrl(signed.path, signed.token, file, { contentType: storageMimeType });
+        .uploadToSignedUrl(signed.path, signed.token, file, {
+          contentType: storageMimeType,
+          cacheControl: "3600",
+        });
       if (uploadError) throw uploadError;
 
       const completeResponse = await fetch(`/api/karaoke-v2/projects/${projectId}/upload-complete`, {
