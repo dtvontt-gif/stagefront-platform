@@ -50,6 +50,9 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
       if (!SOURCE_TYPES.has(mimeType) || file.size > MAX_SOURCE_BYTES) {
         throw new Error("Choose an MP3, WAV, FLAC, M4A, or MP4 file under 250 MB.");
       }
+      // Browsers label MP4 containers as video/mp4 even when they are being
+      // ingested as an audio source. Storage already permits audio/mp4.
+      const storageMimeType = mimeType === "video/mp4" ? "audio/mp4" : mimeType;
 
       const createResponse = await fetch("/api/karaoke-v2/projects", {
         method: "POST",
@@ -71,13 +74,13 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
       const client = createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false } });
       const { error: uploadError } = await client.storage
         .from(signed.bucket)
-        .uploadToSignedUrl(signed.path, signed.token, file, { contentType: mimeType });
+        .uploadToSignedUrl(signed.path, signed.token, file, { contentType: storageMimeType });
       if (uploadError) throw uploadError;
 
       const completeResponse = await fetch(`/api/karaoke-v2/projects/${projectId}/upload-complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: signed.path, fileName: file.name, mimeType, size: file.size }),
+        body: JSON.stringify({ path: signed.path, fileName: file.name, mimeType: storageMimeType, size: file.size }),
       });
       const completed = await completeResponse.json();
       if (!completeResponse.ok) throw new Error(completed.error || "Could not finalize upload.");
