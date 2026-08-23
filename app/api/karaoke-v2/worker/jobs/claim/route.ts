@@ -38,8 +38,8 @@ export async function POST(request: Request) {
     job: { id: job.job_id, projectId: job.project_id, attempt: job.attempts },
     source: { url: source.signedUrl, mimeType: job.source_mime_type },
     outputs: {
-      instrumental: { bucket: KARAOKE_STEMS_BUCKET, path: instrumentalPath, ...instrumental.data },
-      vocals: { bucket: KARAOKE_STEMS_BUCKET, path: vocalsPath, ...vocals.data },
+      instrumental: { bucket: KARAOKE_STEMS_BUCKET, ...instrumental.data },
+      vocals: { bucket: KARAOKE_STEMS_BUCKET, ...vocals.data },
     },
   });
 }
