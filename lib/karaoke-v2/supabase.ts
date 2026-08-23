@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export const KARAOKE_SOURCE_BUCKET = "karaoke-v2-source";
+export const KARAOKE_STEMS_BUCKET = "karaoke-v2-stems";
 
 function isHttpUrl(value?: string) {
   if (!value) return false;
@@ -35,4 +36,19 @@ export function supabaseForUser(accessToken: string): SupabaseClient {
     global: { headers: { Authorization: `Bearer ${accessToken}` } },
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
+}
+
+export function supabaseService(): SupabaseClient {
+  const { url } = supabaseConfiguration();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!serviceRoleKey) throw new Error("Supabase service access is not configured.");
+  return createClient(url, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
+export function isAuthorizedWorker(request: Request) {
+  const expected = process.env.KARAOKE_WORKER_SECRET?.trim();
+  const supplied = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim();
+  return Boolean(expected && supplied && supplied === expected);
 }

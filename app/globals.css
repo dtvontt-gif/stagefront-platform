@@ -14,6 +14,7 @@ dd { margin: .4rem 0 0; overflow-wrap: anywhere; }
 .button-link { margin-top: 2rem; }
 button:disabled { cursor: wait; opacity: .55; }
 button.secondary { border: 1px solid #ffffff30; background: transparent; color: #fff; }
+button.danger { border: 1px solid #ef444466; background: transparent; color: #fca5a5; padding: .5rem .75rem; }
 .panel { border: 1px solid #ffffff1f; border-radius: 1.25rem; background: #0d0d10; padding: 1.25rem; }
 .form { display: grid; gap: 1rem; margin-top: 2rem; }
 .form h2 { margin: 0; }
@@ -33,4 +34,5 @@ button.secondary { border: 1px solid #ffffff30; background: transparent; color: 
 .status-running { background: #3b82f622; color: #93c5fd; }
 .status-succeeded, .status-ready { background: #22c55e22; color: #86efac; }
 .status-failed { background: #ef444422; color: #fca5a5; }
+.project-actions { display: flex; align-items: center; gap: .6rem; }
 @media (max-width: 38rem) { .studio-header, .project { align-items: flex-start; flex-direction: column; } }

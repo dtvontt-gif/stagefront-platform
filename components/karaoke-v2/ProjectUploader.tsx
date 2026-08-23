@@ -104,6 +104,18 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
     window.location.assign("/sign-in");
   }
 
+  async function deleteProject(project: Project) {
+    if (!window.confirm(`Delete “${project.title}”?`)) return;
+    setError("");
+    const response = await fetch(`/api/karaoke-v2/projects/${project.id}`, { method: "DELETE" });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) setError(result.error || "Could not delete the project.");
+    else {
+      setNotice("Incomplete project deleted.");
+      await load();
+    }
+  }
+
   return (
     <>
       <header className="studio-header"><div><p className="eyebrow">StageFront</p><h1>Karaoke v2</h1><p>{email}</p></div><button className="secondary" onClick={signOut}>Sign out</button></header>
@@ -119,7 +131,9 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
       </form>
       <section className="projects"><h2>Your projects</h2>{projects.length === 0 ? <p className="muted">No projects yet.</p> : projects.map((project) => {
         const job = jobs.find((item) => item.project_id === project.id);
-        return <article className="panel project" key={project.id}><div><strong>{project.title}</strong><p>{project.artist || "Unknown artist"}</p></div><span className={`status status-${job?.status || project.status}`}>{(job?.status || project.status).replaceAll("_", " ")}</span></article>;
+        const status = job?.status || project.status;
+        const canDelete = ["pending_upload", "failed", "draft", "uploading"].includes(status);
+        return <article className="panel project" key={project.id}><div><strong>{project.title}</strong><p>{project.artist || "Unknown artist"}</p></div><div className="project-actions"><span className={`status status-${status}`}>{status.replaceAll("_", " ")}</span>{canDelete && <button className="danger" type="button" onClick={() => void deleteProject(project)}>Delete</button>}</div></article>;
       })}</section>
     </>
   );
