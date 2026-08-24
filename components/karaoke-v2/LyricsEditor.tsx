@@ -21,30 +21,50 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
   const [revision, setRevision] = useState(0);
   const [offsetMs, setOffsetMs] = useState(0);
   const [audioUrl, setAudioUrl] = useState("");
+  const [audioLoading, setAudioLoading] = useState(false);
   const [currentMs, setCurrentMs] = useState(0);
   const [working, setWorking] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  async function loadAudio() {
+    setAudioLoading(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/karaoke-v2/projects/${projectId}/assets/vocals/url`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ download: false }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not load vocals.");
+      const audioResponse = await fetch(data.url);
+      if (!audioResponse.ok) throw new Error(`Audio storage returned ${audioResponse.status}.`);
+      const blob = await audioResponse.blob();
+      if (!blob.size) throw new Error("The vocal audio file is empty.");
+      setAudioUrl((current) => {
+        if (current.startsWith("blob:")) URL.revokeObjectURL(current);
+        return URL.createObjectURL(blob);
+      });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not load vocals.");
+    } finally {
+      setAudioLoading(false);
+    }
+  }
+
   useEffect(() => {
-    void Promise.all([
-      fetch(`/api/karaoke-v2/projects/${projectId}/lyrics`, { cache: "no-store" }).then(async (response) => {
+    void fetch(`/api/karaoke-v2/projects/${projectId}/lyrics`, { cache: "no-store" }).then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Could not load lyrics.");
         setRevision(data.revision);
         setLines(data.project?.lyrics?.lines || []);
         setOffsetMs(data.project?.lyrics?.offsetMs || 0);
-      }),
-      fetch(`/api/karaoke-v2/projects/${projectId}/assets/vocals/url`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ download: false }),
-      }).then(async (response) => {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Could not load vocals.");
-        setAudioUrl(data.url);
-      }),
-    ]).catch((cause) => setError(cause instanceof Error ? cause.message : "Could not open editor."))
+      }).then(() => loadAudio())
+      .catch((cause) => setError(cause instanceof Error ? cause.message : "Could not open editor."))
       .finally(() => setWorking(false));
+    return () => { if (audioUrl.startsWith("blob:")) URL.revokeObjectURL(audioUrl); };
+    // The audio object URL is replaced and revoked by loadAudio.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   function updateLine(index: number, changes: Partial<Pick<Line, "text" | "startMs" | "endMs">>) {
@@ -79,7 +99,7 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
 
   return <section className="lyrics-editor panel">
     <header className="editor-header"><div><p className="eyebrow">Lyrics & timing</p><h2>{title}</h2><p className="muted">Revision {revision || "…"} · {lines.length} lines</p></div><button className="secondary compact" onClick={onClose}>Close</button></header>
-    {audioUrl && <audio ref={audioRef} controls src={audioUrl} onTimeUpdate={(event) => setCurrentMs(Math.round(event.currentTarget.currentTime * 1000))} />}
+    <div className="editor-audio"><button className="secondary compact" type="button" disabled={audioLoading} onClick={() => void loadAudio()}>{audioLoading ? "Loading vocals…" : audioUrl ? "Refresh audio" : "Load vocals"}</button>{audioUrl && <audio ref={audioRef} controls preload="metadata" playsInline src={audioUrl} onError={() => setError("The browser could not decode the vocal audio. Try Refresh audio.")} onTimeUpdate={(event) => setCurrentMs(Math.round(event.currentTarget.currentTime * 1000))} />}</div>
     <label className="offset-field">Global offset (milliseconds)<input type="number" value={offsetMs} onChange={(event) => setOffsetMs(Number(event.target.value))} /></label>
     {error && <p className="error">{error}</p>}{message && <p className="success">{message}</p>}
     <div className="lyric-lines">{lines.map((line, index) => {
