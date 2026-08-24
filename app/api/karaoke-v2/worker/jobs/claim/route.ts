@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     .update({ status: "queued", progress: null, error: null, lease_expires_at: null })
     .eq("kind", "prepare")
     .eq("status", "failed")
-    .lt("attempts", 5);
+    .lt("attempts", 7);
   if (retryError) return NextResponse.json({ error: retryError.message }, { status: 500 });
   const { data, error } = await client.rpc("karaoke_v2_claim_separation_job").maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
