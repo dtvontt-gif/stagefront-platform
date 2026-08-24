@@ -5,6 +5,8 @@ import { createClient } from "@supabase/supabase-js";
 
 type Project = { id: string; title: string; artist: string | null; status: string; created_at: string };
 type Job = { id: string; project_id: string; status: string; progress: number | null; error: string | null };
+type Asset = { id: string; project_id: string; kind: "vocals" | "instrumental"; mime_type: string; size_bytes: number };
+type ActiveAudio = { projectId: string; kind: Asset["kind"]; url: string };
 const FALLBACK_MIME: Record<string, string> = {
   mp3: "audio/mpeg", wav: "audio/wav", flac: "audio/flac", m4a: "audio/mp4", mp4: "audio/mp4",
 };
@@ -20,6 +22,9 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
 }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
+  const [trackWorking, setTrackWorking] = useState("");
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -30,6 +35,7 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
       const data = await response.json();
       setProjects(data.projects || []);
       setJobs(data.jobs || []);
+      setAssets(data.assets || []);
     }
   }, []);
 
@@ -116,6 +122,35 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
     }
   }
 
+  async function trackUrl(projectId: string, kind: Asset["kind"], download: boolean) {
+    const key = `${projectId}-${kind}-${download ? "download" : "play"}`;
+    setTrackWorking(key);
+    setError("");
+    try {
+      const response = await fetch(`/api/karaoke-v2/projects/${projectId}/assets/${kind}/url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ download }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not open the audio track.");
+      if (download) {
+        const link = document.createElement("a");
+        link.href = result.url;
+        link.download = `${kind}.mp3`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } else {
+        setActiveAudio({ projectId, kind, url: result.url });
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not open the audio track.");
+    } finally {
+      setTrackWorking("");
+    }
+  }
+
   return (
     <>
       <header className="studio-header"><div><p className="eyebrow">StageFront</p><h1>Karaoke v2</h1><p>{email}</p></div><button className="secondary" onClick={signOut}>Sign out</button></header>
@@ -133,7 +168,12 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
         const job = jobs.find((item) => item.project_id === project.id);
         const status = job?.status || project.status;
         const canDelete = ["pending_upload", "failed", "draft", "uploading"].includes(status);
-        return <article className="panel project" key={project.id}><div><strong>{project.title}</strong><p>{project.artist || "Unknown artist"}</p></div><div className="project-actions"><span className={`status status-${status}`}>{status.replaceAll("_", " ")}</span>{canDelete && <button className="danger" type="button" onClick={() => void deleteProject(project)}>Delete</button>}</div></article>;
+        const stems = assets.filter((asset) => asset.project_id === project.id);
+        return <article className="panel project-card" key={project.id}>
+          <div className="project"><div><strong>{project.title}</strong><p>{project.artist || "Unknown artist"}</p></div><div className="project-actions"><span className={`status status-${status}`}>{status.replaceAll("_", " ")}</span>{canDelete && <button className="danger" type="button" onClick={() => void deleteProject(project)}>Delete</button>}</div></div>
+          {stems.length > 0 && <div className="stem-controls">{(["instrumental", "vocals"] as const).map((kind) => stems.some((asset) => asset.kind === kind) && <div className="stem" key={kind}><span>{kind}</span><button className="secondary compact" disabled={Boolean(trackWorking)} type="button" onClick={() => void trackUrl(project.id, kind, false)}>{trackWorking === `${project.id}-${kind}-play` ? "Opening…" : "Play"}</button><button className="secondary compact" disabled={Boolean(trackWorking)} type="button" onClick={() => void trackUrl(project.id, kind, true)}>{trackWorking === `${project.id}-${kind}-download` ? "Preparing…" : "Download"}</button></div>)}</div>}
+          {activeAudio?.projectId === project.id && <div className="audio-player"><span>Playing {activeAudio.kind}</span><audio key={activeAudio.url} controls autoPlay src={activeAudio.url} /></div>}
+        </article>;
       })}</section>
     </>
   );

@@ -6,12 +6,13 @@ export async function GET() {
   const session = await karaokeSession();
   if (!session) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const client = supabaseForUser(session.accessToken);
-  const [{ data: projects, error }, { data: jobs, error: jobsError }] = await Promise.all([
+  const [{ data: projects, error }, { data: jobs, error: jobsError }, { data: assets, error: assetsError }] = await Promise.all([
     client.from("karaoke_v2_projects").select("id,title,artist,status,created_at,updated_at").order("created_at", { ascending: false }),
     client.from("karaoke_v2_jobs").select("id,project_id,kind,status,progress,error,created_at,updated_at").order("created_at", { ascending: false }),
+    client.from("karaoke_v2_assets").select("id,project_id,kind,mime_type,size_bytes").in("kind", ["vocals", "instrumental"]),
   ]);
-  if (error || jobsError) return NextResponse.json({ error: error?.message || jobsError?.message }, { status: 500 });
-  return NextResponse.json({ projects, jobs });
+  if (error || jobsError || assetsError) return NextResponse.json({ error: error?.message || jobsError?.message || assetsError?.message }, { status: 500 });
+  return NextResponse.json({ projects, jobs, assets });
 }
 
 export async function POST(request: Request) {
