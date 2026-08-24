@@ -13,6 +13,13 @@ type ClaimedJob = {
 export async function POST(request: Request) {
   if (!isAuthorizedWorker(request)) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const client = supabaseService();
+  const { error: retryError } = await client
+    .from("karaoke_v2_jobs")
+    .update({ status: "queued", progress: null, error: null, lease_expires_at: null })
+    .eq("kind", "prepare")
+    .eq("status", "failed")
+    .lt("attempts", 3);
+  if (retryError) return NextResponse.json({ error: retryError.message }, { status: 500 });
   const { data, error } = await client.rpc("karaoke_v2_claim_separation_job").maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data) return new NextResponse(null, { status: 204 });
