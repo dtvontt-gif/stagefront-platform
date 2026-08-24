@@ -42,4 +42,17 @@ button.compact { padding: .5rem .75rem; }
 .stem > span, .audio-player > span { font-weight: 700; text-transform: capitalize; }
 .audio-player { display: grid; gap: .55rem; border-top: 1px solid #ffffff16; padding-top: 1rem; }
 .audio-player audio { width: 100%; }
+.lyrics-editor { display: grid; gap: 1rem; margin-top: 2rem; }
+.editor-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.editor-header h2 { margin: .2rem 0; }
+.lyrics-editor audio { width: 100%; }
+.offset-field { display: grid; gap: .4rem; max-width: 18rem; font-weight: 700; }
+.offset-field input, .lyric-line input, .lyric-line textarea { border: 1px solid #ffffff26; border-radius: .65rem; background: #050506; padding: .65rem; color: #fff; font: inherit; }
+.lyric-lines { display: grid; gap: .7rem; max-height: 38rem; overflow: auto; padding-right: .25rem; }
+.lyric-line { display: grid; grid-template-columns: auto minmax(12rem, 1fr) 7rem 7rem auto; align-items: end; gap: .55rem; border: 1px solid #ffffff16; border-radius: .85rem; padding: .7rem; }
+.lyric-line.active { border-color: #f4b400; background: #f4b40012; }
+.lyric-line label { display: grid; gap: .3rem; color: #ffffff8c; font-size: .75rem; font-weight: 700; }
+.line-number { min-width: 2.4rem; padding: .6rem; }
+.editor-actions { display: flex; justify-content: flex-end; gap: .7rem; }
 @media (max-width: 38rem) { .studio-header, .project { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 48rem) { .lyric-line { grid-template-columns: auto 1fr 1fr; } .lyric-line textarea { grid-column: 2 / -1; } }

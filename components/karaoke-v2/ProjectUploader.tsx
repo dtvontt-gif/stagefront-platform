@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import LyricsEditor from "@/components/karaoke-v2/LyricsEditor";
 
 type Project = { id: string; title: string; artist: string | null; status: string; created_at: string };
 type Job = { id: string; project_id: string; status: string; progress: number | null; error: string | null };
@@ -25,6 +26,7 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
   const [assets, setAssets] = useState<Asset[]>([]);
   const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
   const [trackWorking, setTrackWorking] = useState("");
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -164,6 +166,7 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
         {error && <p className="error">{error}</p>}
         {notice && <p className="success">{notice}</p>}
       </form>
+      {editingProject && <LyricsEditor projectId={editingProject.id} title={editingProject.title} onClose={() => setEditingProject(null)} />}
       <section className="projects"><h2>Your projects</h2>{projects.length === 0 ? <p className="muted">No projects yet.</p> : projects.map((project) => {
         const job = jobs.find((item) => item.project_id === project.id);
         const status = job?.status || project.status;
@@ -171,7 +174,7 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
         const stems = assets.filter((asset) => asset.project_id === project.id);
         return <article className="panel project-card" key={project.id}>
           <div className="project"><div><strong>{project.title}</strong><p>{project.artist || "Unknown artist"}</p></div><div className="project-actions"><span className={`status status-${status}`}>{status.replaceAll("_", " ")}</span>{canDelete && <button className="danger" type="button" onClick={() => void deleteProject(project)}>Delete</button>}</div></div>
-          {stems.length > 0 && <div className="stem-controls">{(["instrumental", "vocals"] as const).map((kind) => stems.some((asset) => asset.kind === kind) && <div className="stem" key={kind}><span>{kind}</span><button className="secondary compact" disabled={Boolean(trackWorking)} type="button" onClick={() => void trackUrl(project.id, kind, false)}>{trackWorking === `${project.id}-${kind}-play` ? "Opening…" : "Play"}</button><button className="secondary compact" disabled={Boolean(trackWorking)} type="button" onClick={() => void trackUrl(project.id, kind, true)}>{trackWorking === `${project.id}-${kind}-download` ? "Preparing…" : "Download"}</button></div>)}</div>}
+          {stems.length > 0 && <div className="stem-controls">{(["instrumental", "vocals"] as const).map((kind) => stems.some((asset) => asset.kind === kind) && <div className="stem" key={kind}><span>{kind}</span><button className="secondary compact" disabled={Boolean(trackWorking)} type="button" onClick={() => void trackUrl(project.id, kind, false)}>{trackWorking === `${project.id}-${kind}-play` ? "Opening…" : "Play"}</button><button className="secondary compact" disabled={Boolean(trackWorking)} type="button" onClick={() => void trackUrl(project.id, kind, true)}>{trackWorking === `${project.id}-${kind}-download` ? "Preparing…" : "Download"}</button></div>)}{status === "succeeded" && <button type="button" onClick={() => { setEditingProject(project); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit lyrics & timing</button>}</div>}
           {activeAudio?.projectId === project.id && <div className="audio-player"><span>Playing {activeAudio.kind}</span><audio key={activeAudio.url} controls autoPlay src={activeAudio.url} /></div>}
         </article>;
       })}</section>
