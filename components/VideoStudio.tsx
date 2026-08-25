@@ -245,13 +245,14 @@ export default function VideoStudioPage() {
             <span className="text-sm font-black uppercase tracking-wide">Your idea</span>
             <textarea
               required
-              maxLength={800}
+              maxLength={1000}
               value={idea}
               onChange={(e) => setIdea(e.target.value)}
               rows={6}
               placeholder="Example: Zoo Crew reveal. I stand in a rain-soaked rainforest as a beautiful anaconda approaches and chooses me. Cinematic, powerful, realistic."
               className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none focus:border-[#f4b400]/70"
             />
+            <span className="text-right text-xs text-white/40">{idea.length}/1,000 characters</span>
           </label>
 
           <div className="grid gap-5 sm:grid-cols-2">

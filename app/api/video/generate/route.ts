@@ -8,9 +8,7 @@ const RATIO = "720:1280" as const;
 const MAX_DATA_URI_LENGTH = 3_400_000;
 
 function buildPrompt(idea: string) {
-  const direction =
-    "Create a polished cinematic vertical social video. Keep the subject visually consistent, use natural motion, cinematic lighting, realistic physics, a strong opening frame, and a clean hero ending. Do not add captions, logos, watermarks, or on-screen text unless explicitly requested.\n\nIdea: ";
-  return `${direction}${idea}`.slice(0, 1000);
+  return idea.slice(0, 1000);
 }
 
 function providerError(error: unknown) {
@@ -50,8 +48,8 @@ export async function POST(request: NextRequest) {
     const referenceUrl = String(body.referenceUrl || "").trim();
 
     if (!idea) return NextResponse.json({ error: "Describe your video idea first." }, { status: 400 });
-    if (idea.length > 800) {
-      return NextResponse.json({ error: "Keep the video idea under 800 characters." }, { status: 400 });
+    if (idea.length > 1000) {
+      return NextResponse.json({ error: "Keep the video idea under 1,000 characters." }, { status: 400 });
     }
     if (!Number.isInteger(duration) || duration < 2 || duration > 10) {
       return NextResponse.json({ error: "Duration must be between 2 and 10 seconds." }, { status: 400 });
