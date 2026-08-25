@@ -48,8 +48,24 @@ export default function VideoStudioPage() {
     void loadAccess();
     const checkout = new URLSearchParams(window.location.search).get("checkout");
     if (checkout === "success") {
-      setNotice("Payment received. Your credits will appear in a moment.");
-      const timers = [1500, 3500, 7000].map((delay) => window.setTimeout(() => void loadAccess(), delay));
+      const sessionId = new URLSearchParams(window.location.search).get("session_id");
+      setNotice("Payment received. Confirming your credits…");
+      if (sessionId) {
+        void fetch("/api/video/reconcile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId }),
+        }).then(async (response) => {
+          const data = await response.json();
+          if (!response.ok && response.status !== 202) throw new Error(data.error || "Could not confirm credits.");
+          await loadAccess();
+          setNotice(response.status === 202 ? "Payment is still processing. Your credits will appear automatically." : "Payment confirmed. Your credits are ready.");
+          window.history.replaceState({}, "", "/create/video");
+        }).catch((err) => {
+          setNotice(err instanceof Error ? err.message : "Payment was received, but credits could not be confirmed yet.");
+        });
+      }
+      const timers = [2000, 5000, 10000].map((delay) => window.setTimeout(() => void loadAccess(), delay));
       return () => timers.forEach(window.clearTimeout);
     }
     if (checkout === "cancelled") setNotice("Checkout was cancelled. You were not charged.");

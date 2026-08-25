@@ -70,6 +70,23 @@ export async function grantVideoCredits(
   );
 }
 
+export async function videoCreditPurchaseReferences(references: string[]) {
+  if (references.length === 0) return new Set<string>();
+  const config = serviceConfiguration();
+  if (!config) throw new Error("Video credit storage is not configured.");
+  const query = new URLSearchParams({
+    select: "reference",
+    reference: `in.(${references.map((value) => `\"${value.replaceAll('"', '')}\"`).join(",")})`,
+  });
+  const response = await fetch(`${config.url}/rest/v1/video_credit_events?${query}`, {
+    headers: serviceHeaders(config.serviceKey),
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("Could not audit video credit purchases.");
+  const records = (await response.json()) as { reference: string }[];
+  return new Set(records.map((record) => record.reference));
+}
+
 export function ownerHasFreeVideoAccess(email?: string) {
   return isAdministrator(email);
 }

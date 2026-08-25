@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     mode: "payment",
     customer_email: user.email,
     client_reference_id: user.id,
-    success_url: `${origin}/create/video?checkout=success`,
+    success_url: `${origin}/create/video?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/create/video?checkout=cancelled`,
     line_items: [{
       quantity: 1,
