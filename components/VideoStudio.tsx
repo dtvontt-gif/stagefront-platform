@@ -25,6 +25,7 @@ type Access = {
 const TERMINAL = new Set(["succeeded", "failed", "cancelled", "expired"]);
 const MAX_IMAGE_BYTES = 2_500_000;
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const SAVED_JOB_KEY = "stagefront:last-video-job";
 
 export default function VideoStudioPage() {
   const [idea, setIdea] = useState("");
@@ -45,6 +46,18 @@ export default function VideoStudioPage() {
   }
 
   useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(SAVED_JOB_KEY);
+      if (saved) {
+        const restored = JSON.parse(saved) as Job;
+        if (restored?.id && restored?.status) {
+          setJob(restored.status === "succeeded" ? { ...restored, status: "pending" } : restored);
+          setNotice(restored.status === "succeeded" ? "Your last finished video was restored." : "Your last video generation was restored.");
+        }
+      }
+    } catch {
+      window.localStorage.removeItem(SAVED_JOB_KEY);
+    }
     void loadAccess();
     const checkout = new URLSearchParams(window.location.search).get("checkout");
     if (checkout === "success") {
@@ -70,6 +83,10 @@ export default function VideoStudioPage() {
     }
     if (checkout === "cancelled") setNotice("Checkout was cancelled. You were not charged.");
   }, []);
+
+  useEffect(() => {
+    if (job?.id) window.localStorage.setItem(SAVED_JOB_KEY, JSON.stringify(job));
+  }, [job]);
 
   useEffect(() => {
     if (!job?.id || TERMINAL.has(job.status)) return;
@@ -141,6 +158,7 @@ export default function VideoStudioPage() {
     setLoading(true);
     setError("");
     setJob(null);
+    window.localStorage.removeItem(SAVED_JOB_KEY);
 
     try {
       const response = await fetch("/api/video/generate", {
@@ -315,9 +333,15 @@ export default function VideoStudioPage() {
                     {job.ratio && <span>{job.ratio}</span>}
                     {job.duration && <span>{job.duration}s</span>}
                   </div>
-                  <a href={job.videoUrl} target="_blank" rel="noreferrer" className="inline-flex w-fit rounded-full border border-[#f4b400]/50 px-5 py-3 text-sm font-black uppercase text-[#f4b400]">
-                    Open finished MP4
-                  </a>
+                  <div className="grid gap-3 sm:flex sm:flex-wrap">
+                    <a href={`/api/video/download/${encodeURIComponent(job.id)}`} download className="inline-flex justify-center rounded-full bg-[#f4b400] px-6 py-4 text-sm font-black uppercase text-black">
+                      Download video
+                    </a>
+                    <a href={job.videoUrl} target="_blank" rel="noreferrer" className="inline-flex justify-center rounded-full border border-[#f4b400]/50 px-5 py-4 text-sm font-black uppercase text-[#f4b400]">
+                      Open full screen
+                    </a>
+                  </div>
+                  <p className="text-xs leading-5 text-white/45">Download it to your phone before leaving. Your latest video will also return here if you accidentally refresh this page.</p>
                 </div>
               )}
 

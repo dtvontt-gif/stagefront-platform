@@ -1,5 +1,6 @@
 import RunwayML, { APIError } from "@runwayml/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { authenticatedUser } from "@/lib/stagefront-auth";
 
 const STATUS = {
   PENDING: "pending",
@@ -14,6 +15,9 @@ export async function GET(
   _request: NextRequest,
   context: RouteContext<"/api/video/status/[id]">,
 ) {
+  if (!await authenticatedUser()) {
+    return NextResponse.json({ error: "Sign in to check this video." }, { status: 401 });
+  }
   const apiKey = process.env.RUNWAYML_API_SECRET?.trim();
   if (!apiKey) {
     return NextResponse.json({ error: "RUNWAYML_API_SECRET is missing." }, { status: 503 });
