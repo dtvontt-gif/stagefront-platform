@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type Token = { id: string; text: string; startMs: number; endMs: number; confidence?: number };
 type Line = { id: string; text: string; startMs: number; endMs: number; tokens: Token[] };
+type DragMode = "move" | "start" | "end";
+type DragState = { lineIndex: number; tokenIndex: number; mode: DragMode; originX: number; original: Token };
+
+const MIN_WORD_MS = 60;
 
 function retimeTokens(line: Line, text: string, startMs: number, endMs: number): Token[] {
   const words = text.trim().split(/\s+/).filter(Boolean);
@@ -16,17 +20,42 @@ function retimeTokens(line: Line, text: string, startMs: number, endMs: number):
   });
 }
 
+function formatTime(milliseconds: number) {
+  const totalSeconds = Math.max(0, milliseconds) / 1000;
+  const minutes = Math.floor(totalSeconds / 60);
+  return `${minutes}:${(totalSeconds % 60).toFixed(2).padStart(5, "0")}`;
+}
+
+function recalculateLine(line: Line, tokens: Token[]): Line {
+  if (!tokens.length) return { ...line, tokens };
+  return { ...line, tokens, startMs: Math.min(...tokens.map((token) => token.startMs)), endMs: Math.max(...tokens.map((token) => token.endMs)) };
+}
+
 export default function LyricsEditor({ projectId, title, onClose }: { projectId: string; title: string; onClose: () => void }) {
   const [lines, setLines] = useState<Line[]>([]);
   const [revision, setRevision] = useState(0);
   const [offsetMs, setOffsetMs] = useState(0);
   const [audioUrl, setAudioUrl] = useState("");
   const [audioLoading, setAudioLoading] = useState(false);
+  const [audioDurationMs, setAudioDurationMs] = useState(0);
+  const [waveform, setWaveform] = useState<number[]>([]);
   const [currentMs, setCurrentMs] = useState(0);
+  const [zoom, setZoom] = useState(80);
+  const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
+  const [autoFollow, setAutoFollow] = useState(true);
   const [working, setWorking] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const audioRef = useRef<HTMLAudioElement>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<DragState | null>(null);
+
+  const lastLyricMs = useMemo(() => Math.max(0, ...lines.flatMap((line) => [line.endMs, ...line.tokens.map((token) => token.endMs)])), [lines]);
+  const durationMs = Math.max(audioDurationMs, lastLyricMs + 2000, 10000);
+  const timelineWidth = Math.max(900, (durationMs / 1000) * zoom);
+  const pixelsPerMs = zoom / 1000;
+  const tickSeconds = zoom >= 120 ? 1 : zoom >= 60 ? 2 : 5;
+  const ticks = useMemo(() => Array.from({ length: Math.ceil(durationMs / (tickSeconds * 1000)) + 1 }, (_, index) => index * tickSeconds), [durationMs, tickSeconds]);
 
   async function loadAudio() {
     setAudioLoading(true);
@@ -41,6 +70,26 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
       if (!audioResponse.ok) throw new Error(`Audio storage returned ${audioResponse.status}.`);
       const blob = await audioResponse.blob();
       if (!blob.size) throw new Error("The vocal audio file is empty.");
+      const arrayBuffer = await blob.arrayBuffer();
+      try {
+        const context = new AudioContext();
+        const decoded = await context.decodeAudioData(arrayBuffer.slice(0));
+        const samples = decoded.getChannelData(0);
+        const bars = 1200;
+        const step = Math.max(1, Math.floor(samples.length / bars));
+        const peaks = Array.from({ length: Math.ceil(samples.length / step) }, (_, index) => {
+          let peak = 0;
+          const end = Math.min(samples.length, (index + 1) * step);
+          for (let sampleIndex = index * step; sampleIndex < end; sampleIndex += Math.max(1, Math.floor(step / 40))) peak = Math.max(peak, Math.abs(samples[sampleIndex]));
+          return peak;
+        });
+        const loudest = Math.max(...peaks, 0.01);
+        setWaveform(peaks.map((peak) => peak / loudest));
+        setAudioDurationMs(Math.round(decoded.duration * 1000));
+        await context.close();
+      } catch {
+        setWaveform([]);
+      }
       setAudioUrl((current) => {
         if (current.startsWith("blob:")) URL.revokeObjectURL(current);
         return URL.createObjectURL(blob);
@@ -54,18 +103,34 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
 
   useEffect(() => {
     void fetch(`/api/karaoke-v2/projects/${projectId}/lyrics`, { cache: "no-store" }).then(async (response) => {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Could not load lyrics.");
-        setRevision(data.revision);
-        setLines(data.project?.lyrics?.lines || []);
-        setOffsetMs(data.project?.lyrics?.offsetMs || 0);
-      }).then(() => loadAudio())
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not load lyrics.");
+      setRevision(data.revision);
+      setLines(data.project?.lyrics?.lines || []);
+      setOffsetMs(data.project?.lyrics?.offsetMs || 0);
+    }).then(() => loadAudio())
       .catch((cause) => setError(cause instanceof Error ? cause.message : "Could not open editor."))
       .finally(() => setWorking(false));
-    return () => { if (audioUrl.startsWith("blob:")) URL.revokeObjectURL(audioUrl); };
-    // The audio object URL is replaced and revoked by loadAudio.
+    return () => { setAudioUrl((current) => { if (current.startsWith("blob:")) URL.revokeObjectURL(current); return ""; }); };
+    // loadAudio is intentionally scoped to this project load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
+
+  useEffect(() => {
+    if (!autoFollow || !timelineRef.current || audioRef.current?.paused) return;
+    const viewport = timelineRef.current;
+    const playheadX = (currentMs - offsetMs) * pixelsPerMs;
+    if (playheadX < viewport.scrollLeft + viewport.clientWidth * .15 || playheadX > viewport.scrollLeft + viewport.clientWidth * .8) {
+      viewport.scrollTo({ left: Math.max(0, playheadX - viewport.clientWidth * .35), behavior: "smooth" });
+    }
+  }, [autoFollow, currentMs, offsetMs, pixelsPerMs]);
+
+  function seek(milliseconds: number) {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.currentTime = Math.max(0, Math.min(audio.duration || Infinity, (milliseconds + offsetMs) / 1000));
+    setCurrentMs(Math.round(audio.currentTime * 1000));
+  }
 
   function updateLine(index: number, changes: Partial<Pick<Line, "text" | "startMs" | "endMs">>) {
     setLines((current) => current.map((line, itemIndex) => {
@@ -74,6 +139,33 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
       const startMs = Math.max(0, changes.startMs ?? line.startMs);
       const endMs = Math.max(startMs + 1, changes.endMs ?? line.endMs);
       return { ...line, text, startMs, endMs, tokens: retimeTokens(line, text, startMs, endMs) };
+    }));
+  }
+
+  function startDrag(event: ReactPointerEvent, lineIndex: number, tokenIndex: number, mode: DragMode) {
+    event.preventDefault();
+    event.stopPropagation();
+    const token = lines[lineIndex].tokens[tokenIndex];
+    dragRef.current = { lineIndex, tokenIndex, mode, originX: event.clientX, original: { ...token } };
+    setSelectedWordId(token.id);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function moveDrag(event: ReactPointerEvent) {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const deltaMs = Math.round((event.clientX - drag.originX) / pixelsPerMs);
+    setLines((current) => current.map((line, lineIndex) => {
+      if (lineIndex !== drag.lineIndex) return line;
+      const tokens = line.tokens.map((token, tokenIndex) => {
+        if (tokenIndex !== drag.tokenIndex) return token;
+        if (drag.mode === "start") return { ...token, startMs: Math.max(0, Math.min(drag.original.endMs - MIN_WORD_MS, drag.original.startMs + deltaMs)) };
+        if (drag.mode === "end") return { ...token, endMs: Math.max(drag.original.startMs + MIN_WORD_MS, drag.original.endMs + deltaMs) };
+        const duration = drag.original.endMs - drag.original.startMs;
+        const startMs = Math.max(0, drag.original.startMs + deltaMs);
+        return { ...token, startMs, endMs: startMs + duration };
+      });
+      return recalculateLine(line, tokens);
     }));
   }
 
@@ -98,20 +190,46 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
   }
 
   return <section className="lyrics-editor panel">
-    <header className="editor-header"><div><p className="eyebrow">Lyrics & timing</p><h2>{title}</h2><p className="muted">Revision {revision || "…"} · {lines.length} lines</p></div><button className="secondary compact" onClick={onClose}>Close</button></header>
-    <div className="editor-audio"><button className="secondary compact" type="button" disabled={audioLoading} onClick={() => void loadAudio()}>{audioLoading ? "Loading vocals…" : audioUrl ? "Refresh audio" : "Load vocals"}</button>{audioUrl && <audio ref={audioRef} controls preload="metadata" playsInline src={audioUrl} onError={() => setError("The browser could not decode the vocal audio. Try Refresh audio.")} onTimeUpdate={(event) => setCurrentMs(Math.round(event.currentTarget.currentTime * 1000))} />}</div>
+    <header className="editor-header"><div><p className="eyebrow">Lyrics & timing</p><h2>{title}</h2><p className="muted">Revision {revision || "…"} · {lines.length} lines · Drag words to match the voice</p></div><button className="secondary compact" onClick={onClose}>Close</button></header>
+    <div className="editor-audio"><button className="secondary compact" type="button" disabled={audioLoading} onClick={() => void loadAudio()}>{audioLoading ? "Loading vocals…" : audioUrl ? "Refresh audio" : "Load vocals"}</button>{audioUrl && <audio ref={audioRef} controls preload="metadata" playsInline src={audioUrl} onLoadedMetadata={(event) => setAudioDurationMs(Math.round(event.currentTarget.duration * 1000))} onError={() => setError("The browser could not decode the vocal audio. Try Refresh audio.")} onTimeUpdate={(event) => setCurrentMs(Math.round(event.currentTarget.currentTime * 1000))} />}</div>
+    <div className="timeline-toolbar">
+      <span className="time-readout">{formatTime(currentMs)} / {formatTime(durationMs)}</span>
+      <label>Zoom<input type="range" min="30" max="240" step="10" value={zoom} onChange={(event) => setZoom(Number(event.target.value))} /></label>
+      <label className="check-field"><input type="checkbox" checked={autoFollow} onChange={(event) => setAutoFollow(event.target.checked)} /> Follow playback</label>
+      <span className="muted">Drag a word · drag its edges to resize</span>
+    </div>
+    <div className="timeline-viewport" ref={timelineRef} onWheel={() => setAutoFollow(false)}>
+      <div className="timeline" style={{ width: timelineWidth }} onPointerMove={moveDrag} onPointerUp={() => { dragRef.current = null; }} onPointerCancel={() => { dragRef.current = null; }} onDoubleClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); seek((event.clientX - bounds.left) / pixelsPerMs); }}>
+        <div className="time-ruler">{ticks.map((second) => <span key={second} style={{ left: second * zoom }}>{formatTime(second * 1000)}</span>)}</div>
+        <div className="waveform" aria-label="Vocal audio waveform" onClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); seek((event.clientX - bounds.left) / pixelsPerMs); }}>
+          {waveform.length ? waveform.map((peak, index) => <i key={index} style={{ left: `${(index / waveform.length) * 100}%`, height: `${Math.max(4, peak * 92)}%` }} />) : <span>{audioLoading ? "Building waveform…" : "Waveform unavailable — timeline editing still works"}</span>}
+        </div>
+        <div className="word-tracks">{lines.map((line, lineIndex) => <div className="word-track" key={line.id}>
+          <button className="track-label" type="button" onClick={() => seek(line.startMs)}>Line {lineIndex + 1}</button>
+          {line.tokens.map((token, tokenIndex) => {
+            const active = currentMs >= token.startMs + offsetMs && currentMs <= token.endMs + offsetMs;
+            return <div key={token.id} className={`word-clip${active ? " playing" : ""}${selectedWordId === token.id ? " selected" : ""}`} style={{ left: token.startMs * pixelsPerMs, width: Math.max(12, (token.endMs - token.startMs) * pixelsPerMs) }} onPointerDown={(event) => startDrag(event, lineIndex, tokenIndex, "move")} onDoubleClick={(event) => { event.stopPropagation(); seek(token.startMs); }} title={`${token.text} · ${formatTime(token.startMs)}–${formatTime(token.endMs)}`}>
+              <span className="clip-handle start" onPointerDown={(event) => startDrag(event, lineIndex, tokenIndex, "start")} />
+              <b>{token.text}</b>
+              <span className="clip-handle end" onPointerDown={(event) => startDrag(event, lineIndex, tokenIndex, "end")} />
+            </div>;
+          })}
+        </div>)}</div>
+        <div className="playhead" style={{ left: Math.max(0, (currentMs - offsetMs) * pixelsPerMs) }}><span /></div>
+      </div>
+    </div>
     <label className="offset-field">Global offset (milliseconds)<input type="number" value={offsetMs} onChange={(event) => setOffsetMs(Number(event.target.value))} /></label>
     {error && <p className="error">{error}</p>}{message && <p className="success">{message}</p>}
-    <div className="lyric-lines">{lines.map((line, index) => {
+    <details className="line-details"><summary>Open lyric text and exact timing</summary><div className="lyric-lines">{lines.map((line, index) => {
       const active = currentMs >= line.startMs + offsetMs && currentMs <= line.endMs + offsetMs;
       return <div className={`lyric-line${active ? " active" : ""}`} key={line.id}>
-        <button className="line-number" type="button" title="Jump to this line" onClick={() => { if (audioRef.current) audioRef.current.currentTime = Math.max(0, (line.startMs + offsetMs) / 1000); }}>{index + 1}</button>
+        <button className="line-number" type="button" title="Jump to this line" onClick={() => seek(line.startMs)}>{index + 1}</button>
         <textarea value={line.text} rows={2} onChange={(event) => updateLine(index, { text: event.target.value })} />
         <label>Start<input type="number" step="0.01" value={(line.startMs / 1000).toFixed(2)} onChange={(event) => updateLine(index, { startMs: Math.round(Number(event.target.value) * 1000) })} /></label>
         <label>End<input type="number" step="0.01" value={(line.endMs / 1000).toFixed(2)} onChange={(event) => updateLine(index, { endMs: Math.round(Number(event.target.value) * 1000) })} /></label>
         <button className="danger compact" type="button" onClick={() => setLines((current) => current.filter((_, itemIndex) => itemIndex !== index))}>Delete</button>
       </div>;
-    })}</div>
+    })}</div></details>
     <div className="editor-actions"><button className="secondary" type="button" onClick={addLine}>Add line</button><button type="button" disabled={working} onClick={() => void save()}>{working ? "Saving…" : "Save new revision"}</button></div>
   </section>;
 }
