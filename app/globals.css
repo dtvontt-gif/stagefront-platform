@@ -75,6 +75,8 @@ button.compact { padding: .5rem .75rem; }
 .word-clip.playing { border-color: #f4b400; background: #f4b400; color: #08080b; box-shadow: 0 0 0 2px #f4b40044; }
 .word-clip.selected { outline: 2px solid #fff; outline-offset: 1px; }
 .word-clip b { overflow: hidden; padding: 0 .55rem; text-overflow: ellipsis; white-space: nowrap; font-size: .72rem; pointer-events: none; }
+.word-clip.editing { z-index: 6; min-width: 5rem; overflow: visible; cursor: text; }
+.word-clip input { width: calc(100% - .7rem); min-width: 3.5rem; border: 0; border-radius: .25rem; outline: 2px solid #f4b400; background: #fff; padding: .25rem .35rem; color: #08080b; font: inherit; font-size: .75rem; font-weight: 800; text-align: center; }
 .clip-handle { position: absolute; z-index: 3; top: 0; bottom: 0; width: .42rem; cursor: ew-resize; }
 .clip-handle.start { left: 0; border-left: 2px solid #ffffff80; }
 .clip-handle.end { right: 0; border-right: 2px solid #ffffff80; }

@@ -42,6 +42,7 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
   const [currentMs, setCurrentMs] = useState(0);
   const [zoom, setZoom] = useState(80);
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
+  const [editingWordId, setEditingWordId] = useState<string | null>(null);
   const [autoFollow, setAutoFollow] = useState(true);
   const [working, setWorking] = useState(true);
   const [message, setMessage] = useState("");
@@ -143,12 +144,21 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
   }
 
   function startDrag(event: ReactPointerEvent, lineIndex: number, tokenIndex: number, mode: DragMode) {
+    if (editingWordId) return;
     event.preventDefault();
     event.stopPropagation();
     const token = lines[lineIndex].tokens[tokenIndex];
     dragRef.current = { lineIndex, tokenIndex, mode, originX: event.clientX, original: { ...token } };
     setSelectedWordId(token.id);
     event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function updateWordText(lineIndex: number, tokenIndex: number, text: string) {
+    setLines((current) => current.map((line, itemLineIndex) => {
+      if (itemLineIndex !== lineIndex) return line;
+      const tokens = line.tokens.map((token, itemTokenIndex) => itemTokenIndex === tokenIndex ? { ...token, text } : token);
+      return { ...line, tokens, text: tokens.map((token) => token.text.trim()).filter(Boolean).join(" ") };
+    }));
   }
 
   function moveDrag(event: ReactPointerEvent) {
@@ -196,7 +206,7 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
       <span className="time-readout">{formatTime(currentMs)} / {formatTime(durationMs)}</span>
       <label>Zoom<input type="range" min="30" max="240" step="10" value={zoom} onChange={(event) => setZoom(Number(event.target.value))} /></label>
       <label className="check-field"><input type="checkbox" checked={autoFollow} onChange={(event) => setAutoFollow(event.target.checked)} /> Follow playback</label>
-      <span className="muted">Drag a word · drag its edges to resize</span>
+      <span className="muted">Double-click a word to edit · drag it to move · drag its edges to resize</span>
     </div>
     <div className="timeline-viewport" ref={timelineRef} onWheel={() => setAutoFollow(false)}>
       <div className="timeline" style={{ width: timelineWidth }} onPointerMove={moveDrag} onPointerUp={() => { dragRef.current = null; }} onPointerCancel={() => { dragRef.current = null; }} onDoubleClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); seek((event.clientX - bounds.left) / pixelsPerMs); }}>
@@ -208,9 +218,9 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
           <button className="track-label" type="button" onClick={() => seek(line.startMs)}>Line {lineIndex + 1}</button>
           {line.tokens.map((token, tokenIndex) => {
             const active = currentMs >= token.startMs + offsetMs && currentMs <= token.endMs + offsetMs;
-            return <div key={token.id} className={`word-clip${active ? " playing" : ""}${selectedWordId === token.id ? " selected" : ""}`} style={{ left: token.startMs * pixelsPerMs, width: Math.max(12, (token.endMs - token.startMs) * pixelsPerMs) }} onPointerDown={(event) => startDrag(event, lineIndex, tokenIndex, "move")} onDoubleClick={(event) => { event.stopPropagation(); seek(token.startMs); }} title={`${token.text} · ${formatTime(token.startMs)}–${formatTime(token.endMs)}`}>
+            return <div key={token.id} className={`word-clip${active ? " playing" : ""}${selectedWordId === token.id ? " selected" : ""}${editingWordId === token.id ? " editing" : ""}`} style={{ left: token.startMs * pixelsPerMs, width: Math.max(12, (token.endMs - token.startMs) * pixelsPerMs) }} onPointerDown={(event) => startDrag(event, lineIndex, tokenIndex, "move")} onDoubleClick={(event) => { event.stopPropagation(); setSelectedWordId(token.id); setEditingWordId(token.id); }} title={`${token.text} · ${formatTime(token.startMs)}–${formatTime(token.endMs)}`}>
               <span className="clip-handle start" onPointerDown={(event) => startDrag(event, lineIndex, tokenIndex, "start")} />
-              <b>{token.text}</b>
+              {editingWordId === token.id ? <input autoFocus aria-label={`Edit word ${token.text}`} value={token.text} onPointerDown={(event) => event.stopPropagation()} onChange={(event) => updateWordText(lineIndex, tokenIndex, event.target.value)} onBlur={() => setEditingWordId(null)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === "Escape") event.currentTarget.blur(); }} /> : <b>{token.text || "Empty"}</b>}
               <span className="clip-handle end" onPointerDown={(event) => startDrag(event, lineIndex, tokenIndex, "end")} />
             </div>;
           })}
