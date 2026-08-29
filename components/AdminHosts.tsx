@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 type Host = {
   founder_number: number;
@@ -26,7 +27,8 @@ export default function AdminHosts() {
   }
 
   useEffect(() => {
-    void load();
+    const initial = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(initial);
   }, []);
 
   function change(founderNumber: number, field: keyof Host, value: string | boolean) {
@@ -60,6 +62,12 @@ export default function AdminHosts() {
         Add each host&apos;s TikTok links, publish their profile, and switch their live status on
         when they are broadcasting.
       </p>
+      <Link
+        href="/scout"
+        className="mt-5 inline-flex rounded-full border border-[#f4b400]/50 px-5 py-3 text-sm font-black text-[#f4b400] hover:bg-[#f4b400] hover:text-black"
+      >
+        Open iPhone Live Scout
+      </Link>
       {message ? <p aria-live="polite" className="mt-5 text-sm text-white/60">{message}</p> : null}
 
       <div className="mt-8 grid gap-5">

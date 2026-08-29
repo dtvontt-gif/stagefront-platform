@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import AdminFounders from "@/components/AdminFounders";
 import AdminGoldenVoices from "@/components/AdminGoldenVoices";
 import AdminHosts from "@/components/AdminHosts";
@@ -22,13 +23,18 @@ export default async function AdminPage() {
   return (
     <main className="min-h-screen bg-[#070708] px-5 py-16 text-white sm:px-8">
       <div className="mx-auto mb-10 flex max-w-6xl items-center justify-between">
-        <a href="/" className="font-display text-2xl font-black tracking-wider text-[#f4b400]">
+        <Link href="/" className="font-display text-2xl font-black tracking-wider text-[#f4b400]">
           STAGEFRONT
-        </a>
+        </Link>
         <div className="flex items-center gap-5">
-          <a href="/profile?member=1" className="text-sm font-semibold text-[#f4b400] hover:text-[#ffd05a]">
+          {access.permissions.includes("hosts") ? (
+            <Link href="/scout" className="text-sm font-semibold text-[#f4b400] hover:text-[#ffd05a]">
+              Live Scout
+            </Link>
+          ) : null}
+          <Link href="/profile?member=1" className="text-sm font-semibold text-[#f4b400] hover:text-[#ffd05a]">
             My profile
-          </a>
+          </Link>
         <form action="/api/auth/sign-out" method="post">
           <button type="submit" className="text-sm font-semibold text-white/60 hover:text-white">
             Sign out
