@@ -6,9 +6,11 @@ export default function AccountForm() {
   const [mode, setMode] = useState<"sign-in" | "sign-up" | "forgot">("sign-in");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [recoverySent, setRecoverySent] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (mode === "forgot" && recoverySent) return;
     setBusy(true);
     setMessage("");
     const form = new FormData(event.currentTarget);
@@ -27,6 +29,7 @@ export default function AccountForm() {
     const result = (await response.json()) as { message?: string; destination?: string };
     setBusy(false);
     setMessage(result.message ?? "Something went wrong.");
+    if (response.ok && mode === "forgot") setRecoverySent(true);
     if (response.ok && result.destination) window.location.assign(result.destination);
   }
 
@@ -40,6 +43,7 @@ export default function AccountForm() {
             onClick={() => {
               setMode(item);
               setMessage("");
+              setRecoverySent(false);
             }}
             className={`rounded-full px-4 py-3 text-sm font-bold transition ${
               mode === item ? "bg-[#f4b400] text-black" : "text-white/60 hover:text-white"
@@ -65,6 +69,7 @@ export default function AccountForm() {
             type="email"
             autoComplete="email"
             required
+            disabled={mode === "forgot" && recoverySent}
             className="mt-2 w-full rounded-2xl border border-white/15 bg-black/50 px-4 py-3.5 text-white outline-none focus:border-[#f4b400]"
           />
         </label>
@@ -81,16 +86,16 @@ export default function AccountForm() {
         </label> : null}
         <button
           type="submit"
-          disabled={busy}
+          disabled={busy || (mode === "forgot" && recoverySent)}
           className="w-full rounded-full bg-[#f4b400] px-6 py-4 font-extrabold text-black transition hover:bg-[#ffd05a] disabled:opacity-60"
         >
-          {busy ? "Please wait..." : mode === "sign-in" ? "Enter StageFront" : mode === "forgot" ? "Send reset link" : "Create account"}
+          {busy ? "Please wait..." : mode === "sign-in" ? "Enter StageFront" : mode === "forgot" ? recoverySent ? "Reset link sent" : "Send reset link" : "Create account"}
         </button>
       </form>
       {message ? <p aria-live="polite" className="mt-5 text-sm leading-6 text-white/70">{message}</p> : null}
       <div className="mt-5 flex flex-wrap justify-center gap-4 text-xs font-bold">
-        {mode === "sign-in" ? <button type="button" onClick={() => { setMode("forgot"); setMessage(""); }} className="text-[#f4b400] hover:text-[#ffd05a]">Forgot password?</button> : null}
-        {mode === "forgot" ? <button type="button" onClick={() => { setMode("sign-in"); setMessage(""); }} className="text-[#f4b400] hover:text-[#ffd05a]">Back to sign in</button> : null}
+        {mode === "sign-in" ? <button type="button" onClick={() => { setMode("forgot"); setMessage(""); setRecoverySent(false); }} className="text-[#f4b400] hover:text-[#ffd05a]">Forgot password?</button> : null}
+        {mode === "forgot" ? <button type="button" onClick={() => { setMode("sign-in"); setMessage(""); setRecoverySent(false); }} className="text-[#f4b400] hover:text-[#ffd05a]">Back to sign in</button> : null}
       </div>
       {mode === "sign-up" ? (
         <p className="mt-5 text-center text-xs leading-5 text-white/45">
