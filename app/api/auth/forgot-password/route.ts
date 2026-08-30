@@ -1,6 +1,7 @@
 import { supabaseConfiguration } from "@/lib/stagefront-auth";
 
-const GENERIC_MESSAGE = "If that email has a StageFront account, a reset link is on its way.";
+const GENERIC_MESSAGE = "If that email has a StageFront account, a reset link is on its way. Use only the newest email—requesting another link will invalidate this one.";
+const RATE_LIMIT_MESSAGE = "Too many reset emails were requested. Wait one hour, request one new link, and use only that newest email.";
 
 function recoveryRedirect(request: Request) {
   const configuredUrl = process.env.STAGEFRONT_SITE_URL?.trim();
@@ -28,7 +29,21 @@ export async function POST(request: Request) {
     method: "POST", headers: { apikey: config.anonKey, "Content-Type": "application/json" }, body: JSON.stringify({ email }),
   });
   if (!response.ok) {
+    const result = await response.json().catch(() => ({})) as {
+      code?: string;
+      error?: string;
+      error_description?: string;
+      msg?: string;
+    };
+    const error = [result.code, result.error, result.error_description, result.msg].filter(Boolean).join(" ");
     console.error("Supabase password recovery request failed", response.status, { redirectTo });
+    if (response.status === 429 || /rate|too many/i.test(error)) {
+      return Response.json({ message: RATE_LIMIT_MESSAGE }, { status: 429 });
+    }
+    return Response.json(
+      { message: "The reset email could not be sent right now. Wait a few minutes and try once more." },
+      { status: 502 },
+    );
   }
   return Response.json({ message: GENERIC_MESSAGE });
 }
