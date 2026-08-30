@@ -10,8 +10,8 @@ export default function Home() {
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#070708] text-white">
       <Navbar />
-      <Hero />
       <LiveNowSection />
+      <Hero />
       <HomeSections />
       <CommunityArchives />
       <SupportStageFront />

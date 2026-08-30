@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Host = {
   founder_number: number;
@@ -10,13 +10,14 @@ type Host = {
   tiktok_profile_url: string | null;
   tiktok_live_url: string | null;
   is_live: boolean;
+  profile_image_url: string | null;
 };
 
 export default function LiveHosts({ compact = false }: { compact?: boolean }) {
   const [hosts, setHosts] = useState<Host[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     fetch("/api/hosts", { cache: "no-store" })
       .then((response) => response.json())
       .then((result: { hosts?: Host[] }) =>
@@ -24,6 +25,12 @@ export default function LiveHosts({ compact = false }: { compact?: boolean }) {
       )
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+    const timer = window.setInterval(load, 15_000);
+    return () => window.clearInterval(timer);
+  }, [load]);
 
   if (loading) {
     return (
@@ -54,49 +61,52 @@ export default function LiveHosts({ compact = false }: { compact?: boolean }) {
 
   return (
     <div className={`grid gap-5 ${compact ? "lg:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-3"}`}>
-      {hosts.map((host) => (
-        <article key={host.founder_number} className="live-host-card">
-          <span className="live-status">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
-            Live now
-          </span>
-          <p className="mt-8 text-xs font-bold uppercase tracking-[0.24em] text-white/35">
-            StageFront host
-          </p>
-          <h3 className="mt-3 font-display text-3xl font-black uppercase">
-            {host.display_name}
-          </h3>
-          <p className="mt-2 text-sm text-white/45">@{host.username}</p>
-          <p className="mt-6 text-sm leading-7 text-white/60">
-            Watch the live broadcast, then open TikTok to join the conversation
-            and interact with the host.
-          </p>
-
-          <div className="mt-8 flex flex-wrap gap-3">
-            {host.tiktok_live_url ? (
-              <a
-                href={host.tiktok_live_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="live-primary-cta"
-              >
-                Watch &amp; interact live
-                <span aria-hidden="true">↗</span>
-              </a>
-            ) : null}
-            {host.tiktok_profile_url ? (
-              <a
-                href={host.tiktok_profile_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="live-secondary-cta"
-              >
-                TikTok profile
-              </a>
-            ) : null}
-          </div>
-        </article>
-      ))}
+      {hosts.map((host) => {
+        const destination = host.tiktok_live_url || host.tiktok_profile_url;
+        const card = (
+          <article className="live-host-card">
+            <div
+              className="live-host-preview"
+              style={host.profile_image_url ? { backgroundImage: `url("${host.profile_image_url}")` } : undefined}
+            >
+              {!host.profile_image_url ? (
+                <span className="live-host-initial">{host.display_name.slice(0, 1)}</span>
+              ) : null}
+              <span className="live-status live-host-badge">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
+                Live now
+              </span>
+              <span className="live-preview-note">Silent preview</span>
+            </div>
+            <div className="live-host-copy">
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-white/35">
+                StageFront host
+              </p>
+              <h3 className="mt-2 font-display text-3xl font-black uppercase">
+                {host.display_name}
+              </h3>
+              <p className="mt-1 text-sm text-white/45">@{host.username}</p>
+              <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-[#f4b400]">
+                Enter Live on TikTok <span aria-hidden="true">↗</span>
+              </span>
+            </div>
+          </article>
+        );
+        return destination ? (
+          <a
+            key={host.founder_number}
+            href={destination}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Open ${host.display_name}'s live on TikTok`}
+            className="live-host-link"
+          >
+            {card}
+          </a>
+        ) : (
+          <div key={host.founder_number}>{card}</div>
+        );
+      })}
     </div>
   );
 }

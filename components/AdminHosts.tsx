@@ -12,12 +12,14 @@ type Host = {
   tiktok_live_url: string | null;
   is_live: boolean;
   host_published: boolean;
+  profile_image_url: string | null;
 };
 
 export default function AdminHosts() {
   const [hosts, setHosts] = useState<Host[]>([]);
   const [message, setMessage] = useState("Loading hosts...");
   const [busy, setBusy] = useState<number | null>(null);
+  const [previewFiles, setPreviewFiles] = useState<Record<number, File | null>>({});
 
   async function load() {
     const response = await fetch("/api/admin/hosts", { cache: "no-store" });
@@ -41,15 +43,25 @@ export default function AdminHosts() {
 
   async function save(host: Host) {
     setBusy(host.founder_number);
+    const body = new FormData();
+    body.set("founder_number", String(host.founder_number));
+    body.set("tiktok_profile_url", host.tiktok_profile_url ?? "");
+    body.set("tiktok_live_url", host.tiktok_live_url ?? "");
+    body.set("is_live", String(host.is_live));
+    body.set("host_published", String(host.host_published));
+    const previewFile = previewFiles[host.founder_number];
+    if (previewFile) body.set("preview_image", previewFile);
     const response = await fetch("/api/admin/hosts", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(host),
+      body,
     });
     const result = (await response.json()) as { message?: string };
     setMessage(result.message ?? "Host saved.");
     setBusy(null);
-    if (response.ok) await load();
+    if (response.ok) {
+      setPreviewFiles((current) => ({ ...current, [host.founder_number]: null }));
+      await load();
+    }
   }
 
   return (
@@ -133,6 +145,36 @@ export default function AdminHosts() {
                   placeholder="https://www.tiktok.com/@username/live"
                   className="mt-2 w-full rounded-2xl border border-white/15 bg-black/40 px-4 py-3 text-white outline-none focus:border-[#f4b400]"
                 />
+              </label>
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-[8rem_1fr] sm:items-center">
+              <div
+                className="aspect-video overflow-hidden rounded-2xl border border-white/15 bg-white/[0.04] bg-cover bg-center"
+                style={host.profile_image_url ? { backgroundImage: `url("${host.profile_image_url}")` } : undefined}
+              >
+                {!host.profile_image_url ? (
+                  <span className="grid h-full place-items-center font-display text-4xl font-black text-[#f4b400]/35">
+                    {host.display_name.slice(0, 1)}
+                  </span>
+                ) : null}
+              </div>
+              <label className="text-sm font-semibold text-white/70">
+                Live preview image
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(event) =>
+                    setPreviewFiles((current) => ({
+                      ...current,
+                      [host.founder_number]: event.target.files?.[0] ?? null,
+                    }))
+                  }
+                  className="mt-2 block w-full text-sm text-white/55 file:mr-4 file:rounded-full file:border-0 file:bg-[#f4b400] file:px-4 file:py-2 file:font-black file:text-black"
+                />
+                <span className="mt-2 block text-xs font-normal leading-5 text-white/40">
+                  Upload a creator-approved photo or screenshot. It appears as the silent preview while this host is marked LIVE.
+                </span>
               </label>
             </div>
 
