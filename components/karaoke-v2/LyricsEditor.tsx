@@ -9,17 +9,6 @@ type DragState = { lineIndex: number; tokenIndex: number; mode: DragMode; origin
 
 const MIN_WORD_MS = 60;
 
-function retimeTokens(line: Line, text: string, startMs: number, endMs: number): Token[] {
-  const words = text.trim().split(/\s+/).filter(Boolean);
-  if (!words.length) return [];
-  const duration = Math.max(words.length, endMs - startMs);
-  return words.map((word, index) => {
-    const wordStart = startMs + Math.floor((duration * index) / words.length);
-    const wordEnd = startMs + Math.floor((duration * (index + 1)) / words.length);
-    return { id: line.tokens[index]?.id || `${line.id}-word-${index + 1}`, text: word, startMs: wordStart, endMs: Math.max(wordStart + 1, wordEnd) };
-  });
-}
-
 function formatTime(milliseconds: number) {
   const totalSeconds = Math.max(0, milliseconds) / 1000;
   const minutes = Math.floor(totalSeconds / 60);
@@ -43,6 +32,7 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
   const [zoom, setZoom] = useState(80);
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
   const [editingWordId, setEditingWordId] = useState<string | null>(null);
+  const [newLyrics, setNewLyrics] = useState("");
   const [autoFollow, setAutoFollow] = useState(true);
   const [working, setWorking] = useState(true);
   const [message, setMessage] = useState("");
@@ -57,6 +47,11 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
   const pixelsPerMs = zoom / 1000;
   const tickSeconds = zoom >= 120 ? 1 : zoom >= 60 ? 2 : 5;
   const ticks = useMemo(() => Array.from({ length: Math.ceil(durationMs / (tickSeconds * 1000)) + 1 }, (_, index) => index * tickSeconds), [durationMs, tickSeconds]);
+  const orderedWords = useMemo(() => lines.flatMap((line, lineIndex) => line.tokens.map((token, tokenIndex) => ({ token, lineIndex, tokenIndex }))).sort((first, second) => first.token.startMs - second.token.startMs), [lines]);
+  const activeWordIndex = orderedWords.findIndex(({ token }) => currentMs >= token.startMs + offsetMs && currentMs <= token.endMs + offsetMs);
+  const nextWordIndex = orderedWords.findIndex(({ token }) => currentMs < token.startMs + offsetMs);
+  const focusWordIndex = activeWordIndex >= 0 ? activeWordIndex : nextWordIndex >= 0 ? nextWordIndex : Math.max(0, orderedWords.length - 1);
+  const followWords = orderedWords.slice(Math.max(0, focusWordIndex - 5), focusWordIndex + 7);
 
   async function loadAudio() {
     setAudioLoading(true);
@@ -121,9 +116,7 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
     if (!autoFollow || !timelineRef.current || audioRef.current?.paused) return;
     const viewport = timelineRef.current;
     const playheadX = (currentMs - offsetMs) * pixelsPerMs;
-    if (playheadX < viewport.scrollLeft + viewport.clientWidth * .15 || playheadX > viewport.scrollLeft + viewport.clientWidth * .8) {
-      viewport.scrollTo({ left: Math.max(0, playheadX - viewport.clientWidth * .35), behavior: "smooth" });
-    }
+    viewport.scrollTo({ left: Math.max(0, playheadX - viewport.clientWidth * .5), behavior: "auto" });
   }, [autoFollow, currentMs, offsetMs, pixelsPerMs]);
 
   function seek(milliseconds: number) {
@@ -131,16 +124,6 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
     if (!audio) return;
     audio.currentTime = Math.max(0, Math.min(audio.duration || Infinity, (milliseconds + offsetMs) / 1000));
     setCurrentMs(Math.round(audio.currentTime * 1000));
-  }
-
-  function updateLine(index: number, changes: Partial<Pick<Line, "text" | "startMs" | "endMs">>) {
-    setLines((current) => current.map((line, itemIndex) => {
-      if (itemIndex !== index) return line;
-      const text = changes.text ?? line.text;
-      const startMs = Math.max(0, changes.startMs ?? line.startMs);
-      const endMs = Math.max(startMs + 1, changes.endMs ?? line.endMs);
-      return { ...line, text, startMs, endMs, tokens: retimeTokens(line, text, startMs, endMs) };
-    }));
   }
 
   function startDrag(event: ReactPointerEvent, lineIndex: number, tokenIndex: number, mode: DragMode) {
@@ -179,10 +162,16 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
     }));
   }
 
-  function addLine() {
-    const startMs = lines.length ? lines[lines.length - 1].endMs + 1 : 0;
+  function addLyricsAtPlayhead() {
+    const words = newLyrics.trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return;
+    const startMs = Math.max(0, currentMs - offsetMs);
     const id = `line-manual-${Date.now()}`;
-    setLines((current) => [...current, { id, text: "New lyric line", startMs, endMs: startMs + 3000, tokens: retimeTokens({ id, text: "", startMs, endMs: startMs + 3000, tokens: [] }, "New lyric line", startMs, startMs + 3000) }]);
+    const tokens = words.map((text, index) => ({ id: `${id}-word-${index + 1}`, text, startMs: startMs + index * 550, endMs: startMs + index * 550 + 480 }));
+    const line = { id, text: words.join(" "), startMs, endMs: tokens[tokens.length - 1].endMs, tokens };
+    setLines((current) => [...current, line].sort((first, second) => first.startMs - second.startMs));
+    setSelectedWordId(tokens[0].id);
+    setNewLyrics("");
   }
 
   async function save() {
@@ -200,23 +189,27 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
   }
 
   return <section className="lyrics-editor panel">
-    <header className="editor-header"><div><p className="eyebrow">Lyrics & timing</p><h2>{title}</h2><p className="muted">Revision {revision || "…"} · {lines.length} lines · Drag words to match the voice</p></div><button className="secondary compact" onClick={onClose}>Close</button></header>
+    <header className="editor-header"><div><p className="eyebrow">Follow-along lyric editor</p><h2>{title}</h2><p className="muted">Revision {revision || "…"} · {orderedWords.length} words</p></div><button className="secondary compact" onClick={onClose}>Close</button></header>
     <div className="editor-audio"><button className="secondary compact" type="button" disabled={audioLoading} onClick={() => void loadAudio()}>{audioLoading ? "Loading vocals…" : audioUrl ? "Refresh audio" : "Load vocals"}</button>{audioUrl && <audio ref={audioRef} controls preload="metadata" playsInline src={audioUrl} onLoadedMetadata={(event) => setAudioDurationMs(Math.round(event.currentTarget.duration * 1000))} onError={() => setError("The browser could not decode the vocal audio. Try Refresh audio.")} onTimeUpdate={(event) => setCurrentMs(Math.round(event.currentTarget.currentTime * 1000))} />}</div>
+    <div className="lyrics-follow" aria-live="polite">{followWords.length ? followWords.map(({ token }) => <button type="button" key={token.id} className={currentMs >= token.startMs + offsetMs && currentMs <= token.endMs + offsetMs ? "current" : ""} onClick={() => seek(token.startMs)}>{token.text}</button>) : <span>Lyrics will appear here as the music plays.</span>}</div>
+    <div className="add-lyrics">
+      <label>Add a missing word or sentence at {formatTime(Math.max(0, currentMs - offsetMs))}<input value={newLyrics} placeholder="Type the missing lyric…" onChange={(event) => setNewLyrics(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addLyricsAtPlayhead(); }} /></label>
+      <button type="button" disabled={!newLyrics.trim()} onClick={addLyricsAtPlayhead}>Add at playhead</button>
+    </div>
     <div className="timeline-toolbar">
       <span className="time-readout">{formatTime(currentMs)} / {formatTime(durationMs)}</span>
       <label>Zoom<input type="range" min="30" max="240" step="10" value={zoom} onChange={(event) => setZoom(Number(event.target.value))} /></label>
-      <label className="check-field"><input type="checkbox" checked={autoFollow} onChange={(event) => setAutoFollow(event.target.checked)} /> Follow playback</label>
-      <span className="muted">Double-click a word to edit · drag it to move · drag its edges to resize</span>
+      <label className="check-field"><input type="checkbox" checked={autoFollow} onChange={(event) => setAutoFollow(event.target.checked)} /> Keep music centered</label>
+      <span className="muted">Double-click a word to fix its spelling · drag it for small timing changes</span>
     </div>
-    <div className="timeline-viewport" ref={timelineRef} onWheel={() => setAutoFollow(false)}>
+    <div className="timeline-viewport" ref={timelineRef}>
       <div className="timeline" style={{ width: timelineWidth }} onPointerMove={moveDrag} onPointerUp={() => { dragRef.current = null; }} onPointerCancel={() => { dragRef.current = null; }} onDoubleClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); seek((event.clientX - bounds.left) / pixelsPerMs); }}>
         <div className="time-ruler">{ticks.map((second) => <span key={second} style={{ left: second * zoom }}>{formatTime(second * 1000)}</span>)}</div>
         <div className="waveform" aria-label="Vocal audio waveform" onClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); seek((event.clientX - bounds.left) / pixelsPerMs); }}>
           {waveform.length ? waveform.map((peak, index) => <i key={index} style={{ left: `${(index / waveform.length) * 100}%`, height: `${Math.max(4, peak * 92)}%` }} />) : <span>{audioLoading ? "Building waveform…" : "Waveform unavailable — timeline editing still works"}</span>}
         </div>
-        <div className="word-tracks">{lines.map((line, lineIndex) => <div className="word-track" key={line.id}>
-          <button className="track-label" type="button" onClick={() => seek(line.startMs)}>Line {lineIndex + 1}</button>
-          {line.tokens.map((token, tokenIndex) => {
+        <div className="word-tracks"><div className="word-track word-track-continuous">
+          {orderedWords.map(({ token, lineIndex, tokenIndex }) => {
             const active = currentMs >= token.startMs + offsetMs && currentMs <= token.endMs + offsetMs;
             return <div key={token.id} className={`word-clip${active ? " playing" : ""}${selectedWordId === token.id ? " selected" : ""}${editingWordId === token.id ? " editing" : ""}`} style={{ left: token.startMs * pixelsPerMs, width: Math.max(12, (token.endMs - token.startMs) * pixelsPerMs) }} onPointerDown={(event) => startDrag(event, lineIndex, tokenIndex, "move")} onDoubleClick={(event) => { event.stopPropagation(); setSelectedWordId(token.id); setEditingWordId(token.id); }} title={`${token.text} · ${formatTime(token.startMs)}–${formatTime(token.endMs)}`}>
               <span className="clip-handle start" onPointerDown={(event) => startDrag(event, lineIndex, tokenIndex, "start")} />
@@ -224,22 +217,12 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
               <span className="clip-handle end" onPointerDown={(event) => startDrag(event, lineIndex, tokenIndex, "end")} />
             </div>;
           })}
-        </div>)}</div>
+        </div></div>
         <div className="playhead" style={{ left: Math.max(0, (currentMs - offsetMs) * pixelsPerMs) }}><span /></div>
       </div>
     </div>
-    <label className="offset-field">Global offset (milliseconds)<input type="number" value={offsetMs} onChange={(event) => setOffsetMs(Number(event.target.value))} /></label>
     {error && <p className="error">{error}</p>}{message && <p className="success">{message}</p>}
-    <details className="line-details"><summary>Open lyric text and exact timing</summary><div className="lyric-lines">{lines.map((line, index) => {
-      const active = currentMs >= line.startMs + offsetMs && currentMs <= line.endMs + offsetMs;
-      return <div className={`lyric-line${active ? " active" : ""}`} key={line.id}>
-        <button className="line-number" type="button" title="Jump to this line" onClick={() => seek(line.startMs)}>{index + 1}</button>
-        <textarea value={line.text} rows={2} onChange={(event) => updateLine(index, { text: event.target.value })} />
-        <label>Start<input type="number" step="0.01" value={(line.startMs / 1000).toFixed(2)} onChange={(event) => updateLine(index, { startMs: Math.round(Number(event.target.value) * 1000) })} /></label>
-        <label>End<input type="number" step="0.01" value={(line.endMs / 1000).toFixed(2)} onChange={(event) => updateLine(index, { endMs: Math.round(Number(event.target.value) * 1000) })} /></label>
-        <button className="danger compact" type="button" onClick={() => setLines((current) => current.filter((_, itemIndex) => itemIndex !== index))}>Delete</button>
-      </div>;
-    })}</div></details>
-    <div className="editor-actions"><button className="secondary" type="button" onClick={addLine}>Add line</button><button type="button" disabled={working} onClick={() => void save()}>{working ? "Saving…" : "Save new revision"}</button></div>
+    <details className="offset-details"><summary>Timing offset</summary><label className="offset-field">Move every word together (milliseconds)<input type="number" value={offsetMs} onChange={(event) => setOffsetMs(Number(event.target.value))} /></label></details>
+    <div className="editor-actions"><button type="button" disabled={working} onClick={() => void save()}>{working ? "Saving…" : "Save lyric changes"}</button></div>
   </section>;
 }
