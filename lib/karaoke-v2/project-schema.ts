@@ -56,6 +56,9 @@ export type KaraokeProject = {
     framesPerSecond: number;
     activeColor: string;
     inactiveColor: string;
+    backgroundColor: string;
+    fontSize: number;
+    verticalPosition: "top" | "center" | "bottom";
     fontFamily: string;
     safeAreaPercent: number;
   };
@@ -84,6 +87,9 @@ export function createEmptyKaraokeProject(input: {
       framesPerSecond: 30,
       activeColor: "#f4b400",
       inactiveColor: "#ffffff",
+      backgroundColor: "#08080b",
+      fontSize: 52,
+      verticalPosition: "bottom",
       fontFamily: "Arial",
       safeAreaPercent: 5,
     },

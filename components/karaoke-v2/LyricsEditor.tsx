@@ -1,6 +1,7 @@
 "use client";
 
 import { PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
+import KaraokePreview, { PreviewStyle } from "@/components/karaoke-v2/KaraokePreview";
 
 type Token = { id: string; text: string; startMs: number; endMs: number; confidence?: number };
 type Line = { id: string; text: string; startMs: number; endMs: number; tokens: Token[] };
@@ -33,6 +34,7 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
   const [editingWordId, setEditingWordId] = useState<string | null>(null);
   const [newLyrics, setNewLyrics] = useState("");
+  const [previewStyle, setPreviewStyle] = useState<PreviewStyle>({ activeColor: "#f4b400", inactiveColor: "#ffffff", backgroundColor: "#08080b", fontSize: 52, verticalPosition: "bottom" });
   const [autoFollow, setAutoFollow] = useState(true);
   const [working, setWorking] = useState(true);
   const [message, setMessage] = useState("");
@@ -104,6 +106,14 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
       setRevision(data.revision);
       setLines(data.project?.lyrics?.lines || []);
       setOffsetMs(data.project?.lyrics?.offsetMs || 0);
+      const render = data.project?.render || {};
+      setPreviewStyle({
+        activeColor: render.activeColor || "#f4b400",
+        inactiveColor: render.inactiveColor || "#ffffff",
+        backgroundColor: render.backgroundColor || "#08080b",
+        fontSize: Number(render.fontSize) || 52,
+        verticalPosition: ["top", "center", "bottom"].includes(render.verticalPosition) ? render.verticalPosition : "bottom",
+      });
     }).then(() => loadAudio())
       .catch((cause) => setError(cause instanceof Error ? cause.message : "Could not open editor."))
       .finally(() => setWorking(false));
@@ -183,7 +193,7 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
         return recalculateLine(line, tokens);
       }).sort((first, second) => first.startMs - second.startMs);
       const response = await fetch(`/api/karaoke-v2/projects/${projectId}/lyrics`, {
-        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ baseRevision: revision, offsetMs: safeOffsetMs, lines: normalizedLines }),
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ baseRevision: revision, offsetMs: safeOffsetMs, lines: normalizedLines, render: previewStyle }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not save lyrics.");
@@ -198,6 +208,14 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
   return <section className="lyrics-editor panel">
     <header className="editor-header"><div><p className="eyebrow">Follow-along lyric editor</p><h2>{title}</h2><p className="muted">Revision {revision || "…"} · {orderedWords.length} words</p></div><button className="secondary compact" onClick={onClose}>Close</button></header>
     <div className="editor-audio"><button className="secondary compact" type="button" disabled={audioLoading} onClick={() => void loadAudio()}>{audioLoading ? "Loading vocals…" : audioUrl ? "Refresh audio" : "Load vocals"}</button>{audioUrl && <audio ref={audioRef} controls preload="metadata" playsInline src={audioUrl} onLoadedMetadata={(event) => setAudioDurationMs(Math.round(event.currentTarget.duration * 1000))} onError={() => setError("The browser could not decode the vocal audio. Try Refresh audio.")} onTimeUpdate={(event) => setCurrentMs(Math.round(event.currentTarget.currentTime * 1000))} />}</div>
+    <KaraokePreview lines={lines} currentMs={currentMs} offsetMs={offsetMs} style={previewStyle} />
+    <div className="preview-controls">
+      <label>Sung words<input type="color" value={previewStyle.activeColor} onChange={(event) => setPreviewStyle((current) => ({ ...current, activeColor: event.target.value }))} /></label>
+      <label>Upcoming words<input type="color" value={previewStyle.inactiveColor} onChange={(event) => setPreviewStyle((current) => ({ ...current, inactiveColor: event.target.value }))} /></label>
+      <label>Background<input type="color" value={previewStyle.backgroundColor} onChange={(event) => setPreviewStyle((current) => ({ ...current, backgroundColor: event.target.value }))} /></label>
+      <label>Text size<input type="range" min="28" max="96" step="2" value={previewStyle.fontSize} onChange={(event) => setPreviewStyle((current) => ({ ...current, fontSize: Number(event.target.value) }))} /></label>
+      <label>Position<select value={previewStyle.verticalPosition} onChange={(event) => setPreviewStyle((current) => ({ ...current, verticalPosition: event.target.value as PreviewStyle["verticalPosition"] }))}><option value="top">Top</option><option value="center">Center</option><option value="bottom">Bottom</option></select></label>
+    </div>
     <div className="lyrics-follow" aria-live="polite">{followWords.length ? followWords.map(({ token }) => <button type="button" key={token.id} className={currentMs >= token.startMs + offsetMs && currentMs <= token.endMs + offsetMs ? "current" : ""} onClick={() => seek(token.startMs)}>{token.text}</button>) : <span>Lyrics will appear here as the music plays.</span>}</div>
     <div className="add-lyrics">
       <label>Add a missing word or sentence at {formatTime(Math.max(0, currentMs - offsetMs))}<input value={newLyrics} placeholder="Type the missing lyric…" onChange={(event) => setNewLyrics(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addLyricsAtPlayhead(); }} /></label>

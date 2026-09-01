@@ -53,12 +53,27 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   }
   const now = new Date().toISOString();
   const revision = current.revision + 1;
+  const currentData = current.project_data as Record<string, unknown>;
+  const currentRender = currentData.render && typeof currentData.render === "object" ? currentData.render as Record<string, unknown> : {};
+  const requestedRender = body.render && typeof body.render === "object" ? body.render as Record<string, unknown> : {};
+  const color = (value: unknown, fallback: string) => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+  const requestedFontSize = Number(requestedRender.fontSize);
+  const verticalPosition = ["top", "center", "bottom"].includes(String(requestedRender.verticalPosition)) ? String(requestedRender.verticalPosition) : "bottom";
+  const render = {
+    ...currentRender,
+    activeColor: color(requestedRender.activeColor, String(currentRender.activeColor || "#f4b400")),
+    inactiveColor: color(requestedRender.inactiveColor, String(currentRender.inactiveColor || "#ffffff")),
+    backgroundColor: color(requestedRender.backgroundColor, String(currentRender.backgroundColor || "#08080b")),
+    fontSize: Number.isFinite(requestedFontSize) ? Math.min(96, Math.max(28, Math.round(requestedFontSize))) : 52,
+    verticalPosition,
+  };
   const projectData = {
-    ...(current.project_data as Record<string, unknown>),
+    ...currentData,
     status: "ready",
     updatedAt: now,
     revision,
     lyrics: { offsetMs, lines: body.lines },
+    render,
   };
   const { error: insertError } = await client.from("karaoke_v2_project_revisions").insert({
     project_id: id, owner_id: session.user.id, revision, project_data: projectData,
