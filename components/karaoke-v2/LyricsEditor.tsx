@@ -177,11 +177,18 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
   async function save() {
     setWorking(true); setError(""); setMessage("");
     try {
+      const safeOffsetMs = Number.isSafeInteger(offsetMs) ? offsetMs : 0;
+      const normalizedLines = lines.map((line) => {
+        const tokens = [...line.tokens].sort((first, second) => first.startMs - second.startMs);
+        return recalculateLine(line, tokens);
+      }).sort((first, second) => first.startMs - second.startMs);
       const response = await fetch(`/api/karaoke-v2/projects/${projectId}/lyrics`, {
-        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ baseRevision: revision, offsetMs, lines }),
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ baseRevision: revision, offsetMs: safeOffsetMs, lines: normalizedLines }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not save lyrics.");
+      setLines(normalizedLines);
+      setOffsetMs(safeOffsetMs);
       setRevision(data.revision);
       setMessage(`Saved revision ${data.revision}.`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save lyrics."); }
@@ -222,7 +229,7 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
       </div>
     </div>
     {error && <p className="error">{error}</p>}{message && <p className="success">{message}</p>}
-    <details className="offset-details"><summary>Timing offset</summary><label className="offset-field">Move every word together (milliseconds)<input type="number" value={offsetMs} onChange={(event) => setOffsetMs(Number(event.target.value))} /></label></details>
+    <details className="offset-details"><summary>Advanced: move every word together</summary><label className="offset-field">Milliseconds<input type="number" value={Number.isFinite(offsetMs) ? offsetMs : ""} onChange={(event) => { const value = Number(event.target.value); setOffsetMs(Number.isFinite(value) ? Math.round(value) : 0); }} /></label></details>
     <div className="editor-actions"><button type="button" disabled={working} onClick={() => void save()}>{working ? "Saving…" : "Save lyric changes"}</button></div>
   </section>;
 }

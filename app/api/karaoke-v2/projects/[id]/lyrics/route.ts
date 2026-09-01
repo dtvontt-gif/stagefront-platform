@@ -7,20 +7,16 @@ type EditableLine = { id: string; text: string; startMs: number; endMs: number; 
 
 function validLines(value: unknown): value is EditableLine[] {
   if (!Array.isArray(value) || value.length > 5000) return false;
-  let previousLineStart = -1;
   return value.every((line) => {
     if (!line || typeof line !== "object") return false;
     const item = line as EditableLine;
     if (typeof item.id !== "string" || typeof item.text !== "string" || item.text.length > 1000 ||
       !Number.isSafeInteger(item.startMs) || !Number.isSafeInteger(item.endMs) || item.startMs < 0 || item.endMs <= item.startMs ||
-      item.startMs < previousLineStart || !Array.isArray(item.tokens) || item.tokens.length > 300) return false;
-    previousLineStart = item.startMs;
-    let previousTokenEnd = item.startMs;
+      !Array.isArray(item.tokens) || item.tokens.length > 300) return false;
     return item.tokens.every((token) => {
       const valid = typeof token.id === "string" && typeof token.text === "string" && token.text.length <= 200 &&
-        Number.isSafeInteger(token.startMs) && Number.isSafeInteger(token.endMs) && token.startMs >= previousTokenEnd &&
+        Number.isSafeInteger(token.startMs) && Number.isSafeInteger(token.endMs) &&
         token.endMs > token.startMs && token.startMs >= item.startMs && token.endMs <= item.endMs;
-      previousTokenEnd = token.endMs;
       return valid;
     });
   });
@@ -42,7 +38,8 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   const { id } = await context.params;
   const body = await request.json().catch(() => ({}));
   if (!validLines(body.lines)) return NextResponse.json({ error: "Some lyric text or timing is invalid." }, { status: 400 });
-  const offsetMs = Number(body.offsetMs ?? 0);
+  const requestedOffset = Number(body.offsetMs ?? 0);
+  const offsetMs = Number.isSafeInteger(requestedOffset) ? requestedOffset : 0;
   if (!Number.isSafeInteger(offsetMs) || Math.abs(offsetMs) > 300000) {
     return NextResponse.json({ error: "The lyric offset is invalid." }, { status: 400 });
   }
