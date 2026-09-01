@@ -37,6 +37,12 @@ button.compact { padding: .5rem .75rem; }
 .status-failed { background: #ef444422; color: #fca5a5; }
 .project-actions { display: flex; align-items: center; gap: .6rem; }
 .project-card { display: grid; gap: 1rem; }
+.song-switcher { position: sticky; z-index: 20; top: .5rem; display: grid; gap: .75rem; margin-top: 1rem; border: 1px solid #f4b40055; border-radius: 1rem; background: #111116ed; padding: .85rem; box-shadow: 0 .7rem 2rem #0009; backdrop-filter: blur(12px); }
+.song-switcher > div:first-child { display: flex; align-items: baseline; justify-content: space-between; gap: .8rem; }
+.song-switcher small { color: #ffffff8c; }
+.song-switcher-buttons { display: flex; gap: .5rem; overflow-x: auto; padding-bottom: .15rem; }
+.song-switcher-buttons button { flex: 0 0 auto; padding: .55rem .8rem; }
+.song-switcher-buttons button.active { background: #f4b400; color: #09090b; }
 .stem-controls { display: grid; gap: .65rem; border-top: 1px solid #ffffff16; padding-top: 1rem; }
 .stem { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: .55rem; }
 .stem > span, .audio-player > span { font-weight: 700; text-transform: capitalize; }
