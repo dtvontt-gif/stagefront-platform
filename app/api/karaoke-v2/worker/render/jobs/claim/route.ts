@@ -1,0 +1,30 @@
+import { NextResponse } from "next/server";
+import { karaokeAss } from "@/lib/karaoke-v2/ass";
+import { isAuthorizedWorker, KARAOKE_RENDERS_BUCKET, supabaseService } from "@/lib/karaoke-v2/supabase";
+
+type ClaimedRender = { job_id: string; project_id: string; owner_id: string; attempts: number; instrumental_bucket: string; instrumental_storage_key: string; project_data: Parameters<typeof karaokeAss>[0] };
+
+export async function POST(request: Request) {
+  if (!isAuthorizedWorker(request)) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  const client = supabaseService();
+  const { error: retryError } = await client.from("karaoke_v2_jobs").update({ status: "queued", progress: null, error: null, lease_expires_at: null })
+    .eq("kind", "render").eq("status", "failed").lt("attempts", 4);
+  if (retryError) return NextResponse.json({ error: retryError.message }, { status: 500 });
+  const { data, error } = await client.rpc("karaoke_v2_claim_render_job").maybeSingle();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!data) return new NextResponse(null, { status: 204 });
+  const job = data as ClaimedRender;
+  const [instrumental, output] = await Promise.all([
+    client.storage.from(job.instrumental_bucket).createSignedUrl(job.instrumental_storage_key, 3600),
+    client.storage.from(KARAOKE_RENDERS_BUCKET).createSignedUploadUrl(`${job.owner_id}/${job.project_id}/renders/karaoke.mp4`, { upsert: true }),
+  ]);
+  if (instrumental.error || output.error) return NextResponse.json({ error: instrumental.error?.message || output.error?.message }, { status: 500 });
+  const render = job.project_data.render || {};
+  return NextResponse.json({
+    job: { id: job.job_id, projectId: job.project_id, attempt: job.attempts },
+    instrumental: { url: instrumental.data.signedUrl },
+    subtitles: karaokeAss(job.project_data),
+    video: { width: render.resolution?.width || 1920, height: render.resolution?.height || 1080, backgroundColor: render.backgroundColor || "#08080b" },
+    output: { bucket: KARAOKE_RENDERS_BUCKET, ...output.data },
+  });
+}

@@ -7,6 +7,7 @@ type Token = { id: string; text: string; startMs: number; endMs: number; confide
 type Line = { id: string; text: string; startMs: number; endMs: number; tokens: Token[] };
 type DragMode = "move" | "start" | "end";
 type DragState = { lineIndex: number; tokenIndex: number; mode: DragMode; originX: number; original: Token };
+type RenderJob = { id: string; status: string; progress: number | null; error?: string | null };
 
 const MIN_WORD_MS = 60;
 
@@ -37,6 +38,9 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
   const [previewStyle, setPreviewStyle] = useState<PreviewStyle>({ activeColor: "#f4b400", inactiveColor: "#ffffff", backgroundColor: "#08080b", fontSize: 52, verticalPosition: "bottom" });
   const [autoFollow, setAutoFollow] = useState(true);
   const [working, setWorking] = useState(true);
+  const [exportWorking, setExportWorking] = useState("");
+  const [renderJob, setRenderJob] = useState<RenderJob | null>(null);
+  const [renderReady, setRenderReady] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -123,6 +127,20 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
   }, [projectId]);
 
   useEffect(() => {
+    let active = true;
+    async function loadRender() {
+      const response = await fetch(`/api/karaoke-v2/projects/${projectId}/export/render`, { cache: "no-store" });
+      if (!response.ok || !active) return;
+      const data = await response.json();
+      setRenderJob(data.job || null);
+      setRenderReady(Boolean(data.render));
+    }
+    void loadRender();
+    const refresh = window.setInterval(() => void loadRender(), 10000);
+    return () => { active = false; window.clearInterval(refresh); };
+  }, [projectId]);
+
+  useEffect(() => {
     if (!autoFollow || !timelineRef.current || audioRef.current?.paused) return;
     const viewport = timelineRef.current;
     const playheadX = (currentMs - offsetMs) * pixelsPerMs;
@@ -205,6 +223,75 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
     finally { setWorking(false); }
   }
 
+  function downloadSubtitles() {
+    const link = document.createElement("a");
+    link.href = `/api/karaoke-v2/projects/${projectId}/export/ass`;
+    link.download = "";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  async function downloadInstrumental() {
+    setExportWorking("instrumental");
+    setError("");
+    try {
+      const response = await fetch(`/api/karaoke-v2/projects/${projectId}/assets/instrumental/url`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ download: true }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not prepare the instrumental.");
+      const link = document.createElement("a");
+      link.href = result.url;
+      link.download = `${title}-instrumental.mp3`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not download the instrumental.");
+    } finally {
+      setExportWorking("");
+    }
+  }
+
+  async function createVideo() {
+    setExportWorking("render");
+    setError("");
+    try {
+      const response = await fetch(`/api/karaoke-v2/projects/${projectId}/export/render`, { method: "POST" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not start the video render.");
+      setRenderJob(result.job);
+      setMessage(result.alreadyQueued ? "Your karaoke video is already being created." : "Karaoke video queued. You can leave this page while it renders.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not start the video render.");
+    } finally {
+      setExportWorking("");
+    }
+  }
+
+  async function downloadVideo() {
+    setExportWorking("video");
+    setError("");
+    try {
+      const response = await fetch(`/api/karaoke-v2/projects/${projectId}/assets/render/url`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ download: true }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not prepare the karaoke video.");
+      const link = document.createElement("a");
+      link.href = result.url;
+      link.download = `${title}-karaoke.mp4`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not download the karaoke video.");
+    } finally {
+      setExportWorking("");
+    }
+  }
+
   return <section className="lyrics-editor panel">
     <header className="editor-header"><div><p className="eyebrow">Follow-along lyric editor</p><h2>{title}</h2><p className="muted">Revision {revision || "…"} · {orderedWords.length} words</p></div><button className="secondary compact" onClick={onClose}>Close</button></header>
     <div className="editor-audio"><button className="secondary compact" type="button" disabled={audioLoading} onClick={() => void loadAudio()}>{audioLoading ? "Loading vocals…" : audioUrl ? "Refresh audio" : "Load vocals"}</button>{audioUrl && <audio ref={audioRef} controls preload="metadata" playsInline src={audioUrl} onLoadedMetadata={(event) => setAudioDurationMs(Math.round(event.currentTarget.duration * 1000))} onError={() => setError("The browser could not decode the vocal audio. Try Refresh audio.")} onTimeUpdate={(event) => setCurrentMs(Math.round(event.currentTarget.currentTime * 1000))} />}</div>
@@ -249,5 +336,10 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
     {error && <p className="error">{error}</p>}{message && <p className="success">{message}</p>}
     <details className="offset-details"><summary>Advanced: move every word together</summary><label className="offset-field">Milliseconds<input type="number" value={Number.isFinite(offsetMs) ? offsetMs : ""} onChange={(event) => { const value = Number(event.target.value); setOffsetMs(Number.isFinite(value) ? Math.round(value) : 0); }} /></label></details>
     <div className="editor-actions"><button type="button" disabled={working} onClick={() => void save()}>{working ? "Saving…" : "Save lyric changes"}</button></div>
+    <section className="export-panel">
+      <div><p className="eyebrow">Export</p><h3>Karaoke files</h3><p className="muted">Save first, then download the timed karaoke subtitles and instrumental audio.</p></div>
+      {renderJob && <p className={`render-status status-${renderJob.status}`}>Video: {renderJob.status}{renderJob.status === "running" && renderJob.progress !== null ? ` · ${Math.round(renderJob.progress * 100)}%` : ""}{renderJob.error ? ` · ${renderJob.error}` : ""}</p>}
+      <div className="export-actions"><button className="secondary" type="button" onClick={downloadSubtitles}>Download subtitles</button><button className="secondary" type="button" disabled={Boolean(exportWorking)} onClick={() => void downloadInstrumental()}>Download instrumental</button>{renderReady && <button className="secondary" type="button" disabled={Boolean(exportWorking)} onClick={() => void downloadVideo()}>Download MP4</button>}<button type="button" disabled={Boolean(exportWorking) || renderJob?.status === "queued" || renderJob?.status === "running"} onClick={() => void createVideo()}>{exportWorking === "render" ? "Starting…" : renderReady ? "Create updated MP4" : "Create MP4 video"}</button></div>
+    </section>
   </section>;
 }
