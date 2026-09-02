@@ -257,7 +257,8 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
       setOffsetMs(safeOffsetMs);
       setRevision(data.revision);
       setMessage(`Saved revision ${data.revision}.`);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save lyrics."); }
+      return true;
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save lyrics."); return false; }
     finally { setWorking(false); }
   }
 
@@ -364,6 +365,8 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
   }
 
   async function createVideo() {
+    const saved = await save();
+    if (!saved) return;
     setExportWorking("render");
     setError("");
     try {
@@ -451,7 +454,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
       <div><p className="eyebrow">Export</p><h3>Karaoke files</h3><p className="muted">Save first, then download the timed karaoke subtitles and instrumental audio.</p></div>
       <div className="custom-instrumental"><div><strong>Use your own instrumental for this song</strong><p className="muted">This keeps your saved lyrics and timing and skips the separator.</p></div><label className="file-button secondary">{exportWorking === "replace-instrumental" ? "Uploading instrumental…" : "Choose Suno instrumental"}<input type="file" accept=".mp3,.wav,audio/mpeg,audio/wav" disabled={Boolean(exportWorking)} onChange={(event) => { const file = event.target.files?.[0]; if (file) void replaceInstrumental(file); event.currentTarget.value = ""; }} /></label></div>
       {renderJob && <p className={`render-status status-${renderJob.status}`}>Video: {renderJob.status}{renderJob.status === "running" && renderJob.progress !== null ? ` · ${Math.round(renderJob.progress * 100)}%` : ""}{renderJob.error ? ` · ${renderJob.error}` : ""}</p>}
-      <div className="export-actions"><button className="secondary" type="button" onClick={downloadSubtitles}>Download subtitles</button><button className="secondary" type="button" disabled={Boolean(exportWorking)} onClick={() => void downloadInstrumental()}>Download instrumental</button>{renderReady && <button className="secondary" type="button" disabled={Boolean(exportWorking)} onClick={() => void downloadVideo()}>Download MP4</button>}<button type="button" disabled={Boolean(exportWorking) || renderJob?.status === "queued" || renderJob?.status === "running"} onClick={() => void createVideo()}>{exportWorking === "render" ? "Starting…" : renderReady ? "Create updated MP4" : "Create MP4 video"}</button></div>
+      <div className="export-actions"><button className="secondary" type="button" onClick={downloadSubtitles}>Download subtitles</button><button className="secondary" type="button" disabled={Boolean(exportWorking)} onClick={() => void downloadInstrumental()}>Download instrumental</button>{renderReady && <button className="secondary" type="button" disabled={Boolean(exportWorking)} onClick={() => void downloadVideo()}>Download MP4</button>}<button type="button" disabled={working || Boolean(exportWorking) || renderJob?.status === "queued" || renderJob?.status === "running"} onClick={() => void createVideo()}>{working ? "Saving first…" : exportWorking === "render" ? "Starting…" : renderReady ? "Save & create updated MP4" : "Save & create MP4 video"}</button></div>
     </section>
   </section>;
 }
