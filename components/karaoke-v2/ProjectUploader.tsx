@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import LyricsEditor from "@/components/karaoke-v2/LyricsEditor";
 
 type Project = { id: string; title: string; artist: string | null; status: string; created_at: string };
-type Job = { id: string; project_id: string; status: string; progress: number | null; error: string | null };
+type Job = { id: string; project_id: string; kind: string; status: string; progress: number | null; error: string | null };
 type Asset = { id: string; project_id: string; kind: "vocals" | "instrumental"; mime_type: string; size_bytes: number };
 type ActiveAudio = { projectId: string; kind: Asset["kind"]; url: string };
 const FALLBACK_MIME: Record<string, string> = {
@@ -32,7 +32,7 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
   const [notice, setNotice] = useState("");
 
   const readyProjects = projects.filter((project) => {
-    const job = jobs.find((item) => item.project_id === project.id);
+    const job = jobs.find((item) => item.project_id === project.id && item.kind !== "render");
     return (job?.status || project.status) === "succeeded";
   });
 
@@ -194,7 +194,7 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
       </nav>}
       {editingProject && <LyricsEditor key={editingProject.id} projectId={editingProject.id} title={editingProject.title} supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} onClose={() => setEditingProject(null)} />}
       <section className="projects"><h2>Your projects</h2>{projects.length === 0 ? <p className="muted">No projects yet.</p> : projects.map((project) => {
-        const job = jobs.find((item) => item.project_id === project.id);
+        const job = jobs.find((item) => item.project_id === project.id && item.kind !== "render");
         const status = job?.status || project.status;
         const canDelete = ["pending_upload", "failed", "draft", "uploading"].includes(status);
         const stems = assets.filter((asset) => asset.project_id === project.id);
