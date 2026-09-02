@@ -404,6 +404,22 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
     }
   }
 
+  async function cancelVideo() {
+    setExportWorking("cancel");
+    setError("");
+    try {
+      const response = await fetch(`/api/karaoke-v2/projects/${projectId}/export/render`, { method: "DELETE" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not cancel the video render.");
+      setRenderJob((job) => job ? { ...job, status: "cancelled", progress: 0, error: null } : null);
+      setMessage("Video render cancelled. Your saved lyrics and settings were not changed.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not cancel the video render.");
+    } finally {
+      setExportWorking("");
+    }
+  }
+
   return <section className="lyrics-editor panel">
     <header className="editor-header"><div><p className="eyebrow">Follow-along lyric editor</p><h2>{title}</h2><p className="muted">Revision {revision || "…"} · {orderedWords.length} words</p></div><button className="secondary compact" onClick={onClose}>Close</button></header>
     <div className="editor-audio"><button className="secondary compact" type="button" disabled={audioLoading} onClick={() => void loadAudio()}>{audioLoading ? "Loading vocals…" : audioUrl ? "Refresh audio" : "Load vocals"}</button>{audioUrl && <audio ref={audioRef} controls preload="metadata" playsInline src={audioUrl} onLoadedMetadata={(event) => setAudioDurationMs(Math.round(event.currentTarget.duration * 1000))} onError={() => setError("The browser could not decode the vocal audio. Try Refresh audio.")} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} onEnded={() => setIsPlaying(false)} onTimeUpdate={(event) => setCurrentMs(Math.round(event.currentTarget.currentTime * 1000))} />}</div>
@@ -454,7 +470,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
       <div><p className="eyebrow">Export</p><h3>Karaoke files</h3><p className="muted">Save first, then download the timed karaoke subtitles and instrumental audio.</p></div>
       <div className="custom-instrumental"><div><strong>Use your own instrumental for this song</strong><p className="muted">This keeps your saved lyrics and timing and skips the separator.</p></div><label className="file-button secondary">{exportWorking === "replace-instrumental" ? "Uploading instrumental…" : "Choose Suno instrumental"}<input type="file" accept=".mp3,.wav,audio/mpeg,audio/wav" disabled={Boolean(exportWorking)} onChange={(event) => { const file = event.target.files?.[0]; if (file) void replaceInstrumental(file); event.currentTarget.value = ""; }} /></label></div>
       {renderJob && <p className={`render-status status-${renderJob.status}`}>Video: {renderJob.status}{renderJob.status === "running" && renderJob.progress !== null ? ` · ${Math.round(renderJob.progress * 100)}%` : ""}{renderJob.error ? ` · ${renderJob.error}` : ""}</p>}
-      <div className="export-actions"><button className="secondary" type="button" onClick={downloadSubtitles}>Download subtitles</button><button className="secondary" type="button" disabled={Boolean(exportWorking)} onClick={() => void downloadInstrumental()}>Download instrumental</button>{renderReady && <button className="secondary" type="button" disabled={Boolean(exportWorking)} onClick={() => void downloadVideo()}>Download MP4</button>}<button type="button" disabled={working || Boolean(exportWorking) || renderJob?.status === "queued" || renderJob?.status === "running"} onClick={() => void createVideo()}>{working ? "Saving first…" : exportWorking === "render" ? "Starting…" : renderReady ? "Save & create updated MP4" : "Save & create MP4 video"}</button></div>
+      <div className="export-actions"><button className="secondary" type="button" onClick={downloadSubtitles}>Download subtitles</button><button className="secondary" type="button" disabled={Boolean(exportWorking)} onClick={() => void downloadInstrumental()}>Download instrumental</button>{renderReady && <button className="secondary" type="button" disabled={Boolean(exportWorking)} onClick={() => void downloadVideo()}>Download MP4</button>}{(renderJob?.status === "queued" || renderJob?.status === "running") && <button className="danger" type="button" disabled={Boolean(exportWorking)} onClick={() => void cancelVideo()}>{exportWorking === "cancel" ? "Cancelling…" : "Cancel render"}</button>}<button type="button" disabled={working || Boolean(exportWorking) || renderJob?.status === "queued" || renderJob?.status === "running"} onClick={() => void createVideo()}>{working ? "Saving first…" : exportWorking === "render" ? "Starting…" : renderReady ? "Save & create updated MP4" : "Save & create MP4 video"}</button></div>
     </section>
   </section>;
 }

@@ -33,3 +33,16 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   if (error || !job) return NextResponse.json({ error: error?.message || "Could not queue the video." }, { status: 500 });
   return NextResponse.json({ job }, { status: 201 });
 }
+
+export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
+  const session = await karaokeSession();
+  if (!session) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  const { id } = await context.params;
+  const client = supabaseForUser(session.accessToken);
+  const { data: jobs, error } = await client.from("karaoke_v2_jobs")
+    .update({ status: "cancelled", progress: 0, error: null, lease_expires_at: null, updated_at: new Date().toISOString() })
+    .eq("project_id", id).eq("kind", "render").in("status", ["queued", "running"])
+    .select("id,status");
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ cancelled: (jobs || []).length > 0, jobs: jobs || [] });
+}
