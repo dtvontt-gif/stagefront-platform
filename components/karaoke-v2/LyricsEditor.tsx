@@ -31,6 +31,7 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
   const [audioDurationMs, setAudioDurationMs] = useState(0);
   const [waveform, setWaveform] = useState<number[]>([]);
   const [currentMs, setCurrentMs] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [zoom, setZoom] = useState(80);
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
   const [editingWordId, setEditingWordId] = useState<string | null>(null);
@@ -152,6 +153,20 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
     if (!audio) return;
     audio.currentTime = Math.max(0, Math.min(audio.duration || Infinity, (milliseconds + offsetMs) / 1000));
     setCurrentMs(Math.round(audio.currentTime * 1000));
+  }
+
+  async function togglePlayback() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) {
+      try {
+        await audio.play();
+      } catch {
+        setError("The browser could not start playback. Try Refresh audio.");
+      }
+    } else {
+      audio.pause();
+    }
   }
 
   function startDrag(event: ReactPointerEvent, lineIndex: number, tokenIndex: number, mode: DragMode) {
@@ -294,7 +309,7 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
 
   return <section className="lyrics-editor panel">
     <header className="editor-header"><div><p className="eyebrow">Follow-along lyric editor</p><h2>{title}</h2><p className="muted">Revision {revision || "…"} · {orderedWords.length} words</p></div><button className="secondary compact" onClick={onClose}>Close</button></header>
-    <div className="editor-audio"><button className="secondary compact" type="button" disabled={audioLoading} onClick={() => void loadAudio()}>{audioLoading ? "Loading vocals…" : audioUrl ? "Refresh audio" : "Load vocals"}</button>{audioUrl && <audio ref={audioRef} controls preload="metadata" playsInline src={audioUrl} onLoadedMetadata={(event) => setAudioDurationMs(Math.round(event.currentTarget.duration * 1000))} onError={() => setError("The browser could not decode the vocal audio. Try Refresh audio.")} onTimeUpdate={(event) => setCurrentMs(Math.round(event.currentTarget.currentTime * 1000))} />}</div>
+    <div className="editor-audio"><button className="secondary compact" type="button" disabled={audioLoading} onClick={() => void loadAudio()}>{audioLoading ? "Loading vocals…" : audioUrl ? "Refresh audio" : "Load vocals"}</button>{audioUrl && <audio ref={audioRef} controls preload="metadata" playsInline src={audioUrl} onLoadedMetadata={(event) => setAudioDurationMs(Math.round(event.currentTarget.duration * 1000))} onError={() => setError("The browser could not decode the vocal audio. Try Refresh audio.")} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} onEnded={() => setIsPlaying(false)} onTimeUpdate={(event) => setCurrentMs(Math.round(event.currentTarget.currentTime * 1000))} />}</div>
     <KaraokePreview lines={lines} currentMs={currentMs} offsetMs={offsetMs} style={previewStyle} />
     <div className="preview-controls">
       <label>Sung words<input type="color" value={previewStyle.activeColor} onChange={(event) => setPreviewStyle((current) => ({ ...current, activeColor: event.target.value }))} /></label>
@@ -312,6 +327,7 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
       <span className="time-readout">{formatTime(currentMs)} / {formatTime(durationMs)}</span>
       <label>Zoom<input type="range" min="30" max="240" step="10" value={zoom} onChange={(event) => setZoom(Number(event.target.value))} /></label>
       <label className="check-field"><input type="checkbox" checked={autoFollow} onChange={(event) => setAutoFollow(event.target.checked)} /> Keep music centered</label>
+      <button className={`timeline-play ${isPlaying ? "playing" : ""}`} type="button" disabled={!audioUrl} aria-label={isPlaying ? "Pause audio" : "Play audio"} aria-pressed={isPlaying} onClick={() => void togglePlayback()}>{isPlaying ? "❚❚ Pause" : "▶ Play"}</button>
       <span className="muted">Double-click a word to fix its spelling · drag it for small timing changes</span>
     </div>
     <div className="timeline-viewport" ref={timelineRef}>

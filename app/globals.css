@@ -65,6 +65,8 @@ button.compact { padding: .5rem .75rem; }
 .timeline-toolbar label { display: flex; align-items: center; gap: .5rem; font-size: .78rem; font-weight: 700; }
 .timeline-toolbar input[type="range"] { width: 8rem; accent-color: #f4b400; }
 .timeline-toolbar .check-field input { accent-color: #f4b400; }
+.timeline-toolbar .timeline-play { min-width: 5.6rem; padding: .5rem .8rem; }
+.timeline-toolbar .timeline-play.playing { background: #fff; color: #09090b; }
 .time-readout { min-width: 8.5rem; color: #f4b400; font-variant-numeric: tabular-nums; font-weight: 800; }
 .timeline-viewport { overflow: auto; border: 1px solid #ffffff16; border-radius: 0 0 .85rem .85rem; background: #08080b; scrollbar-color: #f4b40055 #111116; }
 .timeline { position: relative; min-height: 12rem; padding-top: 1.8rem; user-select: none; }
