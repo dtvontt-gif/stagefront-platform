@@ -179,7 +179,7 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
         <div><strong>Choose a song to edit</strong><small>{editingProject ? "Save your changes before switching songs." : "You can work on any finished song."}</small></div>
         <div className="song-switcher-buttons">{readyProjects.map((project) => <button className={editingProject?.id === project.id ? "active" : "secondary"} type="button" key={project.id} onClick={() => { setEditingProject(project); window.scrollTo({ top: 0, behavior: "smooth" }); }}>{project.title}</button>)}</div>
       </nav>}
-      {editingProject && <LyricsEditor key={editingProject.id} projectId={editingProject.id} title={editingProject.title} onClose={() => setEditingProject(null)} />}
+      {editingProject && <LyricsEditor key={editingProject.id} projectId={editingProject.id} title={editingProject.title} supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} onClose={() => setEditingProject(null)} />}
       <section className="projects"><h2>Your projects</h2>{projects.length === 0 ? <p className="muted">No projects yet.</p> : projects.map((project) => {
         const job = jobs.find((item) => item.project_id === project.id);
         const status = job?.status || project.status;

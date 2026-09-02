@@ -1,6 +1,7 @@
 "use client";
 
 import { PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 import KaraokePreview, { PreviewStyle } from "@/components/karaoke-v2/KaraokePreview";
 
 type Token = { id: string; text: string; startMs: number; endMs: number; confidence?: number };
@@ -10,6 +11,9 @@ type DragState = { lineIndex: number; tokenIndex: number; mode: DragMode; origin
 type RenderJob = { id: string; status: string; progress: number | null; error?: string | null };
 
 const MIN_WORD_MS = 60;
+const MAX_INSTRUMENTAL_BYTES = 250 * 1024 * 1024;
+const INSTRUMENTAL_TYPES = new Set(["audio/mpeg", "audio/wav", "audio/x-wav"]);
+const INSTRUMENTAL_MIME: Record<string, string> = { mp3: "audio/mpeg", wav: "audio/wav" };
 
 function formatTime(milliseconds: number) {
   const totalSeconds = Math.max(0, milliseconds) / 1000;
@@ -22,7 +26,7 @@ function recalculateLine(line: Line, tokens: Token[]): Line {
   return { ...line, tokens, startMs: Math.min(...tokens.map((token) => token.startMs)), endMs: Math.max(...tokens.map((token) => token.endMs)) };
 }
 
-export default function LyricsEditor({ projectId, title, onClose }: { projectId: string; title: string; onClose: () => void }) {
+export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAnonKey, onClose }: { projectId: string; title: string; supabaseUrl: string; supabaseAnonKey: string; onClose: () => void }) {
   const [lines, setLines] = useState<Line[]>([]);
   const [revision, setRevision] = useState(0);
   const [offsetMs, setOffsetMs] = useState(0);
@@ -269,6 +273,47 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
     }
   }
 
+  async function replaceInstrumental(file: File) {
+    setExportWorking("replace-instrumental");
+    setError("");
+    setMessage("");
+    try {
+      const extension = file.name.split(".").pop()?.toLowerCase() || "";
+      const mimeType = file.type || INSTRUMENTAL_MIME[extension] || "";
+      if (!file.size || file.size > MAX_INSTRUMENTAL_BYTES || !INSTRUMENTAL_TYPES.has(mimeType)) {
+        throw new Error("Choose the Suno instrumental as an MP3 or WAV file under 250 MB.");
+      }
+      const signResponse = await fetch(`/api/karaoke-v2/projects/${projectId}/custom-instrumental/upload-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName: file.name, mimeType, size: file.size }),
+      });
+      const signed = await signResponse.json();
+      if (!signResponse.ok) throw new Error(signed.error || "Could not prepare the instrumental upload.");
+
+      const client = createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false } });
+      const storageMimeType = mimeType === "audio/x-wav" ? "audio/wav" : mimeType;
+      const { error: uploadError } = await client.storage.from(signed.bucket).uploadToSignedUrl(signed.path, signed.token, file, {
+        contentType: storageMimeType,
+        cacheControl: "3600",
+      });
+      if (uploadError) throw uploadError;
+
+      const completeResponse = await fetch(`/api/karaoke-v2/projects/${projectId}/custom-instrumental/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: signed.path, fileName: file.name, mimeType: storageMimeType, size: file.size }),
+      });
+      const completed = await completeResponse.json();
+      if (!completeResponse.ok) throw new Error(completed.error || "Could not save the replacement instrumental.");
+      setMessage("Suno instrumental saved for this song. Save your caption style, then create the updated MP4.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not replace the instrumental.");
+    } finally {
+      setExportWorking("");
+    }
+  }
+
   async function createVideo() {
     setExportWorking("render");
     setError("");
@@ -354,6 +399,7 @@ export default function LyricsEditor({ projectId, title, onClose }: { projectId:
     <div className="editor-actions"><button type="button" disabled={working} onClick={() => void save()}>{working ? "Saving…" : "Save lyric changes"}</button></div>
     <section className="export-panel">
       <div><p className="eyebrow">Export</p><h3>Karaoke files</h3><p className="muted">Save first, then download the timed karaoke subtitles and instrumental audio.</p></div>
+      <div className="custom-instrumental"><div><strong>Use your own instrumental for this song</strong><p className="muted">This keeps your saved lyrics and timing and skips the separator.</p></div><label className="file-button secondary">{exportWorking === "replace-instrumental" ? "Uploading instrumental…" : "Choose Suno instrumental"}<input type="file" accept=".mp3,.wav,audio/mpeg,audio/wav" disabled={Boolean(exportWorking)} onChange={(event) => { const file = event.target.files?.[0]; if (file) void replaceInstrumental(file); event.currentTarget.value = ""; }} /></label></div>
       {renderJob && <p className={`render-status status-${renderJob.status}`}>Video: {renderJob.status}{renderJob.status === "running" && renderJob.progress !== null ? ` · ${Math.round(renderJob.progress * 100)}%` : ""}{renderJob.error ? ` · ${renderJob.error}` : ""}</p>}
       <div className="export-actions"><button className="secondary" type="button" onClick={downloadSubtitles}>Download subtitles</button><button className="secondary" type="button" disabled={Boolean(exportWorking)} onClick={() => void downloadInstrumental()}>Download instrumental</button>{renderReady && <button className="secondary" type="button" disabled={Boolean(exportWorking)} onClick={() => void downloadVideo()}>Download MP4</button>}<button type="button" disabled={Boolean(exportWorking) || renderJob?.status === "queued" || renderJob?.status === "running"} onClick={() => void createVideo()}>{exportWorking === "render" ? "Starting…" : renderReady ? "Create updated MP4" : "Create MP4 video"}</button></div>
     </section>
