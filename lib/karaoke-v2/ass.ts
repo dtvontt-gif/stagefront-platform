@@ -8,6 +8,7 @@ type AssProject = {
   render?: {
     activeColor?: string;
     inactiveColor?: string;
+    backgroundColor?: string;
     fontFamily?: string;
     fontSize?: number;
     verticalPosition?: "top" | "center" | "bottom";
