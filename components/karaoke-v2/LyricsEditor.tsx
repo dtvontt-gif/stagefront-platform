@@ -3,6 +3,7 @@
 import { PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import KaraokePreview, { PreviewStyle } from "@/components/karaoke-v2/KaraokePreview";
+import { addTokensToNearestLine, mergeManualLyricLines } from "@/lib/karaoke-v2/lyrics";
 
 type Token = { id: string; text: string; startMs: number; endMs: number; confidence?: number };
 type Line = { id: string; text: string; startMs: number; endMs: number; tokens: Token[] };
@@ -118,7 +119,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not load lyrics.");
       setRevision(data.revision);
-      setLines(data.project?.lyrics?.lines || []);
+      setLines(mergeManualLyricLines(data.project?.lyrics?.lines || []));
       setOffsetMs(data.project?.lyrics?.offsetMs || 0);
       const render = data.project?.render || {};
       const backgroundTemplate = render.backgroundTemplate === "stagefront-stage" ? "stagefront-stage" : undefined;
@@ -239,8 +240,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
     const startMs = Math.max(0, currentMs - offsetMs);
     const id = `line-manual-${Date.now()}`;
     const tokens = words.map((text, index) => ({ id: `${id}-word-${index + 1}`, text, startMs: startMs + index * 550, endMs: startMs + index * 550 + 480 }));
-    const line = { id, text: words.join(" "), startMs, endMs: tokens[tokens.length - 1].endMs, tokens };
-    setLines((current) => [...current, line].sort((first, second) => first.startMs - second.startMs));
+    setLines((current) => addTokensToNearestLine(current, tokens, id));
     setSelectedWordId(tokens[0].id);
     setNewLyrics("");
   }
@@ -249,7 +249,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
     setWorking(true); setError(""); setMessage("");
     try {
       const safeOffsetMs = Number.isSafeInteger(offsetMs) ? offsetMs : 0;
-      const normalizedLines = lines.map((line) => {
+      const normalizedLines = mergeManualLyricLines(lines).map((line) => {
         const tokens = [...line.tokens].sort((first, second) => first.startMs - second.startMs);
         return recalculateLine(line, tokens);
       }).sort((first, second) => first.startMs - second.startMs);

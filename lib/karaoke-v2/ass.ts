@@ -1,10 +1,9 @@
-type AssToken = { text: string; startMs: number; endMs: number };
-type AssLine = { startMs: number; endMs: number; tokens: AssToken[] };
+import { mergeManualLyricLines, type TimedLine } from "@/lib/karaoke-v2/lyrics";
 
 type AssProject = {
   title?: string;
   artist?: string;
-  lyrics?: { offsetMs?: number; lines?: AssLine[] };
+  lyrics?: { offsetMs?: number; lines?: TimedLine[] };
   render?: {
     activeColor?: string;
     inactiveColor?: string;
@@ -46,7 +45,7 @@ export function karaokeAss(project: AssProject) {
   const fontSize = Math.max(28, Math.min(120, Number(render.fontSize) || 52));
   const alignment = render.verticalPosition === "top" ? 8 : render.verticalPosition === "center" ? 5 : 2;
   const offsetMs = Number(project.lyrics?.offsetMs) || 0;
-  const dialogues = (project.lyrics?.lines || []).filter((line) => line.tokens?.length).map((line) => {
+  const dialogues = mergeManualLyricLines(project.lyrics?.lines || []).filter((line) => line.tokens?.length).map((line) => {
     const sorted = [...line.tokens].sort((first, second) => first.startMs - second.startMs);
     const startMs = Math.max(0, sorted[0].startMs + offsetMs);
     const endMs = Math.max(startMs + 10, sorted[sorted.length - 1].endMs + offsetMs);
