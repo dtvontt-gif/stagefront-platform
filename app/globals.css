@@ -132,6 +132,8 @@ button.compact { padding: .5rem .75rem; }
 .export-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .6rem; }
 .custom-instrumental { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .85rem; border: 1px solid #ffffff22; border-radius: .8rem; background: #08080b88; }
 .custom-instrumental p { margin-top: .25rem; }
+.custom-instrumental .instrumental-saved { color: #fff; font-size: .82rem; }
+.instrumental-saved span { color: #55db8a; font-weight: 900; }
 .file-button { display: inline-flex; align-items: center; justify-content: center; cursor: pointer; white-space: nowrap; }
 .file-button input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .render-status { margin: 0; border-radius: .6rem; background: #ffffff0d; padding: .6rem .75rem; font-size: .8rem; font-weight: 700; }

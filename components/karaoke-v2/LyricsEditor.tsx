@@ -9,6 +9,7 @@ type Line = { id: string; text: string; startMs: number; endMs: number; tokens: 
 type DragMode = "move" | "start" | "end";
 type DragState = { lineIndex: number; tokenIndex: number; mode: DragMode; originX: number; original: Token };
 type RenderJob = { id: string; status: string; progress: number | null; error?: string | null };
+type CustomInstrumental = { fileName: string; sizeBytes: number; uploadedAt: string };
 
 const MIN_WORD_MS = 60;
 const MAX_INSTRUMENTAL_BYTES = 250 * 1024 * 1024;
@@ -49,6 +50,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
   const [backgroundWorking, setBackgroundWorking] = useState(false);
   const [renderJob, setRenderJob] = useState<RenderJob | null>(null);
   const [renderReady, setRenderReady] = useState(false);
+  const [customInstrumental, setCustomInstrumental] = useState<CustomInstrumental | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -143,6 +145,14 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
     return () => { setAudioUrl((current) => { if (current.startsWith("blob:")) URL.revokeObjectURL(current); return ""; }); };
     // loadAudio is intentionally scoped to this project load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  useEffect(() => {
+    void fetch(`/api/karaoke-v2/projects/${projectId}/custom-instrumental`, { cache: "no-store" }).then(async (response) => {
+      if (!response.ok) return;
+      const data = await response.json();
+      setCustomInstrumental(data.instrumental || null);
+    });
   }, [projectId]);
 
   useEffect(() => {
@@ -326,6 +336,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
       });
       const completed = await completeResponse.json();
       if (!completeResponse.ok) throw new Error(completed.error || "Could not save the replacement instrumental.");
+      setCustomInstrumental({ fileName: file.name, sizeBytes: file.size, uploadedAt: new Date().toISOString() });
       setMessage("Suno instrumental saved for this song. Save your caption style, then create the updated MP4.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not replace the instrumental.");
@@ -468,7 +479,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
     <div className="editor-actions"><button type="button" disabled={working} onClick={() => void save()}>{working ? "Saving…" : "Save lyric changes"}</button></div>
     <section className="export-panel">
       <div><p className="eyebrow">Export</p><h3>Karaoke files</h3><p className="muted">Save first, then download the timed karaoke subtitles and instrumental audio.</p></div>
-      <div className="custom-instrumental"><div><strong>Use your own instrumental for this song</strong><p className="muted">This keeps your saved lyrics and timing and skips the separator.</p></div><label className="file-button secondary">{exportWorking === "replace-instrumental" ? "Uploading instrumental…" : "Choose Suno instrumental"}<input type="file" accept=".mp3,.wav,audio/mpeg,audio/wav" disabled={Boolean(exportWorking)} onChange={(event) => { const file = event.target.files?.[0]; if (file) void replaceInstrumental(file); event.currentTarget.value = ""; }} /></label></div>
+      <div className="custom-instrumental"><div><strong>Use your own instrumental for this song</strong>{customInstrumental ? <p className="instrumental-saved"><span>✓ Uploaded</span> {customInstrumental.fileName} · {(customInstrumental.sizeBytes / 1024 / 1024).toFixed(1)} MB · {new Date(customInstrumental.uploadedAt).toLocaleDateString()}</p> : <p className="muted">No custom instrumental uploaded. The separated track will be used.</p>}<p className="muted">This keeps your saved lyrics and timing and skips the separator.</p></div><label className="file-button secondary">{exportWorking === "replace-instrumental" ? "Uploading instrumental…" : customInstrumental ? "Replace instrumental" : "Choose Suno instrumental"}<input type="file" accept=".mp3,.wav,audio/mpeg,audio/wav" disabled={Boolean(exportWorking)} onChange={(event) => { const file = event.target.files?.[0]; if (file) void replaceInstrumental(file); event.currentTarget.value = ""; }} /></label></div>
       {renderJob && <p className={`render-status status-${renderJob.status}`}>Video: {renderJob.status}{renderJob.status === "running" && renderJob.progress !== null ? ` · ${Math.round(renderJob.progress * 100)}%` : ""}{renderJob.error ? ` · ${renderJob.error}` : ""}</p>}
       <div className="export-actions"><button className="secondary" type="button" onClick={downloadSubtitles}>Download subtitles</button><button className="secondary" type="button" disabled={Boolean(exportWorking)} onClick={() => void downloadInstrumental()}>Download instrumental</button>{renderReady && <button className="secondary" type="button" disabled={Boolean(exportWorking)} onClick={() => void downloadVideo()}>Download MP4</button>}{(renderJob?.status === "queued" || renderJob?.status === "running") && <button className="danger" type="button" disabled={Boolean(exportWorking)} onClick={() => void cancelVideo()}>{exportWorking === "cancel" ? "Cancelling…" : "Cancel render"}</button>}<button type="button" disabled={working || Boolean(exportWorking) || renderJob?.status === "queued" || renderJob?.status === "running"} onClick={() => void createVideo()}>{working ? "Saving first…" : exportWorking === "render" ? "Starting…" : renderReady ? "Save & create updated MP4" : "Save & create MP4 video"}</button></div>
     </section>
