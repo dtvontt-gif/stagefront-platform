@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 export const KARAOKE_SOURCE_BUCKET = "karaoke-v2-source";
 export const KARAOKE_STEMS_BUCKET = "karaoke-v2-stems";
 export const KARAOKE_RENDERS_BUCKET = "karaoke-v2-renders";
+export const KARAOKE_BACKGROUNDS_BUCKET = "karaoke-v2-backgrounds";
 
 function isHttpUrl(value?: string) {
   if (!value) return false;

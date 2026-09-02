@@ -14,6 +14,8 @@ const MIN_WORD_MS = 60;
 const MAX_INSTRUMENTAL_BYTES = 250 * 1024 * 1024;
 const INSTRUMENTAL_TYPES = new Set(["audio/mpeg", "audio/wav", "audio/x-wav"]);
 const INSTRUMENTAL_MIME: Record<string, string> = { mp3: "audio/mpeg", wav: "audio/wav" };
+const MAX_BACKGROUND_BYTES = 15 * 1024 * 1024;
+const BACKGROUND_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function formatTime(milliseconds: number) {
   const totalSeconds = Math.max(0, milliseconds) / 1000;
@@ -44,6 +46,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
   const [autoFollow, setAutoFollow] = useState(true);
   const [working, setWorking] = useState(true);
   const [exportWorking, setExportWorking] = useState("");
+  const [backgroundWorking, setBackgroundWorking] = useState(false);
   const [renderJob, setRenderJob] = useState<RenderJob | null>(null);
   const [renderReady, setRenderReady] = useState(false);
   const [message, setMessage] = useState("");
@@ -120,9 +123,17 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
         activeColor: render.activeColor || "#f4b400",
         inactiveColor: render.inactiveColor || "#ffffff",
         backgroundColor: render.backgroundColor || "#08080b",
+        backgroundImagePath: render.backgroundImagePath || undefined,
         fontSize: Number(render.fontSize) || 52,
         verticalPosition: ["top", "center", "bottom"].includes(render.verticalPosition) ? render.verticalPosition : "bottom",
       });
+      if (render.backgroundImagePath) {
+        const imageResponse = await fetch(`/api/karaoke-v2/projects/${projectId}/background/url`, { method: "POST" });
+        if (imageResponse.ok) {
+          const image = await imageResponse.json();
+          setPreviewStyle((style) => ({ ...style, backgroundImageUrl: image.url }));
+        }
+      }
     }).then(() => loadAudio())
       .catch((cause) => setError(cause instanceof Error ? cause.message : "Could not open editor."))
       .finally(() => setWorking(false));
@@ -314,6 +325,36 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
     }
   }
 
+  async function uploadBackground(file: File) {
+    setBackgroundWorking(true);
+    setError("");
+    setMessage("");
+    try {
+      if (!file.size || file.size > MAX_BACKGROUND_BYTES || !BACKGROUND_TYPES.has(file.type)) {
+        throw new Error("Choose a JPG, PNG, or WebP image under 15 MB.");
+      }
+      const signResponse = await fetch(`/api/karaoke-v2/projects/${projectId}/background/upload-url`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mimeType: file.type, size: file.size }),
+      });
+      const signed = await signResponse.json();
+      if (!signResponse.ok) throw new Error(signed.error || "Could not prepare the background upload.");
+      const client = createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false } });
+      const { error: uploadError } = await client.storage.from(signed.bucket).uploadToSignedUrl(signed.path, signed.token, file, {
+        contentType: file.type, cacheControl: "3600",
+      });
+      if (uploadError) throw uploadError;
+      const imageResponse = await fetch(`/api/karaoke-v2/projects/${projectId}/background/url`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: signed.path }) });
+      const image = await imageResponse.json();
+      if (!imageResponse.ok) throw new Error(image.error || "Could not open the background image.");
+      setPreviewStyle((style) => ({ ...style, backgroundImagePath: signed.path, backgroundImageUrl: image.url }));
+      setMessage("Background image uploaded. Click Save lyric changes to keep it with this song.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not upload the background image.");
+    } finally {
+      setBackgroundWorking(false);
+    }
+  }
+
   async function createVideo() {
     setExportWorking("render");
     setError("");
@@ -360,6 +401,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
       <label>Sung words<input type="color" value={previewStyle.activeColor} onChange={(event) => setPreviewStyle((current) => ({ ...current, activeColor: event.target.value }))} /></label>
       <label>Upcoming words<input type="color" value={previewStyle.inactiveColor} onChange={(event) => setPreviewStyle((current) => ({ ...current, inactiveColor: event.target.value }))} /></label>
       <label>Background<input type="color" value={previewStyle.backgroundColor} onChange={(event) => setPreviewStyle((current) => ({ ...current, backgroundColor: event.target.value }))} /></label>
+      <label className="background-image-control">Background image<div className="background-image-buttons"><span className="file-button secondary compact">{backgroundWorking ? "Uploading…" : previewStyle.backgroundImagePath ? "Replace image" : "Upload image"}<input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" disabled={backgroundWorking} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadBackground(file); event.currentTarget.value = ""; }} /></span>{previewStyle.backgroundImagePath && <button className="secondary compact" type="button" onClick={() => setPreviewStyle((style) => ({ ...style, backgroundImagePath: undefined, backgroundImageUrl: undefined }))}>Remove image</button>}</div></label>
       <label>Text size<input type="range" min="28" max="96" step="2" value={previewStyle.fontSize} onChange={(event) => setPreviewStyle((current) => ({ ...current, fontSize: Number(event.target.value) }))} /></label>
       <label>Position<select value={previewStyle.verticalPosition} onChange={(event) => setPreviewStyle((current) => ({ ...current, verticalPosition: event.target.value as PreviewStyle["verticalPosition"] }))}><option value="top">Top</option><option value="center">Center</option><option value="bottom">Bottom</option></select></label>
     </div>

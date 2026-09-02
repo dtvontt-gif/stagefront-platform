@@ -59,11 +59,15 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   const color = (value: unknown, fallback: string) => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
   const requestedFontSize = Number(requestedRender.fontSize);
   const verticalPosition = ["top", "center", "bottom"].includes(String(requestedRender.verticalPosition)) ? String(requestedRender.verticalPosition) : "bottom";
+  const expectedBackgroundPrefix = `${session.user.id}/${id}/background/`;
+  const requestedBackgroundPath = typeof requestedRender.backgroundImagePath === "string" ? requestedRender.backgroundImagePath : "";
+  const backgroundImagePath = requestedBackgroundPath.startsWith(expectedBackgroundPrefix) ? requestedBackgroundPath : undefined;
   const render = {
     ...currentRender,
     activeColor: color(requestedRender.activeColor, String(currentRender.activeColor || "#f4b400")),
     inactiveColor: color(requestedRender.inactiveColor, String(currentRender.inactiveColor || "#ffffff")),
     backgroundColor: color(requestedRender.backgroundColor, String(currentRender.backgroundColor || "#08080b")),
+    backgroundImagePath,
     fontSize: Number.isFinite(requestedFontSize) ? Math.min(96, Math.max(28, Math.round(requestedFontSize))) : 52,
     verticalPosition,
   };

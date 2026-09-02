@@ -9,6 +9,8 @@ export type PreviewStyle = {
   activeColor: string;
   inactiveColor: string;
   backgroundColor: string;
+  backgroundImagePath?: string;
+  backgroundImageUrl?: string;
   fontSize: number;
   verticalPosition: "top" | "center" | "bottom";
 };
@@ -28,6 +30,7 @@ export default function KaraokePreview({ lines, currentMs, offsetMs, style }: {
     "--preview-active": style.activeColor,
     "--preview-inactive": style.inactiveColor,
     "--preview-background": style.backgroundColor,
+    "--preview-background-image": style.backgroundImageUrl ? `url(${JSON.stringify(style.backgroundImageUrl)})` : "none",
     "--preview-font-size": `${style.fontSize}px`,
   } as CSSProperties;
 

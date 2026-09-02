@@ -9,6 +9,7 @@ type AssProject = {
     activeColor?: string;
     inactiveColor?: string;
     backgroundColor?: string;
+    backgroundImagePath?: string;
     fontFamily?: string;
     fontSize?: number;
     verticalPosition?: "top" | "center" | "bottom";
