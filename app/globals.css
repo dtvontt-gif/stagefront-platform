@@ -116,6 +116,7 @@ button.compact { padding: .5rem .75rem; }
 .preview-controls label { display: grid; align-content: end; gap: .4rem; color: #ffffffa8; font-size: .72rem; font-weight: 700; }
 .preview-controls input[type="color"] { width: 100%; height: 2.35rem; border: 1px solid #ffffff2b; border-radius: .5rem; background: #050506; padding: .2rem; cursor: pointer; }
 .preview-controls .background-image-control { grid-column: span 2; }
+.background-image-control { display: grid; align-content: end; gap: .4rem; color: #ffffffa8; font-size: .72rem; font-weight: 700; }
 .background-image-buttons { display: flex; flex-wrap: wrap; gap: .4rem; }
 .preview-controls input[type="range"] { width: 100%; accent-color: #f4b400; }
 .preview-controls select { min-height: 2.35rem; border: 1px solid #ffffff2b; border-radius: .5rem; background: #050506; padding: .4rem; color: #fff; }

@@ -119,11 +119,14 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
       setLines(data.project?.lyrics?.lines || []);
       setOffsetMs(data.project?.lyrics?.offsetMs || 0);
       const render = data.project?.render || {};
+      const backgroundTemplate = render.backgroundTemplate === "stagefront-stage" ? "stagefront-stage" : undefined;
       setPreviewStyle({
         activeColor: render.activeColor || "#f4b400",
         inactiveColor: render.inactiveColor || "#ffffff",
         backgroundColor: render.backgroundColor || "#08080b",
         backgroundImagePath: render.backgroundImagePath || undefined,
+        backgroundTemplate,
+        backgroundImageUrl: backgroundTemplate ? "/images/karaoke/stagefront-stage-background.png" : undefined,
         fontSize: Number(render.fontSize) || 52,
         verticalPosition: ["top", "center", "bottom"].includes(render.verticalPosition) ? render.verticalPosition : "bottom",
       });
@@ -351,7 +354,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
       const imageResponse = await fetch(`/api/karaoke-v2/projects/${projectId}/background/url`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: signed.path }) });
       const image = await imageResponse.json();
       if (!imageResponse.ok) throw new Error(image.error || "Could not open the background image.");
-      setPreviewStyle((style) => ({ ...style, backgroundImagePath: signed.path, backgroundImageUrl: image.url }));
+      setPreviewStyle((style) => ({ ...style, backgroundImagePath: signed.path, backgroundTemplate: undefined, backgroundImageUrl: image.url }));
       setMessage("Background image uploaded. Click Save lyric changes to keep it with this song.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not upload the background image.");
@@ -406,7 +409,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
       <label>Sung words<input type="color" value={previewStyle.activeColor} onChange={(event) => setPreviewStyle((current) => ({ ...current, activeColor: event.target.value }))} /></label>
       <label>Upcoming words<input type="color" value={previewStyle.inactiveColor} onChange={(event) => setPreviewStyle((current) => ({ ...current, inactiveColor: event.target.value }))} /></label>
       <label>Background<input type="color" value={previewStyle.backgroundColor} onChange={(event) => setPreviewStyle((current) => ({ ...current, backgroundColor: event.target.value }))} /></label>
-      <label className="background-image-control">Background image<div className="background-image-buttons"><span className="file-button secondary compact">{backgroundWorking ? "Uploading…" : previewStyle.backgroundImagePath ? "Replace image" : "Upload image"}<input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" disabled={backgroundWorking} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadBackground(file); event.currentTarget.value = ""; }} /></span>{previewStyle.backgroundImagePath && <button className="secondary compact" type="button" onClick={() => setPreviewStyle((style) => ({ ...style, backgroundImagePath: undefined, backgroundImageUrl: undefined }))}>Remove image</button>}</div></label>
+      <div className="background-image-control"><span>Background design</span><div className="background-image-buttons"><button className={previewStyle.backgroundTemplate === "stagefront-stage" ? "compact" : "secondary compact"} type="button" onClick={() => setPreviewStyle((style) => ({ ...style, backgroundTemplate: "stagefront-stage", backgroundImagePath: undefined, backgroundImageUrl: "/images/karaoke/stagefront-stage-background.png" }))}>StageFront Stage</button><button className={!previewStyle.backgroundImageUrl ? "compact" : "secondary compact"} type="button" onClick={() => setPreviewStyle((style) => ({ ...style, backgroundTemplate: undefined, backgroundImagePath: undefined, backgroundImageUrl: undefined }))}>Solid color</button><span className="file-button secondary compact">{backgroundWorking ? "Uploading…" : previewStyle.backgroundImagePath ? "Replace custom image" : "Upload custom image"}<input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" disabled={backgroundWorking} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadBackground(file); event.currentTarget.value = ""; }} /></span></div></div>
       <label>Text size<input type="range" min="28" max="96" step="2" value={previewStyle.fontSize} onChange={(event) => setPreviewStyle((current) => ({ ...current, fontSize: Number(event.target.value) }))} /></label>
       <label>Position<select value={previewStyle.verticalPosition} onChange={(event) => setPreviewStyle((current) => ({ ...current, verticalPosition: event.target.value as PreviewStyle["verticalPosition"] }))}><option value="top">Top</option><option value="center">Center</option><option value="bottom">Bottom</option></select></label>
     </div>

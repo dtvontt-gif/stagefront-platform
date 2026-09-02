@@ -23,11 +23,12 @@ export async function POST(request: Request) {
   const backgroundPath = typeof render.backgroundImagePath === "string" && render.backgroundImagePath.startsWith(`${job.owner_id}/${job.project_id}/background/`) ? render.backgroundImagePath : "";
   const backgroundImage = backgroundPath ? await client.storage.from(KARAOKE_BACKGROUNDS_BUCKET).createSignedUrl(backgroundPath, 3600) : null;
   if (backgroundImage?.error) return NextResponse.json({ error: backgroundImage.error.message }, { status: 500 });
+  const templateImageUrl = render.backgroundTemplate === "stagefront-stage" ? `${new URL(request.url).origin}/images/karaoke/stagefront-stage-background.png` : null;
   return NextResponse.json({
     job: { id: job.job_id, projectId: job.project_id, attempt: job.attempts },
     instrumental: { url: instrumental.data.signedUrl },
     subtitles: karaokeAss(job.project_data),
-    video: { width: render.resolution?.width || 1920, height: render.resolution?.height || 1080, backgroundColor: render.backgroundColor || "#08080b", backgroundImageUrl: backgroundImage?.data.signedUrl || null },
+    video: { width: render.resolution?.width || 1920, height: render.resolution?.height || 1080, backgroundColor: render.backgroundColor || "#08080b", backgroundImageUrl: templateImageUrl || backgroundImage?.data.signedUrl || null, backgroundImageIsTemplate: Boolean(templateImageUrl) },
     output: { bucket: KARAOKE_RENDERS_BUCKET, ...output.data },
   });
 }

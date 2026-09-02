@@ -10,6 +10,7 @@ type AssProject = {
     inactiveColor?: string;
     backgroundColor?: string;
     backgroundImagePath?: string;
+    backgroundTemplate?: "stagefront-stage";
     fontFamily?: string;
     fontSize?: number;
     verticalPosition?: "top" | "center" | "bottom";

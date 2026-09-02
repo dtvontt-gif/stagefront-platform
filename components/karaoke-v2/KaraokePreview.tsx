@@ -11,6 +11,7 @@ export type PreviewStyle = {
   backgroundColor: string;
   backgroundImagePath?: string;
   backgroundImageUrl?: string;
+  backgroundTemplate?: "stagefront-stage";
   fontSize: number;
   verticalPosition: "top" | "center" | "bottom";
 };

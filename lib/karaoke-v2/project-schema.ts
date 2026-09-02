@@ -58,6 +58,7 @@ export type KaraokeProject = {
     inactiveColor: string;
     backgroundColor: string;
     backgroundImagePath?: string;
+    backgroundTemplate?: "stagefront-stage";
     fontSize: number;
     verticalPosition: "top" | "center" | "bottom";
     fontFamily: string;
