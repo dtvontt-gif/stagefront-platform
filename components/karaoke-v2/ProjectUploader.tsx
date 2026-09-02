@@ -47,9 +47,22 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
   }, []);
 
   useEffect(() => {
-    void load();
+    let lastSessionRefresh = 0;
+    async function refreshSession(force = false) {
+      if (!force && Date.now() - lastSessionRefresh < 5 * 60 * 1000) return;
+      try {
+        const response = await fetch("/api/auth/refresh", { method: "POST" });
+        if (response.ok) lastSessionRefresh = Date.now();
+      } catch {
+        // A temporary network interruption should not close the editor.
+      }
+    }
+    void refreshSession(true).then(load);
     const refresh = window.setInterval(() => void load(), 10000);
-    return () => window.clearInterval(refresh);
+    const keepSignedIn = window.setInterval(() => void refreshSession(true), 30 * 60 * 1000);
+    const returnedToStudio = () => { if (document.visibilityState === "visible") void refreshSession(); };
+    document.addEventListener("visibilitychange", returnedToStudio);
+    return () => { window.clearInterval(refresh); window.clearInterval(keepSignedIn); document.removeEventListener("visibilitychange", returnedToStudio); };
   }, [load]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {

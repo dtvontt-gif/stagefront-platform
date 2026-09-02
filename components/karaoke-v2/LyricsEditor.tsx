@@ -240,9 +240,14 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
         const tokens = [...line.tokens].sort((first, second) => first.startMs - second.startMs);
         return recalculateLine(line, tokens);
       }).sort((first, second) => first.startMs - second.startMs);
-      const response = await fetch(`/api/karaoke-v2/projects/${projectId}/lyrics`, {
+      const saveRequest = () => fetch(`/api/karaoke-v2/projects/${projectId}/lyrics`, {
         method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ baseRevision: revision, offsetMs: safeOffsetMs, lines: normalizedLines, render: previewStyle }),
       });
+      let response = await saveRequest();
+      if (response.status === 401) {
+        const refreshed = await fetch("/api/auth/refresh", { method: "POST" });
+        if (refreshed.ok) response = await saveRequest();
+      }
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not save lyrics.");
       setLines(normalizedLines);
