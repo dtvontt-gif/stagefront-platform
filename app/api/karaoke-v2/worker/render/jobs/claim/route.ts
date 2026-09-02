@@ -14,9 +14,10 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data) return new NextResponse(null, { status: 204 });
   const job = data as ClaimedRender;
+  const outputPath = `${job.owner_id}/${job.project_id}/renders/karaoke-${job.job_id}.mp4`;
   const [instrumental, output] = await Promise.all([
     client.storage.from(job.instrumental_bucket).createSignedUrl(job.instrumental_storage_key, 3600),
-    client.storage.from(KARAOKE_RENDERS_BUCKET).createSignedUploadUrl(`${job.owner_id}/${job.project_id}/renders/karaoke.mp4`, { upsert: true }),
+    client.storage.from(KARAOKE_RENDERS_BUCKET).createSignedUploadUrl(outputPath, { upsert: true }),
   ]);
   if (instrumental.error || output.error) return NextResponse.json({ error: instrumental.error?.message || output.error?.message }, { status: 500 });
   const render = job.project_data.render || {};
@@ -29,6 +30,6 @@ export async function POST(request: Request) {
     instrumental: { url: instrumental.data.signedUrl },
     subtitles: karaokeAss(job.project_data),
     video: { width: render.resolution?.width || 1920, height: render.resolution?.height || 1080, backgroundColor: render.backgroundColor || "#08080b", backgroundImageUrl: templateImageUrl || backgroundImage?.data.signedUrl || null, backgroundImageIsTemplate: Boolean(templateImageUrl) },
-    output: { bucket: KARAOKE_RENDERS_BUCKET, ...output.data },
+    output: { bucket: KARAOKE_RENDERS_BUCKET, path: outputPath, ...output.data },
   });
 }
