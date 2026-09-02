@@ -30,6 +30,6 @@ export async function POST(request: Request) {
     instrumental: { url: instrumental.data.signedUrl },
     subtitles: karaokeAss(job.project_data),
     video: { width: render.resolution?.width || 1920, height: render.resolution?.height || 1080, backgroundColor: render.backgroundColor || "#08080b", backgroundImageUrl: templateImageUrl || backgroundImage?.data.signedUrl || null, backgroundImageIsTemplate: Boolean(templateImageUrl) },
-    output: { bucket: KARAOKE_RENDERS_BUCKET, path: outputPath, ...output.data },
+    output: { bucket: KARAOKE_RENDERS_BUCKET, ...output.data, path: outputPath },
   });
 }
