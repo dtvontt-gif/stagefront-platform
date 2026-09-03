@@ -148,7 +148,9 @@ button.compact { padding: .5rem .75rem; }
 .music-generator { display: grid; gap: 1.25rem; margin-top: 2rem; background: radial-gradient(circle at 85% 0%, #f4b40018, transparent 38%), #0d0d10; }
 .music-generator h2 { margin: .25rem 0 0; font-size: 1.8rem; }
 .music-generator label { display: grid; gap: .55rem; color: #ffffffc9; font-weight: 800; }
-.music-generator textarea { resize: vertical; min-height: 10rem; border: 1px solid #ffffff29; border-radius: .85rem; background: #050506; padding: 1rem; color: #fff; font: inherit; line-height: 1.5; }
+.music-generator textarea, .music-generator input[type="text"], .music-generator label > input:not([type]) { resize: vertical; border: 1px solid #ffffff29; border-radius: .85rem; background: #050506; padding: 1rem; color: #fff; font: inherit; line-height: 1.5; }
+.music-generator textarea { min-height: 10rem; }
+.music-generator label small { color: #ffffff80; font-weight: 500; }
 .music-preset-header, .music-settings, .music-result { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .music-settings { border: 1px solid #ffffff16; border-radius: .85rem; padding: .9rem; }
 .music-settings label:first-child { flex: 1; }

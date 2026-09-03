@@ -8,6 +8,7 @@ export default function MusicGenerator({ email, configured }: { email: string; c
   const [prompt, setPrompt] = useState(SONIC_LOGO_PROMPT);
   const [duration, setDuration] = useState(10);
   const [instrumental, setInstrumental] = useState(false);
+  const [requiredWords, setRequiredWords] = useState("Stage Front");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
@@ -22,7 +23,7 @@ export default function MusicGenerator({ email, configured }: { email: string; c
       const response = await fetch("/api/music/generate", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ prompt, durationSeconds: duration, instrumental }),
+        body: JSON.stringify({ prompt, durationSeconds: duration, instrumental, requiredWords }),
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({ error: "Generation failed." }));
@@ -44,8 +45,9 @@ export default function MusicGenerator({ email, configured }: { email: string; c
     </header>
 
     <form className="panel music-generator" onSubmit={generate}>
-      <div className="music-preset-header"><div><p className="eyebrow">First instrument</p><h2>StageFront sonic logo</h2></div><button type="button" className="secondary compact" onClick={() => { setPrompt(SONIC_LOGO_PROMPT); setDuration(10); setInstrumental(false); }}>Reset preset</button></div>
+      <div className="music-preset-header"><div><p className="eyebrow">First instrument</p><h2>StageFront sonic logo</h2></div><button type="button" className="secondary compact" onClick={() => { setPrompt(SONIC_LOGO_PROMPT); setDuration(10); setInstrumental(false); setRequiredWords("Stage Front"); }}>Reset preset</button></div>
       <label>Describe the sound<textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} maxLength={4100} rows={8} /></label>
+      <label>Required words<input value={requiredWords} onChange={(event) => setRequiredWords(event.target.value)} maxLength={120} placeholder="Leave blank for no required lyrics" /><small>These words are placed directly into the composition instead of being treated as a suggestion.</small></label>
       <div className="music-settings">
         <label>Length: {duration} seconds<input type="range" min="3" max="60" value={duration} onChange={(event) => setDuration(Number(event.target.value))} /></label>
         <label className="music-check"><input type="checkbox" checked={instrumental} onChange={(event) => setInstrumental(event.target.checked)} /> Instrumental only</label>

@@ -2,6 +2,7 @@ export type MusicGenerationRequest = {
   prompt: string;
   durationSeconds: number;
   instrumental: boolean;
+  requiredWords?: string;
 };
 
 export type MusicProvider = {

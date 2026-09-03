@@ -15,7 +15,28 @@ export const elevenMusicProvider: MusicProvider = {
         "content-type": "application/json",
         "xi-api-key": apiKey,
       },
-      body: JSON.stringify({
+      body: JSON.stringify(request.requiredWords ? {
+        composition_plan: {
+          chunks: [{
+            text: `[Sonic Logo]\n{arena drums and low grand piano intro}\n${request.requiredWords}\n{electric guitar resolves cleanly}`,
+            duration_ms: Math.round(request.durationSeconds * 1000),
+            positive_styles: [
+              "premium concert-stage sonic logo",
+              "real expressive electric guitar through a physical talk box",
+              "the required words are clearly articulated once as the main melodic hook",
+              "arena drums",
+              "low grand piano",
+              "cinematic live-concert energy",
+              "polished professional studio mix",
+              request.prompt,
+            ],
+            negative_styles: ["bullhorn", "intercom", "toy", "cheap synthesizer", "spoken announcer", "unclear words", "copyrighted melody"],
+            context_adherence: "high",
+          }],
+        },
+        model_id: "music_v2",
+        sign_with_c2pa: true,
+      } : {
         prompt: request.prompt,
         music_length_ms: Math.round(request.durationSeconds * 1000),
         model_id: "music_v2",

@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const input = body as { prompt?: unknown; durationSeconds?: unknown; instrumental?: unknown };
+  const input = body as { prompt?: unknown; durationSeconds?: unknown; instrumental?: unknown; requiredWords?: unknown };
   const prompt = typeof input.prompt === "string" ? input.prompt.trim() : "";
   const durationSeconds = Number(input.durationSeconds);
   if (prompt.length < 12 || prompt.length > 4100) {
@@ -30,6 +30,7 @@ export async function POST(request: Request) {
       prompt,
       durationSeconds,
       instrumental: input.instrumental !== false,
+      requiredWords: typeof input.requiredWords === "string" ? input.requiredWords.trim().slice(0, 120) : undefined,
     });
     return new Response(result.audio, {
       headers: {
