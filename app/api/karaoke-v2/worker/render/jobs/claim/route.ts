@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { karaokeAss } from "@/lib/karaoke-v2/ass";
+import { karaokeAss, KARAOKE_INTRO_MS, KARAOKE_OUTRO_MS } from "@/lib/karaoke-v2/ass";
 import { isAuthorizedWorker, KARAOKE_BACKGROUNDS_BUCKET, KARAOKE_RENDERS_BUCKET, supabaseService } from "@/lib/karaoke-v2/supabase";
 
 type ClaimedRender = { job_id: string; project_id: string; owner_id: string; attempts: number; instrumental_bucket: string; instrumental_storage_key: string; project_data: Parameters<typeof karaokeAss>[0] };
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     job: { id: job.job_id, projectId: job.project_id, attempt: job.attempts },
     instrumental: { url: instrumental.data.signedUrl },
     subtitles: karaokeAss(job.project_data),
-    video: { width: render.resolution?.width || 1920, height: render.resolution?.height || 1080, backgroundColor: render.backgroundColor || "#08080b", backgroundImageUrl: templateImageUrl || backgroundImage?.data.signedUrl || null, backgroundImageIsTemplate: Boolean(templateImageUrl) },
+    video: { width: render.resolution?.width || 1920, height: render.resolution?.height || 1080, backgroundColor: render.backgroundColor || "#08080b", backgroundImageUrl: templateImageUrl || backgroundImage?.data.signedUrl || null, backgroundImageIsTemplate: Boolean(templateImageUrl), introDurationMs: KARAOKE_INTRO_MS, outroDurationMs: KARAOKE_OUTRO_MS },
     output: { bucket: KARAOKE_RENDERS_BUCKET, ...output.data, path: outputPath },
   });
 }

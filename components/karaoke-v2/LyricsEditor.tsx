@@ -245,6 +245,17 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
     setNewLyrics("");
   }
 
+  function deleteSelectedWord() {
+    if (!selectedWordId) return;
+    setLines((current) => current.flatMap((line) => {
+      const tokens = line.tokens.filter((token) => token.id !== selectedWordId);
+      return tokens.length ? [recalculateLine({ ...line, text: tokens.map((token) => token.text.trim()).filter(Boolean).join(" ") }, tokens)] : [];
+    }));
+    setEditingWordId(null);
+    setSelectedWordId(null);
+    setMessage("Word removed. Save lyric changes when you are finished editing.");
+  }
+
   async function save() {
     setWorking(true); setError(""); setMessage("");
     try {
@@ -453,6 +464,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
       <label>Zoom<input type="range" min="30" max="240" step="10" value={zoom} onChange={(event) => setZoom(Number(event.target.value))} /></label>
       <label className="check-field"><input type="checkbox" checked={autoFollow} onChange={(event) => setAutoFollow(event.target.checked)} /> Keep music centered</label>
       <button className={`timeline-play ${isPlaying ? "playing" : ""}`} type="button" disabled={!audioUrl} aria-label={isPlaying ? "Pause audio" : "Play audio"} aria-pressed={isPlaying} onClick={() => void togglePlayback()}>{isPlaying ? "❚❚ Pause" : "▶ Play"}</button>
+      <button className="danger compact" type="button" disabled={!selectedWordId} onClick={deleteSelectedWord}>Delete selected word</button>
       <span className="muted">Double-click a word to fix its spelling · drag it for small timing changes</span>
     </div>
     <div className="timeline-viewport" ref={timelineRef}>
