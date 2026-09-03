@@ -2,6 +2,11 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
+type SavedGeneration = {
+  id: string; prompt: string; required_words: string | null; duration_seconds: number;
+  provider: string; created_at: string; audioUrl: string | null;
+};
+
 const SONIC_LOGO_PROMPT = `A premium 10-second concert-stage sonic logo for a brand named StageFront. Real arena drums and low grand piano lead into a warm, expressive electric guitar played through a physical talk box. The guitar clearly articulates the two words "Stage Front" as a memorable melodic phrase. It must sound like a real guitarist and amplifier, not a vocoder, horn, intercom, synth, or toy. Cinematic live-concert energy, polished studio mix, strong musical ending, no copyrighted melody.`;
 
 export default function MusicGenerator({ email, configured }: { email: string; configured: boolean }) {
@@ -12,7 +17,22 @@ export default function MusicGenerator({ email, configured }: { email: string; c
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
+  const [history, setHistory] = useState<SavedGeneration[]>([]);
+  const [historyError, setHistoryError] = useState("");
 
+  async function loadHistory() {
+    try {
+      const response = await fetch("/api/music/generations", { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not load history.");
+      setHistory(data.generations || []);
+      setHistoryError("");
+    } catch (problem) {
+      setHistoryError(problem instanceof Error ? problem.message : "Could not load history.");
+    }
+  }
+
+  useEffect(() => { void loadHistory(); }, []);
   useEffect(() => () => { if (audioUrl) URL.revokeObjectURL(audioUrl); }, [audioUrl]);
 
   async function generate(event: FormEvent) {
@@ -31,6 +51,7 @@ export default function MusicGenerator({ email, configured }: { email: string; c
       }
       const nextUrl = URL.createObjectURL(await response.blob());
       setAudioUrl((current) => { if (current) URL.revokeObjectURL(current); return nextUrl; });
+      await loadHistory();
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : "Generation failed.");
     } finally {
@@ -57,5 +78,15 @@ export default function MusicGenerator({ email, configured }: { email: string; c
       <button disabled={busy || !configured}>{busy ? "Creating your music…" : "Generate music"}</button>
       {audioUrl && <section className="music-result"><strong>Newest generation</strong><audio controls src={audioUrl} /><a className="button-link" href={audioUrl} download="stagefront-generation.mp3">Download MP3</a></section>}
     </form>
+    <section className="music-history">
+      <div><p className="eyebrow">Saved automatically</p><h2>Generation history</h2></div>
+      {historyError && <p className="error">{historyError}</p>}
+      {!historyError && history.length === 0 && <p className="muted">Your next generation will be saved here permanently.</p>}
+      <div className="music-history-list">{history.map((item) => <article className="panel music-history-card" key={item.id}>
+        <div><strong>{item.required_words || "Instrumental generation"}</strong><p>{new Date(item.created_at).toLocaleString()} · {item.duration_seconds}s</p></div>
+        <p>{item.prompt}</p>
+        {item.audioUrl ? <><audio controls preload="none" src={item.audioUrl} /><a className="button-link" href={item.audioUrl} download={`stagefront-${item.id}.mp3`}>Download</a></> : <p className="error">Audio temporarily unavailable.</p>}
+      </article>)}</div>
+    </section>
   </>;
 }

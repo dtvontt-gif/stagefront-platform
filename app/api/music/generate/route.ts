@@ -1,4 +1,5 @@
 import { karaokeSession } from "@/lib/karaoke-v2/auth";
+import { supabaseService } from "@/lib/karaoke-v2/supabase";
 import { elevenMusicProvider } from "@/lib/music-generation/elevenlabs";
 
 export const runtime = "nodejs";
@@ -32,12 +33,37 @@ export async function POST(request: Request) {
       instrumental: input.instrumental !== false,
       requiredWords: typeof input.requiredWords === "string" ? input.requiredWords.trim().slice(0, 120) : undefined,
     });
+    const generationId = crypto.randomUUID();
+    const storageKey = `${session.user.id}/${generationId}.mp3`;
+    const service = supabaseService();
+    const { error: uploadError } = await service.storage
+      .from("music-generations")
+      .upload(storageKey, result.audio, { contentType: result.contentType, upsert: false });
+    if (uploadError) throw new Error(`Music was created but history storage failed: ${uploadError.message}`);
+    const { error: historyError } = await service.from("music_generations").insert({
+      id: generationId,
+      owner_id: session.user.id,
+      prompt,
+      required_words: typeof input.requiredWords === "string" ? input.requiredWords.trim().slice(0, 120) || null : null,
+      duration_seconds: Math.round(durationSeconds),
+      provider: elevenMusicProvider.id,
+      provider_generation_id: result.generationId || null,
+      bucket: "music-generations",
+      storage_key: storageKey,
+      mime_type: result.contentType,
+      size_bytes: result.audio.byteLength,
+    });
+    if (historyError) {
+      await service.storage.from("music-generations").remove([storageKey]);
+      throw new Error(`Music was created but history could not be recorded: ${historyError.message}`);
+    }
     return new Response(result.audio, {
       headers: {
         "content-type": result.contentType,
         "content-disposition": 'inline; filename="stagefront-generation.mp3"',
         "cache-control": "no-store",
-        ...(result.generationId ? { "x-stagefront-generation-id": result.generationId } : {}),
+        "x-stagefront-history-id": generationId,
+        ...(result.generationId ? { "x-provider-generation-id": result.generationId } : {}),
       },
     });
   } catch (error) {

@@ -162,3 +162,10 @@ button.compact { padding: .5rem .75rem; }
 .music-result audio { width: 100%; }
 .music-result .button-link { align-self: flex-start; margin-top: 0; }
 @media (max-width: 38rem) { .music-preset-header, .music-settings { align-items: stretch; flex-direction: column; } }
+.music-history { display: grid; gap: 1rem; margin-top: 2rem; }
+.music-history h2 { margin: .25rem 0; font-size: 1.8rem; }
+.music-history-list { display: grid; gap: .9rem; }
+.music-history-card { display: grid; gap: .8rem; }
+.music-history-card p { margin: .2rem 0; color: #ffffff8c; line-height: 1.45; }
+.music-history-card audio { width: 100%; }
+.music-history-card .button-link { justify-self: start; margin-top: 0; }
