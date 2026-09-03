@@ -7,7 +7,7 @@ export default async function StudioPage() {
   const session = await karaokeSession();
   if (!session) redirect("/sign-in");
   const config = supabaseConfiguration();
-  return <main className="studio"><ProjectUploader
+  return <main className="studio"><a className="button-link music-studio-link" href="/music-studio">Open Music Generator</a><ProjectUploader
     email={session.user.email || "Signed in"}
     supabaseUrl={config.url}
     supabaseAnonKey={config.anonKey}
