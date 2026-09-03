@@ -25,11 +25,12 @@ export async function POST(request: Request) {
   const backgroundImage = backgroundPath ? await client.storage.from(KARAOKE_BACKGROUNDS_BUCKET).createSignedUrl(backgroundPath, 3600) : null;
   if (backgroundImage?.error) return NextResponse.json({ error: backgroundImage.error.message }, { status: 500 });
   const templateImageUrl = render.backgroundTemplate === "stagefront-stage" ? `${new URL(request.url).origin}/images/karaoke/stagefront-stage-background.png` : null;
+  const introImageUrl = `${new URL(request.url).origin}/images/karaoke/stagefront-intro-background.png`;
   return NextResponse.json({
     job: { id: job.job_id, projectId: job.project_id, attempt: job.attempts },
     instrumental: { url: instrumental.data.signedUrl },
     subtitles: karaokeAss(job.project_data),
-    video: { width: render.resolution?.width || 1920, height: render.resolution?.height || 1080, backgroundColor: render.backgroundColor || "#08080b", backgroundImageUrl: templateImageUrl || backgroundImage?.data.signedUrl || null, backgroundImageIsTemplate: Boolean(templateImageUrl), introDurationMs: KARAOKE_INTRO_MS, outroDurationMs: KARAOKE_OUTRO_MS },
+    video: { width: render.resolution?.width || 1920, height: render.resolution?.height || 1080, backgroundColor: render.backgroundColor || "#08080b", backgroundImageUrl: templateImageUrl || backgroundImage?.data.signedUrl || null, backgroundImageIsTemplate: Boolean(templateImageUrl), introImageUrl, introDurationMs: KARAOKE_INTRO_MS, outroDurationMs: KARAOKE_OUTRO_MS },
     output: { bucket: KARAOKE_RENDERS_BUCKET, ...output.data, path: outputPath },
   });
 }

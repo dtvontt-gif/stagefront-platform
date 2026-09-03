@@ -18,7 +18,8 @@ type AssProject = {
   };
 };
 
-export const KARAOKE_INTRO_MS = 5000;
+// Matches the mastered StageFront sonic-logo/welcome asset used by the renderer.
+export const KARAOKE_INTRO_MS = 11450;
 export const KARAOKE_OUTRO_MS = 4000;
 
 function assTime(milliseconds: number) {
@@ -70,8 +71,9 @@ export function karaokeAss(project: AssProject) {
   const introTitle = escapeAss(project.title || "Your song");
   const introArtist = project.artist ? `\\N${escapeAss(project.artist)}` : "";
   const introEvents = [
-    `Dialogue: 1,${assTime(400)},${assTime(2400)},Intro,,0,0,0,,COMING TO THE STAGE`,
-    `Dialogue: 1,${assTime(2400)},${assTime(KARAOKE_INTRO_MS - 200)},IntroTitle,,0,0,0,,${introTitle}${introArtist}`,
+    `Dialogue: 1,${assTime(350)},${assTime(3800)},Intro,,0,0,0,,{\\fad(450,500)}STAGEFRONT`,
+    `Dialogue: 1,${assTime(4450)},${assTime(6000)},Intro,,0,0,0,,{\\fad(350,300)}NOW COMING TO THE STAGE`,
+    `Dialogue: 2,${assTime(6100)},${assTime(KARAOKE_INTRO_MS - 300)},IntroTitle,,0,0,0,,{\\fad(500,450)}${introTitle}${introArtist}`,
   ];
   const outroStartMs = KARAOKE_INTRO_MS + songDurationMs;
   const outroEvent = `Dialogue: 1,${assTime(outroStartMs)},${assTime(outroStartMs + KARAOKE_OUTRO_MS)},Outro,,0,0,0,,THANK YOU FOR COMING TO THE STAGE`;
