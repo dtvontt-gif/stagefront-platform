@@ -9,6 +9,7 @@ import AdminAudioStation from "@/components/AdminAudioStation";
 import AdminWinners from "@/components/AdminWinners";
 import AdminOriginals from "@/components/AdminOriginals";
 import AdminVideoCredits from "@/components/AdminVideoCredits";
+import AdminAccounts from "@/components/AdminAccounts";
 import { staffAccess } from "@/lib/stagefront-auth";
 
 export const metadata = {
@@ -46,6 +47,7 @@ export default async function AdminPage() {
         Signed in with <strong className="capitalize text-[#f4b400]">{access.role}</strong> access.
       </div>
       {access.permissions.includes("finance") ? <><AdminVideoCredits /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
+      {access.permissions.includes("staff") ? <><AdminAccounts /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
       {access.permissions.includes("profiles") ? <><AdminFounders /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
       {access.permissions.includes("hosts") ? <><AdminHosts /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
       {access.permissions.includes("hosts") ? <><AdminAudioStation /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}

@@ -33,7 +33,13 @@ export async function POST(request: Request) {
     body: JSON.stringify({ email, password }),
   });
   if (!response.ok) {
-    return Response.json({ message: "The email or password was not recognized." }, { status: 401 });
+    const failure = await response.json().catch(() => ({})) as { error_code?: string; msg?: string };
+    const unconfirmed = failure.error_code === "email_not_confirmed" || failure.msg?.toLowerCase().includes("email not confirmed");
+    return Response.json({
+      message: unconfirmed
+        ? "Confirm your email before signing in. Check your inbox and spam folder for the StageFront confirmation email."
+        : "The email or password was not recognized.",
+    }, { status: 401 });
   }
 
   const session = (await response.json()) as {
