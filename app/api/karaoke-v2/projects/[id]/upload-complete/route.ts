@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { karaokeSession } from "@/lib/karaoke-v2/auth";
 import { KARAOKE_SOURCE_BUCKET, supabaseForUser } from "@/lib/karaoke-v2/supabase";
+import { wakeKaraokeWorker } from "@/lib/karaoke-v2/worker-trigger";
 
 export async function POST(request: Request, context: RouteContext<"/api/karaoke-v2/projects/[id]/upload-complete">) {
   const session = await karaokeSession();
@@ -34,5 +35,6 @@ export async function POST(request: Request, context: RouteContext<"/api/karaoke
     object_size: sizeBytes,
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true, status: "queued" });
+  const workerStarted = await wakeKaraokeWorker();
+  return NextResponse.json({ ok: true, status: "queued", workerStarted });
 }

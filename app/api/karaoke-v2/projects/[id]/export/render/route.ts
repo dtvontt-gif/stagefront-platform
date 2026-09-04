@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { karaokeSession } from "@/lib/karaoke-v2/auth";
 import { supabaseForUser } from "@/lib/karaoke-v2/supabase";
+import { wakeKaraokeWorker } from "@/lib/karaoke-v2/worker-trigger";
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await karaokeSession();
@@ -31,7 +32,8 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     project_id: id, owner_id: session.user.id, kind: "render", status: "queued", progress: 0,
   }).select("id,status,progress").single();
   if (error || !job) return NextResponse.json({ error: error?.message || "Could not queue the video." }, { status: 500 });
-  return NextResponse.json({ job }, { status: 201 });
+  const workerStarted = await wakeKaraokeWorker();
+  return NextResponse.json({ job, workerStarted }, { status: 201 });
 }
 
 export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
