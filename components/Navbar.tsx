@@ -8,6 +8,7 @@ const navigation = [
   { label: "Live", href: "/live" },
   { label: "Queue", href: "/queue" },
   { label: "AI Video Studio", href: "/create/video" },
+  { label: "Karaoke Studio", href: "/studio" },
   { label: "Discover", href: "/#discover" },
   { label: "Hosts", href: "/hosts" },
   { label: "Golden Voices", href: "/golden-voices" },
@@ -23,7 +24,7 @@ const navigation = [
 ];
 
 const desktopNavigation = navigation.filter((item) =>
-  ["Live", "Queue", "AI Video Studio", "Hosts", "Golden Voices", "Original Artists", "Community"].includes(item.label),
+  ["Live", "Queue", "AI Video Studio", "Karaoke Studio", "Hosts", "Golden Voices", "Original Artists", "Community"].includes(item.label),
 );
 
 export default async function Navbar() {
