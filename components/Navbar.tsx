@@ -8,6 +8,7 @@ const navigation = [
   { label: "Live", href: "/live" },
   { label: "Queue", href: "/queue" },
   { label: "AI Video Studio", href: "/create/video" },
+  { label: "Music Generator", href: "https://longplay-song-studio.domchop22.chatgpt.site/" },
   { label: "Karaoke Studio", href: "/studio" },
   { label: "Discover", href: "/#discover" },
   { label: "Hosts", href: "/hosts" },
@@ -24,7 +25,7 @@ const navigation = [
 ];
 
 const desktopNavigation = navigation.filter((item) =>
-  ["Live", "Queue", "AI Video Studio", "Karaoke Studio", "Hosts", "Golden Voices", "Original Artists", "Community"].includes(item.label),
+  ["Live", "Queue", "AI Video Studio", "Music Generator", "Karaoke Studio", "Hosts", "Golden Voices", "Original Artists", "Community"].includes(item.label),
 );
 
 export default async function Navbar() {

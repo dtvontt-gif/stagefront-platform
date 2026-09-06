@@ -5,6 +5,7 @@ const footerLinks = [
   { label: "Watch Live", href: "/live" },
   { label: "Live Queue", href: "/queue" },
   { label: "AI Video Studio", href: "/create/video" },
+  { label: "StageFront Music Generator", href: "https://longplay-song-studio.domchop22.chatgpt.site/" },
   { label: "Discover", href: "/#discover" },
   { label: "Golden Voices", href: "/golden-voices" },
   { label: "Contest Winners", href: "/winners" },

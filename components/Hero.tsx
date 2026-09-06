@@ -66,6 +66,15 @@ export default function Hero() {
           >
             AI Video Studio
           </a>
+          <a
+            href="https://longplay-song-studio.domchop22.chatgpt.site/"
+            className="rounded-full border border-[#f4b400] bg-[#f4b400]/10 px-8 py-3 text-sm font-extrabold text-[#ffd05a] backdrop-blur-sm transition hover:-translate-y-1 hover:bg-[#f4b400] hover:text-[#0b0b0f] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#f4b400] sm:text-base"
+          >
+            <span className="block">StageFront Music Generator</span>
+            <span className="mt-0.5 block text-[0.65rem] font-semibold uppercase tracking-[0.2em] opacity-70">
+              Powered by Longplay
+            </span>
+          </a>
         </div>
       </div>
 
