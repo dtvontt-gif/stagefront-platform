@@ -19,7 +19,10 @@ export default function AdminFounders() {
     const result = (await response.json()) as { members?: Member[]; message?: string };
     setMembers(result.members ?? []); setMessage(result.message ?? "");
   }
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    const initial = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(initial);
+  }, []);
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return members.filter((member) => (
@@ -53,7 +56,7 @@ export default function AdminFounders() {
   return (
     <section className="mx-auto w-full max-w-6xl">
       <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-        <div><p className="section-kicker">Administrator control</p><h1 className="mt-3 font-display text-4xl font-black uppercase sm:text-6xl">Wall of <span className="text-stage-gold">Founders.</span></h1></div>
+        <div><p className="section-kicker">Backstage profile control</p><h1 className="mt-3 font-display text-4xl font-black uppercase sm:text-6xl">Member <span className="text-stage-gold">Profiles.</span></h1><p className="mt-4 max-w-2xl text-white/55">Manage every original member record, update profile information, and promote members into Host Discovery.</p></div>
         <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search members" className="w-full rounded-full border border-white/15 bg-white/[0.05] px-5 py-3 text-sm text-white outline-none focus:border-[#f4b400] sm:max-w-sm" />
       </div>
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
