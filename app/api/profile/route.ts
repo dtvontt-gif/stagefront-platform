@@ -5,7 +5,7 @@ const headers = (key: string) => ({ apikey: key, Authorization: `Bearer ${key}`,
 
 async function memberForEmail(url: string, key: string, email: string) {
   const query = new URLSearchParams({
-    select: "founder_number,display_name,email,username,role,show_on_wall,profile_image_path,bio,location,genres,tiktok_profile_url,instagram_url,youtube_url,facebook_url,website_url",
+    select: "founder_number,display_name,email,username,role,show_on_wall,host_published,is_live,profile_image_path,bio,location,genres,tiktok_profile_url,instagram_url,youtube_url,facebook_url,website_url",
     email: `eq.${email.toLowerCase()}`,
     limit: "1",
   });
@@ -17,7 +17,7 @@ async function memberForEmail(url: string, key: string, email: string) {
 
 async function memberForNumber(url: string, key: string, founderNumber: number) {
   const query = new URLSearchParams({
-    select: "founder_number,display_name,email,username,role,show_on_wall,profile_image_path,bio,location,genres,tiktok_profile_url,instagram_url,youtube_url,facebook_url,website_url",
+    select: "founder_number,display_name,email,username,role,show_on_wall,host_published,is_live,profile_image_path,bio,location,genres,tiktok_profile_url,instagram_url,youtube_url,facebook_url,website_url",
     founder_number: `eq.${founderNumber}`,
     limit: "1",
   });
@@ -102,6 +102,8 @@ export async function PATCH(request: Request) {
       display_name: displayName,
       username,
       role,
+      host_published: canManage ? role === "host" : member.host_published,
+      is_live: canManage && role !== "host" ? false : member.is_live,
       show_on_wall: showOnWall,
       bio: bio || null,
       location: location || null,
@@ -123,5 +125,10 @@ export async function PATCH(request: Request) {
     return Response.json({ message: "The profile could not be saved." }, { status: 502 });
   }
   if (oldPath && oldPath !== newPath) await deleteProfileImage(config, oldPath);
-  return Response.json({ message: "Profile updated successfully.", profileImageUrl: profileImageUrl(config.url, newPath) });
+  return Response.json({
+    message: role === "host" && canManage
+      ? "Profile updated and added to Host Discovery."
+      : "Profile updated successfully.",
+    profileImageUrl: profileImageUrl(config.url, newPath),
+  });
 }
