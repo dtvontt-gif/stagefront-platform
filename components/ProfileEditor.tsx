@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import StagePortrait from "@/components/StagePortrait";
 
@@ -10,6 +10,7 @@ type Member = {
   username: string;
   role: string;
   show_on_wall: boolean;
+  host_published: boolean;
   profile_image_url?: string | null;
   bio?: string | null;
   location?: string | null;
@@ -28,15 +29,18 @@ export default function ProfileEditor() {
   const [message, setMessage] = useState("Loading your profile...");
   const [busy, setBusy] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     const query = managedMember ? `?member=${encodeURIComponent(managedMember)}` : "";
     const response = await fetch(`/api/profile${query}`, { cache: "no-store" });
     const result = (await response.json()) as { member?: Member; message?: string };
     setMember(result.member ?? null);
     setMessage(result.message ?? "");
-  }
+  }, [managedMember]);
 
-  useEffect(() => { void load(); }, [managedMember]);
+  useEffect(() => {
+    const initial = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(initial);
+  }, [load]);
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -88,6 +92,9 @@ export default function ProfileEditor() {
               ))}
             </div>
           </fieldset>
+          <p className="rounded-2xl border border-[#f4b400]/20 bg-[#f4b400]/[0.06] p-4 text-sm leading-6 text-white/65">
+            Selecting <strong className="text-[#f4b400]">Host</strong> automatically publishes this member in Host Discovery. Changing them from Host removes them from Host Discovery and switches off their live status.
+          </p>
           <label className="flex items-center gap-3 text-sm text-white/65">
             <input type="checkbox" name="showOnWall" defaultChecked={member.show_on_wall} className="h-4 w-4 accent-[#f4b400]" />
             Show this member on the Wall of Founders
