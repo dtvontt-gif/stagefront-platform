@@ -10,7 +10,7 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/memb
   const normalizedUsername = username.toLowerCase();
 
   const accountQuery = new URLSearchParams({
-    select: "user_id,username,display_name,bio,role,genres,location,looking_for,profile_image_path",
+    select: "user_id,email,username,display_name,bio,role,genres,location,looking_for,profile_image_path",
     username: `eq.${normalizedUsername}`,
     is_public: "eq.true",
     limit: "1",
@@ -23,9 +23,13 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/memb
     ? (await accountResponse.json()) as Record<string, unknown>[]
     : [];
   if (accountProfile) {
+    const socialQuery = new URLSearchParams({ select: "tiktok_profile_url", email: `eq.${String(accountProfile.email).toLowerCase()}`, limit: "1" });
+    const socialResponse = await fetch(`${config.url}/rest/v1/founding_members?${socialQuery}`, { headers: headers(config.serviceKey), cache: "no-store" });
+    const [social] = socialResponse.ok ? await socialResponse.json() as { tiktok_profile_url?: string | null }[] : [];
     return Response.json({
       profile: {
         ...accountProfile,
+        tiktok_profile_url: social?.tiktok_profile_url ?? null,
         legacy_profile: false,
         profile_image_url: profileImageUrl(config.url, accountProfile.profile_image_path as string | null),
       },
@@ -33,7 +37,7 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/memb
   }
 
   const founderQuery = new URLSearchParams({
-    select: "founder_number,username,display_name,bio,role,genres,location,profile_image_path,show_on_wall,host_published",
+    select: "founder_number,username,display_name,bio,role,genres,location,profile_image_path,tiktok_profile_url,show_on_wall,host_published",
     username: `eq.${normalizedUsername}`,
     or: "(show_on_wall.eq.true,host_published.eq.true)",
     limit: "1",
