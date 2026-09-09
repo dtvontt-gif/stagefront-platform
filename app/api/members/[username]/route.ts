@@ -33,9 +33,9 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/memb
   }
 
   const founderQuery = new URLSearchParams({
-    select: "founder_number,username,display_name,bio,role,genres,location,profile_image_path",
+    select: "founder_number,username,display_name,bio,role,genres,location,profile_image_path,show_on_wall,host_published",
     username: `eq.${normalizedUsername}`,
-    show_on_wall: "eq.true",
+    or: "(show_on_wall.eq.true,host_published.eq.true)",
     limit: "1",
   });
   const founderResponse = await fetch(`${config.url}/rest/v1/founding_members?${founderQuery}`, {
