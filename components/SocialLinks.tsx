@@ -10,7 +10,7 @@ const socialLinks = [
   },
   {
     label: "Facebook",
-    href: process.env.NEXT_PUBLIC_FACEBOOK_URL,
+    href: "https://www.facebook.com/share/18DqoWfQ3f/?mibextid=wwXIfr",
     color: "hover:border-blue-500/60 hover:text-blue-400",
   },
   {
