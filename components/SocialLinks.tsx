@@ -15,17 +15,17 @@ const socialLinks = [
   },
   {
     label: "Instagram",
-    href: process.env.NEXT_PUBLIC_INSTAGRAM_URL,
+    href: process.env.NEXT_PUBLIC_INSTAGRAM_URL ?? "https://www.instagram.com/stagefrontdtv/",
     color: "hover:border-pink-500/60 hover:text-pink-400",
   },
   {
     label: "X",
-    href: process.env.NEXT_PUBLIC_X_URL,
+    href: process.env.NEXT_PUBLIC_X_URL ?? "https://x.com/stagefrontdtv",
     color: "hover:border-white/60 hover:text-white",
   },
   {
     label: "Snapchat",
-    href: process.env.NEXT_PUBLIC_SNAPCHAT_URL,
+    href: process.env.NEXT_PUBLIC_SNAPCHAT_URL ?? "https://www.snapchat.com/add/stagefrontdtv",
     color: "hover:border-yellow-400/60 hover:text-yellow-300",
   },
 ].filter((link): link is typeof link & { href: string } => Boolean(link.href));
