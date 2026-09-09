@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 type Member = {
   founder_number: number; display_name: string; email: string; username: string;
   role: string; show_on_wall: boolean; profile_image_url?: string | null;
+  tiktok_profile_url?: string | null;
 };
 
 export default function AdminFounders() {
@@ -52,6 +53,12 @@ export default function AdminFounders() {
     setBusy(member.founder_number);
     await patch({ founderNumber: member.founder_number, action: "remove-photo" });
   }
+  async function editTikTok(member: Member) {
+    const link = window.prompt("Paste the complete TikTok profile link:", member.tiktok_profile_url ?? "");
+    if (link === null) return;
+    setBusy(member.founder_number);
+    await patch({ founderNumber: member.founder_number, action: "set-tiktok", tiktokUrl: link });
+  }
 
   return (
     <section className="mx-auto w-full max-w-6xl">
@@ -92,6 +99,7 @@ export default function AdminFounders() {
                 <td className="px-5 py-4"><span className={member.show_on_wall ? "text-emerald-300" : "text-white/40"}>{member.show_on_wall ? "Visible" : "Hidden"}</span></td>
                 <td className="px-5 py-4"><div className="flex flex-wrap gap-2">
                   <button disabled={busy === member.founder_number} onClick={() => void override(member)} className="rounded-full border border-[#f4b400]/40 px-4 py-2 font-bold text-[#f4b400] disabled:opacity-50">{member.show_on_wall ? "Remove from Wall" : "Add to Wall"}</button>
+                  <button disabled={busy === member.founder_number} onClick={() => void editTikTok(member)} className="rounded-full border border-cyan-400/35 px-4 py-2 font-bold text-cyan-200 disabled:opacity-50">{member.tiktok_profile_url ? "Edit TikTok" : "Add TikTok"}</button>
                   {member.profile_image_url ? <button disabled={busy === member.founder_number} onClick={() => void removePhoto(member)} className="rounded-full border border-red-400/35 px-4 py-2 font-bold text-red-200 disabled:opacity-50">Remove Photo</button> : null}
                 </div></td>
               </tr>
