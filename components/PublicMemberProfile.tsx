@@ -14,6 +14,7 @@ type Profile = {
   looking_for?: string;
   legacy_profile?: boolean;
   profile_image_url?: string | null;
+  tiktok_profile_url?: string | null;
 };
 
 export default function PublicMemberProfile({ username }: { username: string }) {
@@ -56,6 +57,7 @@ export default function PublicMemberProfile({ username }: { username: string }) 
           {profile.genres ? <div className="rounded-2xl border border-white/10 bg-white/[.035] p-5"><strong className="text-[#f4b400]">Genres</strong><p className="mt-2 text-white/65">{profile.genres}</p></div> : null}
           {profile.looking_for ? <div className="rounded-2xl border border-white/10 bg-white/[.035] p-5"><strong className="text-[#f4b400]">Looking to connect for</strong><p className="mt-2 text-white/65">{profile.looking_for}</p></div> : null}
         </div>
+        {profile.tiktok_profile_url ? <a href={profile.tiktok_profile_url} target="_blank" rel="noopener noreferrer" className="mt-8 inline-flex rounded-full border border-cyan-400/40 px-5 py-3 text-sm font-black text-cyan-200 transition hover:bg-cyan-400 hover:text-black">Open TikTok Profile</a> : null}
         {profile.user_id ? <button onClick={connect} className="primary-cta mt-8">Request to connect</button> : (
           <p className="mt-8 rounded-2xl border border-white/10 bg-white/[.035] p-4 text-sm text-white/50">This original member profile is managed by StageFront. Interactive connections will unlock when the member claims their account.</p>
         )}
