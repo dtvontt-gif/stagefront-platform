@@ -5,7 +5,7 @@ import { track } from "@vercel/analytics";
 const socialLinks = [
   {
     label: "YouTube",
-    href: process.env.NEXT_PUBLIC_YOUTUBE_URL,
+    href: "https://youtube.com/@stagefront-y4e?si=oADuYA04oYFvLWyO",
     color: "hover:border-red-500/60 hover:text-red-400",
   },
   {
