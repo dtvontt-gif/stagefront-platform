@@ -23,8 +23,8 @@ export async function GET(request: Request) {
     ),
     fetch(
       `${config.url}/rest/v1/founding_members?${new URLSearchParams({
-        select: "founder_number,email,username,display_name,bio,role,genres,location,profile_image_path,created_at",
-        show_on_wall: "eq.true",
+        select: "founder_number,email,username,display_name,bio,role,genres,location,profile_image_path,show_on_wall,host_published,created_at",
+        or: "(show_on_wall.eq.true,host_published.eq.true)",
         order: "founder_number.asc",
         limit: "1000",
       })}`,
