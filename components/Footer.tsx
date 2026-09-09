@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import SocialLinks from "@/components/SocialLinks";
 
 const footerLinks = [
   { label: "Watch Live", href: "/live" },
@@ -40,6 +41,7 @@ export default function Footer() {
               Live performance, original music, talent discovery, and community
               under one spotlight.
             </p>
+            <SocialLinks />
           </div>
 
           <nav aria-label="Footer navigation" className="flex max-w-xl flex-wrap gap-x-7 gap-y-4">
