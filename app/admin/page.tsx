@@ -10,6 +10,7 @@ import AdminWinners from "@/components/AdminWinners";
 import AdminOriginals from "@/components/AdminOriginals";
 import AdminVideoCredits from "@/components/AdminVideoCredits";
 import AdminAccounts from "@/components/AdminAccounts";
+import AdminMemberProfiles from "@/components/AdminMemberProfiles";
 import { staffAccess } from "@/lib/stagefront-auth";
 
 export const metadata = {
@@ -48,6 +49,7 @@ export default async function AdminPage() {
       </div>
       {access.permissions.includes("finance") ? <><AdminVideoCredits /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
       {access.permissions.includes("staff") ? <><AdminAccounts /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
+      {access.permissions.includes("profiles") ? <><AdminMemberProfiles /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
       {access.permissions.includes("profiles") ? <><AdminFounders /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
       {access.permissions.includes("hosts") ? <><AdminHosts /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
       {access.permissions.includes("hosts") ? <><AdminAudioStation /><div className="mx-auto my-16 h-px max-w-6xl bg-white/10" /></> : null}
