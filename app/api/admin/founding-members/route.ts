@@ -12,7 +12,7 @@ export async function GET() {
   if (!config) return Response.json({ message: "Admin service is not configured." }, { status: 503 });
 
   const query = new URLSearchParams({
-    select: "founder_number,display_name,email,username,role,show_on_wall,created_at,profile_image_path",
+    select: "founder_number,display_name,email,username,role,show_on_wall,tiktok_profile_url,created_at,profile_image_path",
     order: "founder_number.asc",
     limit: "1000",
   });
@@ -39,10 +39,33 @@ export async function PATCH(request: Request) {
     showOnWall?: unknown;
     reason?: unknown;
     action?: unknown;
+    tiktokUrl?: unknown;
   } | null;
   const founderNumber = Number(body?.founderNumber);
   const showOnWall = body?.showOnWall;
   const reason = typeof body?.reason === "string" ? body.reason.trim().slice(0, 300) : "";
+  if (body?.action === "set-tiktok" && Number.isSafeInteger(founderNumber)) {
+    const value = typeof body.tiktokUrl === "string" ? body.tiktokUrl.trim() : "";
+    let tiktokUrl: string | null = null;
+    if (value) {
+      try {
+        const url = new URL(value);
+        if (url.protocol !== "https:" || !/(^|\.)tiktok\.com$/i.test(url.hostname)) throw new Error("invalid");
+        tiktokUrl = url.toString();
+      } catch {
+        return Response.json({ message: "Paste a complete TikTok profile link beginning with https://." }, { status: 400 });
+      }
+    }
+    const update = await fetch(`${config.url}/rest/v1/founding_members?founder_number=eq.${founderNumber}`, {
+      method: "PATCH",
+      headers: { ...headers(config.serviceKey), Prefer: "return=representation" },
+      body: JSON.stringify({ tiktok_profile_url: tiktokUrl }),
+    });
+    if (!update.ok) return Response.json({ message: "TikTok link could not be saved." }, { status: 502 });
+    const changed = (await update.json()) as unknown[];
+    if (!changed.length) return Response.json({ message: "Member not found." }, { status: 404 });
+    return Response.json({ message: tiktokUrl ? "TikTok link saved." : "TikTok link removed." });
+  }
   if (body?.action === "remove-photo" && Number.isSafeInteger(founderNumber)) {
     const lookup = await fetch(
       `${config.url}/rest/v1/founding_members?select=profile_image_path&founder_number=eq.${founderNumber}&limit=1`,
