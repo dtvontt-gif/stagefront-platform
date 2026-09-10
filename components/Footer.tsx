@@ -3,17 +3,14 @@ import Link from "next/link";
 import SocialLinks from "@/components/SocialLinks";
 
 const footerLinks = [
-  { label: "Watch Live", href: "/live" },
-  { label: "Live Queue", href: "/queue" },
   { label: "AI Video Studio", href: "/create/video" },
   { label: "StageFront Music Generator", href: "https://longplay-song-studio.domchop22.chatgpt.site/" },
   { label: "Discover", href: "/#discover" },
-  { label: "Golden Voices", href: "/golden-voices" },
-  { label: "Contest Winners", href: "/winners" },
+  { label: "Contests & Winners", href: "/winners" },
   { label: "Wall of Founders", href: "/founders" },
   { label: "Original Artists", href: "/originals" },
   { label: "Founding Members", href: "/join" },
-  { label: "Community", href: "/#community" },
+  { label: "Community", href: "/community" },
   { label: "Support StageFront", href: "/#support" },
   { label: "About", href: "/#about" },
 ];
@@ -38,8 +35,8 @@ export default function Footer() {
               />
             </Link>
             <p className="mt-4 max-w-md text-sm leading-7 text-white/50">
-              Live performance, original music, talent discovery, and community
-              under one spotlight.
+              Original music, talent discovery, creative tools, and a community
+              where every singer has a voice.
             </p>
             <SocialLinks />
           </div>

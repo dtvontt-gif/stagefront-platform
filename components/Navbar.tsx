@@ -5,15 +5,12 @@ import { staffAccess } from "@/lib/stagefront-auth";
 import MobileNavigation from "@/components/MobileNavigation";
 
 const navigation = [
-  { label: "Live", href: "/live" },
-  { label: "Queue", href: "/queue" },
   { label: "AI Video Studio", href: "/create/video" },
   { label: "Music Generator", href: "https://longplay-song-studio.domchop22.chatgpt.site/" },
   { label: "Karaoke Studio", href: "/studio" },
   { label: "Discover", href: "/#discover" },
   { label: "Hosts", href: "/hosts" },
-  { label: "Golden Voices", href: "/golden-voices" },
-  { label: "Winners", href: "/winners" },
+  { label: "Contests & Winners", href: "/winners" },
   { label: "Original Artists", href: "/originals" },
   { label: "Members", href: "/members" },
   { label: "Connections", href: "/connections" },
@@ -25,7 +22,7 @@ const navigation = [
 ];
 
 const desktopNavigation = navigation.filter((item) =>
-  ["Live", "Queue", "AI Video Studio", "Music Generator", "Karaoke Studio", "Hosts", "Golden Voices", "Original Artists", "Community"].includes(item.label),
+  ["Community", "Contests & Winners", "Original Artists", "Hosts", "Karaoke Studio", "AI Video Studio", "Music Generator"].includes(item.label),
 );
 
 export default async function Navbar() {

@@ -1,13 +1,14 @@
 import Image from "next/image";
+import CommunityPreview from "@/components/CommunityPreview";
 
 const experiences = [
   {
     number: "01",
-    eyebrow: "Live discovery",
-    title: "Golden Voices",
+    eyebrow: "The social heart",
+    title: "Community Wall",
     description:
-      "Weekly showcases, community voting, and championship moments built to give exceptional voices a real audience.",
-    href: "/golden-voices",
+      "Share updates, support other performers, and build real connections with singers and music fans.",
+    href: "/community",
   },
   {
     number: "02",
@@ -19,11 +20,11 @@ const experiences = [
   },
   {
     number: "03",
-    eyebrow: "One community",
-    title: "StageFront Live",
+    eyebrow: "Competition history",
+    title: "Contests & Winners",
     description:
-      "Fans, artists, producers, and hosts connecting around performances instead of fighting an algorithm.",
-    href: "#community",
+      "Follow current competitions and celebrate the performers who earned their place on the Wall of Winners.",
+    href: "/winners",
   },
 ];
 
@@ -32,26 +33,6 @@ const foundingBenefits = [
   "Early access to the StageFront beta",
   "Priority competition registration",
   "Permanent Wall of Founders recognition",
-];
-
-const communityRoles = [
-  {
-    label: "Artists",
-    copy: "Perform, share originals, build a following, and be discovered.",
-  },
-  {
-    label: "Fans",
-    copy: "Find emerging talent early and help elevate the voices you believe in.",
-  },
-  {
-    label: "Producers",
-    copy: "Scout fresh talent and build meaningful creative relationships.",
-  },
-  {
-    label: "Hosts",
-    copy: "Run showcases, organize live queues, and grow loyal communities.",
-    href: "/hosts",
-  },
 ];
 
 export default function HomeSections() {
@@ -109,79 +90,7 @@ export default function HomeSections() {
         </div>
       </section>
 
-      <section
-        id="golden-voices"
-        aria-labelledby="golden-voices-heading"
-        className="relative scroll-mt-20 overflow-hidden border-y border-white/10 bg-[#0b0b0f] px-5 py-24 sm:px-8 sm:py-32"
-      >
-        <div className="absolute inset-0 opacity-35">
-          <Image
-            src="/images/hero/stagefront-hero-background-alternate.png"
-            alt=""
-            fill
-            sizes="100vw"
-            className="object-cover"
-          />
-        </div>
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,#0b0b0f_8%,rgba(11,11,15,0.82)_50%,#0b0b0f_100%)]" />
-
-        <div className="relative mx-auto grid max-w-7xl gap-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-          <div>
-            <p className="section-kicker">Signature competition</p>
-            <h2 id="golden-voices-heading" className="section-title">
-              Golden Voices
-              <span className="block text-stage-gold">takes center stage.</span>
-            </h2>
-            <p className="section-lede">
-              A recurring showcase where vocalists compete, audiences
-              participate, and standout performers move closer to their next
-              opportunity.
-            </p>
-            <div className="mt-9 flex flex-wrap gap-3">
-              {["Weekly showcases", "Community voting", "Monthly finals"].map(
-                (item) => (
-                  <span key={item} className="pill">
-                    {item}
-                  </span>
-                ),
-              )}
-            </div>
-          </div>
-
-          <div className="show-card">
-            <div className="flex items-center justify-between border-b border-white/10 pb-6">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#f4b400]">
-                  Coming soon
-                </p>
-                <p className="mt-2 font-display text-2xl font-black uppercase">
-                  Season One
-                </p>
-              </div>
-              <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[#f4b400]/35 bg-[#f4b400]/10 text-2xl text-[#f4b400]">
-                ★
-              </span>
-            </div>
-            <div className="mt-8 space-y-5">
-              {[
-                ["Showcase", "Artists step into the spotlight"],
-                ["Community", "Fans help elevate standout voices"],
-                ["Finals", "Top performers meet on the big stage"],
-              ].map(([title, copy], index) => (
-                <div key={title} className="flex gap-5">
-                  <span className="font-display text-sm font-black text-[#f4b400]">
-                    0{index + 1}
-                  </span>
-                  <div>
-                    <h3 className="font-display font-black uppercase">{title}</h3>
-                    <p className="mt-1 text-sm text-white/55">{copy}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      <CommunityPreview />
 
       <section
         id="original-artists"
@@ -276,55 +185,6 @@ export default function HomeSections() {
               height={900}
               className="relative h-auto w-full"
             />
-          </div>
-        </div>
-      </section>
-
-      <section
-        id="community"
-        aria-labelledby="community-heading"
-        className="scroll-mt-20 bg-[#070708] px-5 py-24 sm:px-8 sm:py-32"
-      >
-        <div className="mx-auto max-w-7xl">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="section-kicker">One connected community</p>
-            <h2 id="community-heading" className="section-title">
-              Everyone has a place
-              <span className="text-stage-gold"> at StageFront.</span>
-            </h2>
-          </div>
-
-          <div className="mt-14 grid gap-px overflow-hidden rounded-3xl border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
-            {communityRoles.map((role, index) =>
-              "href" in role ? (
-              <a
-                key={role.label}
-                href={role.href}
-                className="group bg-[#0b0b0f] p-8 transition hover:bg-[#f4b400]/[0.07]"
-              >
-                <span className="font-display text-xs font-black text-[#f4b400]">
-                  0{index + 1}
-                </span>
-                <h3 className="mt-10 font-display text-2xl font-black uppercase">
-                  {role.label}
-                </h3>
-                <p className="mt-3 text-sm leading-7 text-white/55">{role.copy}</p>
-                <span className="mt-6 inline-flex text-sm font-black text-[#f4b400]">
-                  View hosts →
-                </span>
-              </a>
-              ) : (
-                <div key={role.label} className="bg-[#0b0b0f] p-8">
-                  <span className="font-display text-xs font-black text-[#f4b400]">
-                    0{index + 1}
-                  </span>
-                  <h3 className="mt-10 font-display text-2xl font-black uppercase">
-                    {role.label}
-                  </h3>
-                  <p className="mt-3 text-sm leading-7 text-white/55">{role.copy}</p>
-                </div>
-              ),
-            )}
           </div>
         </div>
       </section>

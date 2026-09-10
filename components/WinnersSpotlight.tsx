@@ -18,7 +18,7 @@ type Winner = {
 };
 
 function competitionName(value: Winner["competition"]) {
-  return value === "box_battle" ? "Box Battle" : "Golden Voices";
+  return value === "box_battle" ? "Box Battle" : "StageFront Contest";
 }
 
 function youtubeEmbed(url: string | null) {
@@ -74,7 +74,7 @@ export default function WinnersSpotlight() {
           </h2>
           <p className="section-lede mx-auto">
             Celebrating the voices and performers who rose to the moment in
-            Box Battle and Golden Voices.
+            StageFront competitions past and present.
           </p>
         </div>
 

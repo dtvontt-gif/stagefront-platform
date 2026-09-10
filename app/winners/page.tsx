@@ -5,7 +5,7 @@ import WinnersSpotlight from "@/components/WinnersSpotlight";
 
 export const metadata: Metadata = {
   title: "Contest Winners | StageFront",
-  description: "Meet StageFront Box Battle and Golden Voices champions and watch their featured performances.",
+  description: "Meet StageFront competition champions and watch their featured performances.",
 };
 
 export default function WinnersPage() {

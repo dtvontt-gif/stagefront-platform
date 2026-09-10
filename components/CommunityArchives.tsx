@@ -4,7 +4,7 @@ const archives = [
   {
     eyebrow: "Hall of champions",
     title: "Contest Winners",
-    copy: "Meet the Box Battle and Golden Voices champions, hear their stories, and watch featured performances.",
+    copy: "Meet StageFront competition champions, hear their stories, and watch their featured performances.",
     href: "/winners",
     action: "Explore the winners",
     symbol: "★",
