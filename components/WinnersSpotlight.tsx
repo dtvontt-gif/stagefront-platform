@@ -18,7 +18,7 @@ type Winner = {
 };
 
 function competitionName(value: Winner["competition"]) {
-  return value === "box_battle" ? "Box Battle" : "StageFront Contest";
+  return value === "box_battle" ? "Box Battle" : "Pass the Mic Karaoke";
 }
 
 function youtubeEmbed(url: string | null) {

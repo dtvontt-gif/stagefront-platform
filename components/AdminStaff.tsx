@@ -5,8 +5,8 @@ import { FormEvent, useEffect, useState } from "react";
 type Staff = { id: number; email: string; display_name?: string | null; role: "owner" | "manager" | "moderator"; active: boolean };
 const descriptions = {
   owner: "Full access, including staff levels and future financial reports.",
-  manager: "Profiles, hosts, queues, contests, and operations. No financial access.",
-  moderator: "Queues and contestant status only.",
+  manager: "Profiles, hosts, contests, and operations. No financial access.",
+  moderator: "Contest and community moderation tools.",
 };
 
 export default function AdminStaff() {

@@ -134,8 +134,8 @@ export default function AdminWinners() {
         Winner <span className="text-stage-gold">Spotlights.</span>
       </h2>
       <p className="mt-4 max-w-3xl text-white/55">
-        Add Box Battle and Golden Voices champions. “Featured” places that winner
-        in the main homepage spotlight. YouTube links play directly on StageFront.
+        Add winners from Box Battle, Pass the Mic Karaoke, and other StageFront
+        competitions. YouTube links play directly on StageFront.
       </p>
 
       <div id="winner-editor" className="mt-8 grid gap-5 rounded-3xl border border-[#f4b400]/20 bg-white/[0.035] p-5 sm:p-7 lg:grid-cols-2">
@@ -144,7 +144,7 @@ export default function AdminWinners() {
           <span>Competition</span>
           <select value={form.competition} onChange={(event) => setForm({ ...form, competition: event.target.value as WinnerForm["competition"] })}>
             <option value="box_battle">Box Battle</option>
-            <option value="golden_voices">Golden Voices</option>
+            <option value="golden_voices">Pass the Mic Karaoke</option>
           </select>
         </label>
         <label className="form-field"><span>Winner title</span><input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Grand Champion" /></label>
@@ -190,7 +190,7 @@ export default function AdminWinners() {
           <article key={winner.id} className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f4b400]">{winner.competition === "box_battle" ? "Box Battle" : "Golden Voices"}</p>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f4b400]">{winner.competition === "box_battle" ? "Box Battle" : "Pass the Mic Karaoke"}</p>
                 <h3 className="mt-2 font-display text-2xl font-black uppercase">{winner.display_name}</h3>
                 <p className="mt-1 text-sm text-white/55">{winner.title}</p>
               </div>
