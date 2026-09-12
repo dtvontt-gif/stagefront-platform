@@ -50,7 +50,9 @@ export function supabaseService(): SupabaseClient {
 }
 
 export function isAuthorizedWorker(request: Request) {
-  const expected = process.env.KARAOKE_WORKER_SECRET?.trim();
   const supplied = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim();
-  return Boolean(expected && supplied && supplied === expected);
+  const accepted = [process.env.KARAOKE_WORKER_SECRET, process.env.VERCEL_AUTOMATION_BYPASS_SECRET]
+    .map((value) => value?.trim())
+    .filter(Boolean);
+  return Boolean(supplied && accepted.includes(supplied));
 }
