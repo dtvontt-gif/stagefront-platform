@@ -11,6 +11,7 @@ type DragMode = "move" | "start" | "end";
 type DragState = { lineIndex: number; tokenIndex: number; mode: DragMode; originX: number; original: Token };
 type RenderJob = { id: string; status: string; progress: number | null; error?: string | null };
 type CustomInstrumental = { fileName: string; sizeBytes: number; uploadedAt: string };
+type AudioResume = { timeSeconds: number; autoplay: boolean };
 
 const MIN_WORD_MS = 60;
 const MAX_INSTRUMENTAL_BYTES = 250 * 1024 * 1024;
@@ -55,6 +56,8 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const audioRef = useRef<HTMLAudioElement>(null);
+  const audioResumeRef = useRef<AudioResume | null>(null);
+  const audioRecoveryRef = useRef(false);
   const timelineRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
 
@@ -70,15 +73,22 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
   const focusWordIndex = activeWordIndex >= 0 ? activeWordIndex : nextWordIndex >= 0 ? nextWordIndex : Math.max(0, orderedWords.length - 1);
   const followWords = orderedWords.slice(Math.max(0, focusWordIndex - 5), focusWordIndex + 7);
 
-  async function loadAudio() {
+  async function loadAudio(resume?: AudioResume) {
     setAudioLoading(true);
     setError("");
     try {
-      const response = await fetch(`/api/karaoke-v2/projects/${projectId}/assets/vocals/url`, {
+      let response = await fetch(`/api/karaoke-v2/projects/${projectId}/assets/vocals/url`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ download: false }),
       });
+      if (response.status === 401) {
+        await fetch("/api/auth/refresh", { method: "POST" });
+        response = await fetch(`/api/karaoke-v2/projects/${projectId}/assets/vocals/url`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ download: false }),
+        });
+      }
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not load vocals.");
+      audioResumeRef.current = resume || null;
       setAudioUrl((current) => {
         if (current.startsWith("blob:")) URL.revokeObjectURL(current);
         return data.url;
@@ -111,9 +121,35 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
         setWaveform([]);
       }
     } catch (cause) {
+      audioResumeRef.current = null;
+      audioRecoveryRef.current = false;
       setError(cause instanceof Error ? cause.message : "Could not load vocals.");
     } finally {
       setAudioLoading(false);
+    }
+  }
+
+  async function recoverAudio(autoplay = true) {
+    if (audioRecoveryRef.current) return;
+    const audio = audioRef.current;
+    audioRecoveryRef.current = true;
+    await loadAudio({ timeSeconds: audio?.currentTime || currentMs / 1000, autoplay });
+  }
+
+  async function handleAudioReady(audio: HTMLAudioElement) {
+    setAudioDurationMs(Math.round(audio.duration * 1000));
+    const resume = audioResumeRef.current;
+    audioResumeRef.current = null;
+    audioRecoveryRef.current = false;
+    if (!resume) return;
+    audio.currentTime = Math.max(0, Math.min(resume.timeSeconds, Number.isFinite(audio.duration) ? audio.duration : resume.timeSeconds));
+    setCurrentMs(Math.round(audio.currentTime * 1000));
+    if (resume.autoplay) {
+      try {
+        await audio.play();
+      } catch {
+        setError("Audio was refreshed. Press Play once to continue.");
+      }
     }
   }
 
@@ -194,7 +230,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
       try {
         await audio.play();
       } catch {
-        setError("The browser could not start playback. Try Refresh audio.");
+        await recoverAudio(true);
       }
     } else {
       audio.pause();
@@ -447,7 +483,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
 
   return <section className="lyrics-editor panel">
     <header className="editor-header"><div><p className="eyebrow">Follow-along lyric editor</p><h2>{title}</h2><p className="muted">Revision {revision || "…"} · {orderedWords.length} words</p></div><button className="secondary compact" onClick={onClose}>Close</button></header>
-    <div className="editor-audio"><button className="secondary compact" type="button" disabled={audioLoading} onClick={() => void loadAudio()}>{audioLoading ? "Loading vocals…" : audioUrl ? "Refresh audio" : "Load vocals"}</button>{audioUrl && <audio ref={audioRef} controls preload="metadata" playsInline src={audioUrl} onLoadedMetadata={(event) => setAudioDurationMs(Math.round(event.currentTarget.duration * 1000))} onError={() => setError("The browser could not decode the vocal audio. Try Refresh audio.")} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} onEnded={() => setIsPlaying(false)} onTimeUpdate={(event) => setCurrentMs(Math.round(event.currentTarget.currentTime * 1000))} />}</div>
+    <div className="editor-audio"><button className="secondary compact" type="button" disabled={audioLoading} onClick={() => void recoverAudio(false)}>{audioLoading ? "Loading vocals…" : audioUrl ? "Refresh audio" : "Load vocals"}</button>{audioUrl && <audio ref={audioRef} controls preload="metadata" playsInline src={audioUrl} onLoadedMetadata={(event) => void handleAudioReady(event.currentTarget)} onError={() => void recoverAudio(!audioRef.current?.paused)} onPlay={() => { audioRecoveryRef.current = false; setError(""); setIsPlaying(true); }} onPause={() => setIsPlaying(false)} onEnded={() => setIsPlaying(false)} onTimeUpdate={(event) => setCurrentMs(Math.round(event.currentTarget.currentTime * 1000))} />}</div>
     <KaraokePreview lines={lines} currentMs={currentMs} offsetMs={offsetMs} style={previewStyle} />
     <div className="preview-controls">
       <label>Sung words<input type="color" value={previewStyle.activeColor} onChange={(event) => setPreviewStyle((current) => ({ ...current, activeColor: event.target.value }))} /></label>
