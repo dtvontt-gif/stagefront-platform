@@ -79,12 +79,19 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not load vocals.");
-      const audioResponse = await fetch(data.url);
-      if (!audioResponse.ok) throw new Error(`Audio storage returned ${audioResponse.status}.`);
-      const blob = await audioResponse.blob();
-      if (!blob.size) throw new Error("The vocal audio file is empty.");
-      const arrayBuffer = await blob.arrayBuffer();
+      setAudioUrl((current) => {
+        if (current.startsWith("blob:")) URL.revokeObjectURL(current);
+        return data.url;
+      });
+
+      // Playback can stream the signed URL directly. Waveform decoding is a
+      // progressive enhancement and must never prevent the editor from playing.
       try {
+        const audioResponse = await fetch(data.url);
+        if (!audioResponse.ok) throw new Error(`Audio storage returned ${audioResponse.status}.`);
+        const blob = await audioResponse.blob();
+        if (!blob.size) throw new Error("The vocal audio file is empty.");
+        const arrayBuffer = await blob.arrayBuffer();
         const context = new AudioContext();
         const decoded = await context.decodeAudioData(arrayBuffer.slice(0));
         const samples = decoded.getChannelData(0);
@@ -103,10 +110,6 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
       } catch {
         setWaveform([]);
       }
-      setAudioUrl((current) => {
-        if (current.startsWith("blob:")) URL.revokeObjectURL(current);
-        return URL.createObjectURL(blob);
-      });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not load vocals.");
     } finally {
