@@ -34,12 +34,10 @@
 .status-failed { background: #ef444422; color: #fca5a5; }
 .project-actions { display: flex; align-items: center; gap: .6rem; }
 .project-card { display: grid; gap: 1rem; }
-.song-switcher { position: sticky; z-index: 20; top: .5rem; display: grid; gap: .75rem; margin-top: 1rem; border: 1px solid #f4b40055; border-radius: 1rem; background: #111116ed; padding: .85rem; box-shadow: 0 .7rem 2rem #0009; backdrop-filter: blur(12px); }
-.song-switcher > div:first-child { display: flex; align-items: baseline; justify-content: space-between; gap: .8rem; }
-.song-switcher small { color: #ffffff8c; }
-.song-switcher-buttons { display: flex; gap: .5rem; overflow-x: auto; padding-bottom: .15rem; }
-.song-switcher-buttons button { flex: 0 0 auto; padding: .55rem .8rem; }
-.song-switcher-buttons button.active { background: #f4b400; color: #09090b; }
+.song-switcher { position: sticky; z-index: 20; top: .5rem; display: flex; align-items: center; gap: .65rem; width: fit-content; max-width: 100%; margin: .65rem 0 0 auto; border: 1px solid #f4b40055; border-radius: 999px; background: #111116ed; padding: .35rem .45rem .35rem .8rem; box-shadow: 0 .4rem 1.2rem #0008; backdrop-filter: blur(12px); }
+.song-switcher label { flex: 0 0 auto; color: #f4b400; font-size: .78rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.song-switcher select { width: min(15rem, 42vw); border: 1px solid #ffffff25; border-radius: 999px; background: #08080b; color: #fff; padding: .48rem 2rem .48rem .75rem; }
+.song-switcher small { flex: 0 0 auto; color: #ffffff8c; font-size: .72rem; }
 .stem-controls { display: grid; gap: .65rem; border-top: 1px solid #ffffff16; padding-top: 1rem; }
 .stem { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: .55rem; }
 .stem > span, .audio-player > span { font-weight: 700; text-transform: capitalize; }
@@ -134,7 +132,7 @@
 .file-button { display: inline-flex; align-items: center; justify-content: center; cursor: pointer; white-space: nowrap; }
 .file-button input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .render-status { margin: 0; border-radius: .6rem; background: #ffffff0d; padding: .6rem .75rem; font-size: .8rem; font-weight: 700; }
-@media (max-width: 38rem) { .studio-header, .project { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 38rem) { .studio-header, .project { align-items: flex-start; flex-direction: column; } .song-switcher { margin-left: auto; padding-left: .6rem; } .song-switcher label { font-size: 0; } .song-switcher label::after { content: "Songs"; font-size: .75rem; } .song-switcher select { width: min(13rem, 62vw); } .song-switcher small { display: none; } }
 @media (max-width: 48rem) { .lyric-line { grid-template-columns: auto 1fr 1fr; } .lyric-line textarea { grid-column: 2 / -1; } }
 @media (max-width: 38rem) { .editor-audio { grid-template-columns: 1fr; } }
 @media (max-width: 38rem) { .add-lyrics { grid-template-columns: 1fr; } .add-lyrics button { width: 100%; } }

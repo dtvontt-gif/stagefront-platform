@@ -195,8 +195,17 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
         {notice && <p className="success">{notice}</p>}
       </form>
       {readyProjects.length > 0 && <nav className="song-switcher" aria-label="Songs ready to edit">
-        <div><strong>Choose a song to edit</strong><small>{editingProject ? "Save your changes before switching songs." : "You can work on any finished song."}</small></div>
-        <div className="song-switcher-buttons">{readyProjects.map((project) => <button className={editingProject?.id === project.id ? "active" : "secondary"} type="button" key={project.id} onClick={() => { setEditingProject(project); window.scrollTo({ top: 0, behavior: "smooth" }); }}>{project.title}</button>)}</div>
+        <label htmlFor="song-switcher-select">Edit another song</label>
+        <select id="song-switcher-select" value={editingProject?.id || ""} onChange={(event) => {
+          const project = readyProjects.find((item) => item.id === event.target.value);
+          if (!project) return;
+          setEditingProject(project);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}>
+          <option value="" disabled>Choose a finished song</option>
+          {readyProjects.map((project) => <option value={project.id} key={project.id}>{project.title}</option>)}
+        </select>
+        {editingProject && <small>Save before switching</small>}
       </nav>}
       {editingProject && <LyricsEditor key={editingProject.id} projectId={editingProject.id} title={editingProject.title} supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} onClose={() => setEditingProject(null)} />}
       <section className="projects"><h2>Your projects</h2>{projects.length === 0 ? <p className="muted">No projects yet.</p> : projects.map((project) => {
