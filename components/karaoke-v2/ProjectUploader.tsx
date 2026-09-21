@@ -135,13 +135,19 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
   }
 
   async function deleteProject(project: Project) {
-    if (!window.confirm(`Delete “${project.title}”?`)) return;
+    if (!window.confirm(`Permanently delete “${project.title}” and all of its audio, lyrics, video, and job files? This cannot be undone.`)) return;
     setError("");
+    setNotice("");
     const response = await fetch(`/api/karaoke-v2/projects/${project.id}`, { method: "DELETE" });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) setError(result.error || "Could not delete the project.");
     else {
-      setNotice("Incomplete project deleted.");
+      if (editingProject?.id === project.id) setEditingProject(null);
+      if (activeAudio?.projectId === project.id) setActiveAudio(null);
+      setProjects((current) => current.filter((item) => item.id !== project.id));
+      setJobs((current) => current.filter((item) => item.project_id !== project.id));
+      setAssets((current) => current.filter((item) => item.project_id !== project.id));
+      setNotice(`“${project.title}” was permanently deleted.`);
       await load();
     }
   }
@@ -196,7 +202,7 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
       <section className="projects"><h2>Your projects</h2>{projects.length === 0 ? <p className="muted">No projects yet.</p> : projects.map((project) => {
         const job = jobs.find((item) => item.project_id === project.id && item.kind !== "render");
         const status = job?.status || project.status;
-        const canDelete = ["pending_upload", "failed", "draft", "uploading"].includes(status);
+        const canDelete = !["queued", "running", "processing"].includes(status);
         const stems = assets.filter((asset) => asset.project_id === project.id);
         return <article className="panel project-card" key={project.id}>
           <div className="project"><div><strong>{project.title}</strong><p>{project.artist || "Unknown artist"}</p></div><div className="project-actions"><span className={`status status-${status}`}>{status.replaceAll("_", " ")}</span>{canDelete && <button className="danger" type="button" onClick={() => void deleteProject(project)}>Delete</button>}</div></div>
