@@ -49,7 +49,7 @@ export default function PublicMemberProfile({ username }: { username: string }) 
         {!profile.profile_image_url ? <div className="grid h-full place-items-center text-8xl font-black text-[#f4b400]/40">{profile.display_name[0]}</div> : null}
       </div>
       <div className="self-center">
-        <div className="flex flex-wrap items-center gap-3"><p className="section-kicker">{profile.role}</p>{profile.superfan_supports?.length ? <span className="rounded-full bg-[#f4b400] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-black">Zoo Crew Superfan · Supports {profile.superfan_supports.map((name) => name === "don" ? "Don" : "Unk").join(" & ")}</span> : null}</div>
+        <div className="flex flex-wrap items-center gap-3"><p className="section-kicker">{profile.role}</p>{profile.superfan_supports?.length ? <span className="rounded-full bg-[#f4b400] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-black">Official Zoo Crew Superfan</span> : null}</div>
         <h1 className="mt-4 font-display text-5xl font-black uppercase sm:text-7xl">{profile.display_name}</h1>
         <p className="mt-3 text-xl text-[#f4b400]">@{profile.username}</p>
         {profile.location ? <p className="mt-5 text-white/50">{profile.location}</p> : null}

@@ -22,19 +22,20 @@ declare global {
 
 type Props = {
   creator: "don" | "unk";
+  membershipName?: string;
   signedIn: boolean;
   userId?: string;
   clientId?: string;
   planId?: string;
 };
 
-export default function SuperfanButton({ creator, signedIn, userId, clientId, planId }: Props) {
+export default function SuperfanButton({ creator, membershipName, signedIn, userId, clientId, planId }: Props) {
   const reactId = useId();
   const containerId = `paypal-superfan-${creator}-${reactId.replace(/:/g, "")}`;
   const rendered = useRef(false);
   const [message, setMessage] = useState("");
   const configured = Boolean(clientId && planId);
-  const name = creator === "don" ? "Don" : "Unk";
+  const name = membershipName ?? (creator === "don" ? "Don" : "Unk");
 
   const renderPayPal = useCallback(async () => {
     if (!signedIn || !userId || !planId || !window.paypal || rendered.current) return;
@@ -63,7 +64,7 @@ export default function SuperfanButton({ creator, signedIn, userId, clientId, pl
   }, [containerId, creator, planId, signedIn, userId]);
 
   if (!configured) return <button type="button" disabled className="primary-cta mt-7 w-full cursor-not-allowed opacity-60">PayPal setup in progress</button>;
-  if (!signedIn) return <button type="button" onClick={() => { window.location.href = "/sign-in?next=/%23superfans"; }} className="primary-cta mt-7 w-full">Sign in to subscribe to {name}</button>;
+  if (!signedIn) return <button type="button" onClick={() => { window.location.href = "/sign-in?next=/%23superfans"; }} className="primary-cta mt-7 w-full">Sign in to join {name}</button>;
 
   return <div className="mt-7">
     <Script
