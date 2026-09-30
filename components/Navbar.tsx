@@ -16,13 +16,14 @@ const navigation = [
   { label: "Connections", href: "/connections" },
   { label: "Community", href: "/community" },
   { label: "Founders", href: "/founders" },
+  { label: "Superfans", href: "/#superfans" },
   { label: "Support", href: "/#support" },
   { label: "My Profile", href: "/profile" },
   { label: "About", href: "/#about" },
 ];
 
 const desktopNavigation = navigation.filter((item) =>
-  ["Community", "Contests & Winners", "Original Artists", "Hosts", "Karaoke Studio", "AI Video Studio", "Music Generator"].includes(item.label),
+  ["Community", "Superfans", "Original Artists", "Hosts", "Karaoke Studio", "AI Video Studio", "Music Generator"].includes(item.label),
 );
 
 export default async function Navbar() {

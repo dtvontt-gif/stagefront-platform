@@ -3,9 +3,9 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "StageFront | Every Artist Deserves a Stage",
+  title: "StageFront | Home of Zoo Crew Vibe",
   description:
-    "StageFront connects artists, fans, producers, and hosts through live performance, discovery, and community.",
+    "StageFront is the independent home of Zoo Crew Vibe across TikTok, GoLive Streamers, and Echo Live—plus music, creators, and community.",
   icons: {
     icon: [
       { url: "/images/favicons/favicon.ico" },

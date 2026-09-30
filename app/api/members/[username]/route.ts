@@ -26,11 +26,15 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/memb
     const socialQuery = new URLSearchParams({ select: "tiktok_profile_url", email: `eq.${String(accountProfile.email).toLowerCase()}`, limit: "1" });
     const socialResponse = await fetch(`${config.url}/rest/v1/founding_members?${socialQuery}`, { headers: headers(config.serviceKey), cache: "no-store" });
     const [social] = socialResponse.ok ? await socialResponse.json() as { tiktok_profile_url?: string | null }[] : [];
+    const superfanQuery = new URLSearchParams({ select: "creator", user_id: `eq.${String(accountProfile.user_id)}`, status: "eq.active" });
+    const superfanResponse = await fetch(`${config.url}/rest/v1/superfan_subscriptions?${superfanQuery}`, { headers: headers(config.serviceKey), cache: "no-store" });
+    const superfanSupports = superfanResponse.ok ? (await superfanResponse.json() as { creator: string }[]).map((item) => item.creator) : [];
     return Response.json({
       profile: {
         ...accountProfile,
         tiktok_profile_url: social?.tiktok_profile_url ?? null,
         legacy_profile: false,
+        superfan_supports: superfanSupports,
         profile_image_url: profileImageUrl(config.url, accountProfile.profile_image_path as string | null),
       },
     });

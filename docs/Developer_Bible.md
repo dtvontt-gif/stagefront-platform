@@ -42,6 +42,27 @@ Payment buttons live in `components/SupportStageFront.tsx`. External payment
 links must open in a new tab with `rel="noopener noreferrer"`. StageFront does
 not collect or store payment-card information.
 
+### Zoo Crew Superfan subscriptions
+
+StageFront supports two separate $9.99 monthly PayPal subscriptions: Don The
+Vibe Superfan and Unk Superfan. Each creator uses a separate PayPal Business
+application and subscription plan, so the selected creator receives the
+payment directly and pays their own PayPal processing fee.
+
+Don's live PayPal button uses public client ID
+`BAAC_qKIWVThR4YbqPj3vHSRACP_Ko0pR8WLMyg5Jjbakl4mPSoM2y7XF2BTHq7e9FMr_VDKBLoOe6pxjM`
+and plan `P-5RS38758NF368232RNK6PGBY`. The public values live in
+`lib/paypal-public.ts`; no PayPal secret is exposed to the browser. Unk's button
+stays disabled until his own account and plan are connected.
+
+Checkout requires a signed-in StageFront account and stores PayPal's approved
+subscription ID against that user with `approval_pending` status. Verified
+PayPal webhooks activate,
+suspend, cancel, or expire the Zoo Crew Superfan badge. Apply
+`supabase/014_superfan_subscriptions.sql` before enabling either live button.
+The webhook URLs are `/api/paypal/webhook/don` and
+`/api/paypal/webhook/unk`.
+
 Version: 1.1
 
 ## Product

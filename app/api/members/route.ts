@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   if (!config) return Response.json({ profiles: [] });
 
   const search = new URL(request.url).searchParams.get("q")?.trim().toLowerCase() ?? "";
-  const [profilesResponse, foundersResponse] = await Promise.all([
+  const [profilesResponse, foundersResponse, superfansResponse] = await Promise.all([
     fetch(
       `${config.url}/rest/v1/stagefront_profiles?${new URLSearchParams({
         select: "user_id,email,username,display_name,bio,role,genres,location,looking_for,profile_image_path,created_at",
@@ -30,6 +30,10 @@ export async function GET(request: Request) {
       })}`,
       { headers: serviceHeaders(config.serviceKey), cache: "no-store" },
     ),
+    fetch(
+      `${config.url}/rest/v1/superfan_subscriptions?${new URLSearchParams({ select: "user_id,creator", status: "eq.active" })}`,
+      { headers: serviceHeaders(config.serviceKey), cache: "no-store" },
+    ),
   ]);
 
   const accountProfiles = profilesResponse.ok
@@ -38,6 +42,9 @@ export async function GET(request: Request) {
   const founders = foundersResponse.ok
     ? (await foundersResponse.json()) as Record<string, unknown>[]
     : [];
+  const superfans = superfansResponse.ok ? await superfansResponse.json() as { user_id: string; creator: string }[] : [];
+  const superfanMap = new Map<string, string[]>();
+  for (const subscription of superfans) superfanMap.set(subscription.user_id, [...(superfanMap.get(subscription.user_id) ?? []), subscription.creator]);
   const claimedEmails = new Set(accountProfiles.map((profile) => String(profile.email).toLowerCase()));
   const claimedUsernames = new Set(accountProfiles.map((profile) => String(profile.username).toLowerCase()));
   const legacyProfiles = founders
@@ -59,6 +66,7 @@ export async function GET(request: Request) {
       ...profile,
       profile_key: String(profile.user_id),
       legacy_profile: false,
+      superfan_supports: superfanMap.get(String(profile.user_id)) ?? [],
     })),
     ...legacyProfiles,
   ];
