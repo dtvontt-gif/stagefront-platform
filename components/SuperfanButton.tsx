@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { useCallback, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 type PayPalActions = {
   subscription: { create(input: { plan_id: string; custom_id?: string }): Promise<string> };
@@ -41,6 +41,11 @@ export default function SuperfanButton({ creator, membershipName, signedIn, user
   const [message, setMessage] = useState("");
   const configured = Boolean(clientId && planId);
   const name = membershipName ?? (creator === "don" ? "Don" : "Unk");
+
+  useEffect(() => {
+    if (!signedIn) return;
+    void fetch("/api/superfans/record", { method: "PUT" });
+  }, [signedIn]);
 
   const renderPayPal = useCallback(async () => {
     if (!signedIn || !userId || !planId || !window.paypal || rendered.current) return;
