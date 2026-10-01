@@ -1,8 +1,6 @@
 import { authenticatedUser, serviceConfiguration } from "@/lib/stagefront-auth";
-import { profileImageUrl } from "@/lib/profile-images";
-
-const headers = (key: string) => ({ apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" });
-type Profile = { user_id:string; username:string; display_name:string; profile_image_path:string|null };
+import { profileImageUrl } from "@/lib/profile-images";const headers = (key: string) => ({ apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" });
+type Profile = { user_id:string; username:string; display_name:string; profile_image_path:string|null; is_superfan?:boolean };
 type Post = { id:number; author_id:string; profile_user_id:string|null; body:string; created_at:string };
 type Comment = { id:number; post_id:number; author_id:string; body:string; created_at:string };
 
@@ -10,8 +8,11 @@ async function profilesFor(url:string,key:string,ids:string[]){
   if(!ids.length)return new Map<string,Profile>();
   const query=new URLSearchParams({select:"user_id,username,display_name,profile_image_path",user_id:`in.(${[...new Set(ids)].join(",")})`,is_public:"eq.true"});
   const response=await fetch(`${url}/rest/v1/stagefront_profiles?${query}`,{headers:headers(key),cache:"no-store"});
-  const profiles=response.ok?await response.json() as Profile[]:[];
-  return new Map(profiles.map(profile=>[profile.user_id,{...profile,profile_image_path:profileImageUrl(url,profile.profile_image_path)}]));
+  const profiles=response.ok?await response.json() as Profile[]:[];  const superfanQuery=new URLSearchParams({select:"user_id",user_id:`in.(${[...new Set(ids)].join(",")})`,status:"eq.active"});
+  const superfanResponse=await fetch(`${url}/rest/v1/superfan_subscriptions?${superfanQuery}`,{headers:headers(key),cache:"no-store"});
+  const superfans=superfanResponse.ok?await superfanResponse.json() as {user_id:string}[]:[];
+  const superfanIds=new Set(superfans.map(item=>item.user_id));
+  return new Map(profiles.map(profile=>[profile.user_id,{...profile,is_superfan:superfanIds.has(profile.user_id),profile_image_path:profileImageUrl(url,profile.profile_image_path)}]));
 }
 
 export async function GET(request:Request){
