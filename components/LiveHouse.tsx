@@ -1,3 +1,60 @@
 "use client";
-import { useRef, useState } from "react";
-export default function LiveHouse(){const v=useRef<HTMLVideoElement>(null);const [s,setS]=useState("idle");async function test(){setS("opening");try{const m=await navigator.mediaDevices.getUserMedia({video:true,audio:true});if(v.current)v.current.srcObject=m;setS("ready")}catch{setS("blocked")}}return <section className="relative overflow-hidden px-4 py-12 sm:px-8"><div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(244,180,0,.15),transparent_28%),radial-gradient(circle_at_88%_20%,rgba(124,58,237,.16),transparent_25%)]"/><div className="relative mx-auto max-w-[1500px]"><header className="mb-8 flex flex-col justify-between gap-5 lg:flex-row lg:items-end"><div><div className="flex gap-3"><span className="rounded-full border border-red-400/30 bg-red-500/10 px-3 py-1.5 text-xs font-black uppercase text-red-300">Offline</span><span className="pill">Platform beta</span></div><p className="section-kicker mt-6">StageFront presents</p><h1 className="mt-3 font-display text-4xl font-black uppercase sm:text-6xl">Zoo Crew Live House</h1><p className="mt-4 max-w-3xl text-white/60">One family stage with equal owner controls for Don and Unk, guest boxes, live chat, and a protected audience.</p></div><a href="/sign-in?next=/live" className="primary-cta">Sign in to enter</a></header><div className="grid gap-6 xl:grid-cols-[1fr_360px]"><div className="rounded-[2rem] border border-[#f4b400]/25 bg-black/45 p-4"><div className="grid min-h-[520px] grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"><div className="relative col-span-2 row-span-2 overflow-hidden rounded-3xl border border-[#f4b400]/45 bg-[#111118]">{s==="ready"?<video ref={v} autoPlay muted playsInline className="h-full min-h-[330px] w-full object-cover"/>:<div className="grid h-full min-h-[330px] place-items-center text-center"><div><p className="text-5xl">🎙️</p><h2 className="mt-4 text-2xl font-black uppercase">Main host stage</h2><p className="mt-2 text-white/45">The live connection will appear here.</p></div></div>}<div className="absolute inset-x-3 bottom-3 flex justify-between rounded-2xl bg-black/70 px-4 py-3"><strong>Host preview</strong><span className="text-xs text-[#f4b400]">OWNER</span></div></div>{Array.from({length:7},(_,i)=><div key={i} className="grid min-h-40 place-items-center rounded-3xl border border-dashed border-white/15 bg-white/[.025] text-center"><div className="text-white/35"><span className="text-2xl">＋</span><p className="mt-2 text-xs font-bold uppercase">Guest box {i+2}</p></div></div>)}</div><div className="mt-4 flex items-center gap-3 rounded-3xl border border-white/10 bg-white/[.035] p-4"><button onClick={test} className="rounded-full bg-[#f4b400] px-5 py-3 text-sm font-black text-black">{s==="opening"?"Opening…":s==="ready"?"Camera ready":"Test camera & mic"}</button>{s==="blocked"?<p className="text-sm text-red-300">Allow camera and microphone access, then try again.</p>:null}</div></div><aside className="flex min-h-[600px] flex-col rounded-[2rem] border border-white/10 bg-[#0d0d12] p-5"><div className="flex justify-between border-b border-white/10 pb-4"><h2 className="text-xl font-black">Audience chat</h2><span className="text-xs text-white/50">0 watching</span></div><div className="grid flex-1 place-items-center text-center"><div><p className="text-4xl">💬</p><p className="mt-4 font-bold">Chat opens when the room goes live.</p><p className="mt-2 text-sm text-white/45">Members can comment, react, and request a box.</p></div></div><button disabled className="rounded-full border border-[#f4b400]/25 bg-[#f4b400]/10 px-5 py-3 font-black text-[#f4b400] opacity-60">Request a guest box</button><p className="mt-3 text-center text-xs text-white/35">Owners approve every guest.</p></aside></div></div></section>}
+
+import { useState } from "react";
+
+type RoomState = "idle" | "opening" | "ready" | "error";
+
+export default function LiveHouse() {
+  const [state, setState] = useState<RoomState>("idle");
+  const [roomUrl, setRoomUrl] = useState("");
+  const [message, setMessage] = useState("");
+  const [owner, setOwner] = useState(false);
+
+  async function enterRoom() {
+    setState("opening");
+    setMessage("");
+    const response = await fetch("/api/live/room", { method: "POST" });
+    const result = (await response.json().catch(() => ({}))) as { roomUrl?: string; message?: string; isOwner?: boolean };
+    if (!response.ok || !result.roomUrl) {
+      setState("error");
+      setMessage(result.message || "The Live House could not open.");
+      return;
+    }
+    setRoomUrl(result.roomUrl);
+    setOwner(Boolean(result.isOwner));
+    setState("ready");
+  }
+
+  return (
+    <section className="relative min-h-[calc(100vh-5rem)] overflow-hidden px-3 py-8 sm:px-6">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(244,180,0,.15),transparent_28%),radial-gradient(circle_at_88%_20%,rgba(124,58,237,.16),transparent_25%)]" />
+      <div className="relative mx-auto max-w-[1700px]">
+        <header className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+          <div>
+            <div className="flex flex-wrap gap-3"><span className={`rounded-full border px-3 py-1.5 text-xs font-black uppercase ${state === "ready" ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-300" : "border-[#f4b400]/30 bg-[#f4b400]/10 text-[#f4b400]"}`}>{state === "ready" ? "Room connected" : "Private beta"}</span><span className="pill">Powered by Daily</span></div>
+            <h1 className="mt-4 font-display text-4xl font-black uppercase sm:text-6xl">Zoo Crew Live House</h1>
+            <p className="mt-3 max-w-3xl text-white/60">The Zoo Crew family room for hosts, approved guests, and signed-in StageFront members.</p>
+          </div>
+          {state !== "ready" ? <button onClick={enterRoom} disabled={state === "opening"} className="primary-cta disabled:opacity-50">{state === "opening" ? "Opening the room…" : "Enter live room"}</button> : <span className="rounded-full border border-white/10 px-4 py-2 text-sm font-bold text-white/60">{owner ? "Owner controls enabled" : "Member access"}</span>}
+        </header>
+
+        {state === "ready" ? (
+          <div className="overflow-hidden rounded-[2rem] border border-[#f4b400]/30 bg-black shadow-2xl">
+            <iframe title="Zoo Crew Live House" src={roomUrl} allow="camera; microphone; fullscreen; display-capture; autoplay" className="h-[78vh] min-h-[620px] w-full border-0" />
+          </div>
+        ) : (
+          <div className="grid min-h-[68vh] place-items-center rounded-[2rem] border border-[#f4b400]/25 bg-black/45 p-8 text-center shadow-2xl">
+            <div className="max-w-xl">
+              <div className="mx-auto grid h-24 w-24 place-items-center rounded-full border border-[#f4b400]/40 bg-[#f4b400]/10 text-5xl">🎙️</div>
+              <h2 className="mt-6 font-display text-3xl font-black uppercase">The room is ready for the crew</h2>
+              <p className="mt-3 leading-7 text-white/55">Sign in, enter the room, then allow camera and microphone access. Your camera and mic begin off so you control when you appear.</p>
+              {state === "error" ? <div className="mt-5 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-200">{message}{message.toLowerCase().includes("sign in") ? <a className="ml-2 font-black underline" href="/sign-in?next=/live">Sign in</a> : null}</div> : null}
+              <button onClick={enterRoom} disabled={state === "opening"} className="mt-7 rounded-full bg-[#f4b400] px-7 py-3.5 font-black text-black disabled:opacity-50">{state === "opening" ? "Opening…" : "Enter Zoo Crew Live"}</button>
+              <p className="mt-4 text-xs text-white/35">Private beta · Up to 10 people · Owners control removal and room settings</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
