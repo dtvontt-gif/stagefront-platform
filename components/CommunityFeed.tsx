@@ -1,18 +1,14 @@
 "use client";
 
-import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useState } from "react";
-
-type Member={user_id:string;username:string;display_name:string;profile_image_path?:string|null};
+import Link from "next/link";import { FormEvent, useCallback, useEffect, useState } from "react";
+import ZooCrewBadge from "@/components/ZooCrewBadge";type Member={user_id:string;username:string;display_name:string;profile_image_path?:string|null;is_superfan?:boolean};
 type Comment={id:number;body:string;created_at:string;author:Member};
 type Post={id:number;body:string;created_at:string;author:Member;comments:Comment[]};
 
 function Avatar({member,size="large"}:{member:Member;size?:"large"|"small"}){
   const dimensions=size==="large"?"h-12 w-12 text-lg":"h-8 w-8 text-xs";
   return <div aria-hidden="true" className={`${dimensions} shrink-0 rounded-full border border-[#f4b400]/35 bg-[#17130b] bg-cover bg-center font-black text-[#f4b400] grid place-items-center`} style={member.profile_image_path?{backgroundImage:`url(${member.profile_image_path})`}:{}}>{member.profile_image_path?null:member.display_name.slice(0,1).toUpperCase()}</div>;
-}
-
-function MemberName({member}:{member:Member}){return <Link href={`/singers/${member.username}`} className="font-bold text-white transition hover:text-[#f4b400]">{member.display_name} <span className="font-normal text-white/40">@{member.username}</span></Link>}
+}function MemberName({member}:{member:Member}){return <div className="flex flex-wrap items-center gap-2"><Link href={`/singers/${member.username}`} className="font-bold text-white transition hover:text-[#f4b400]">{member.display_name} <span className="font-normal text-white/40">@{member.username}</span></Link>{member.is_superfan?<ZooCrewBadge compact/>:null}</div>}
 
 export default function CommunityFeed({profileId,composerLabel="Share something with the StageFront community..."}:{profileId?:string;composerLabel?:string}){
   const[posts,setPosts]=useState<Post[]>([]);const[message,setMessage]=useState("Loading the community...");const[busy,setBusy]=useState(false);
