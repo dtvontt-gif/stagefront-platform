@@ -6,6 +6,12 @@ const serviceHeaders = (key: string) => ({
   Authorization: `Bearer ${key}`,
 });
 
+function publicProfile(profile: Record<string, unknown>) {
+  const { email: _privateEmail, ...safeProfile } = profile;
+  void _privateEmail;
+  return safeProfile;
+}
+
 export async function GET(request: Request) {
   const config = serviceConfiguration();
   if (!config) return Response.json({ profiles: [] });
@@ -77,7 +83,7 @@ export async function GET(request: Request) {
         .some((value) => String(value ?? "").toLowerCase().includes(search));
     })
     .map((profile) => ({
-      ...profile,
+      ...publicProfile(profile),
       profile_image_url: profileImageUrl(config.url, profile.profile_image_path as string | null),
     }));
 
