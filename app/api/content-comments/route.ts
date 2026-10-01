@@ -3,8 +3,7 @@ import { profileImageUrl } from "@/lib/profile-images";
 
 const headers=(key:string)=>({apikey:key,Authorization:`Bearer ${key}`,"Content-Type":"application/json"});
 const contentTypes=new Set(["winner","original"]);
-type Comment={id:number;author_id:string;body:string;created_at:string};
-type Profile={user_id:string;username:string;display_name:string;profile_image_path:string|null};
+type Comment={id:number;author_id:string;body:string;created_at:string};type Profile={user_id:string;username:string;display_name:string;profile_image_path:string|null;is_superfan?:boolean};
 
 function target(data:{contentType?:unknown;contentId?:unknown}|null){
   const contentType=typeof data?.contentType==="string"?data.contentType:"";
@@ -22,8 +21,12 @@ export async function GET(request:Request){
   const comments=await response.json() as Comment[];if(!comments.length)return Response.json({comments:[]});
   const profileQuery=new URLSearchParams({select:"user_id,username,display_name,profile_image_path",user_id:`in.(${[...new Set(comments.map(comment=>comment.author_id))].join(",")})`,is_public:"eq.true"});
   const profileResponse=await fetch(`${config.url}/rest/v1/stagefront_profiles?${profileQuery}`,{headers:headers(config.serviceKey),cache:"no-store"});
-  const profiles=profileResponse.ok?await profileResponse.json() as Profile[]:[];
-  const profileMap=new Map(profiles.map(profile=>[profile.user_id,{...profile,profile_image_url:profileImageUrl(config.url,profile.profile_image_path)}]));
+  const profiles=profileResponse.ok?await profileResponse.json() as Profile[]:[];  const authorIds=[...new Set(comments.map(comment=>comment.author_id))];
+  const superfanQuery=new URLSearchParams({select:"user_id",user_id:`in.(${authorIds.join(",")})`,status:"eq.active"});
+  const superfanResponse=await fetch(`${config.url}/rest/v1/superfan_subscriptions?${superfanQuery}`,{headers:headers(config.serviceKey),cache:"no-store"});
+  const superfans=superfanResponse.ok?await superfanResponse.json() as {user_id:string}[]:[];
+  const superfanIds=new Set(superfans.map(item=>item.user_id));
+  const profileMap=new Map(profiles.map(profile=>[profile.user_id,{...profile,is_superfan:superfanIds.has(profile.user_id),profile_image_url:profileImageUrl(config.url,profile.profile_image_path)}]));
   return Response.json({comments:comments.filter(comment=>profileMap.has(comment.author_id)).map(comment=>({...comment,author:profileMap.get(comment.author_id)}))});
 }
 
