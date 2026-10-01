@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import ZooCrewBadge from "@/components/ZooCrewBadge";
 
 type Member = {
   username: string;
   display_name: string;
   profile_image_path?: string | null;
+  is_superfan?: boolean;
 };
 
 type Post = {
@@ -88,7 +90,7 @@ export default function CommunityPreview() {
               <header className="flex items-center gap-3">
                 <PostAvatar member={post.author} />
                 <div className="min-w-0">
-                  <p className="truncate font-bold text-white group-hover:text-[#f4b400]">{post.author.display_name}</p>
+                  <div className="flex min-w-0 items-center gap-2"><p className="truncate font-bold text-white group-hover:text-[#f4b400]">{post.author.display_name}</p>{post.author.is_superfan?<ZooCrewBadge compact/>:null}</div>
                   <p className="truncate text-xs text-white/40">@{post.author.username}</p>
                 </div>
               </header>
