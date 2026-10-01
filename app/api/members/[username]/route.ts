@@ -3,6 +3,12 @@ import { serviceConfiguration } from "@/lib/stagefront-auth";
 
 const headers = (key: string) => ({ apikey: key, Authorization: `Bearer ${key}` });
 
+function publicProfile(profile: Record<string, unknown>) {
+  const { email: _privateEmail, ...safeProfile } = profile;
+  void _privateEmail;
+  return safeProfile;
+}
+
 export async function GET(_request: Request, { params }: RouteContext<"/api/members/[username]">) {
   const config = serviceConfiguration();
   if (!config) return Response.json({ message: "Member service unavailable." }, { status: 503 });
@@ -31,7 +37,7 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/memb
     const superfanSupports = superfanResponse.ok ? (await superfanResponse.json() as { creator: string }[]).map((item) => item.creator) : [];
     return Response.json({
       profile: {
-        ...accountProfile,
+        ...publicProfile(accountProfile),
         tiktok_profile_url: social?.tiktok_profile_url ?? null,
         legacy_profile: false,
         superfan_supports: superfanSupports,
