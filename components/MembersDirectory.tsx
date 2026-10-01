@@ -1,4 +1,5 @@
 "use client";
+import ZooCrewBadge from "@/components/ZooCrewBadge";
 
 import { FormEvent, useEffect, useState } from "react";
 
@@ -49,7 +50,7 @@ export default function MembersDirectory() {
               {!profile.profile_image_url ? <div className="grid h-full place-items-center text-7xl font-black text-[#f4b400]/35">{profile.display_name[0]}</div> : null}
             </div>
             <div className="p-6">
-              <div className="flex flex-wrap items-center gap-2"><p className="text-xs font-black uppercase tracking-[.2em] text-[#f4b400]">{profile.role}</p>{profile.superfan_supports?.length ? <span className="rounded-full bg-[#f4b400] px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-wide text-black">Zoo Crew Superfan</span> : null}</div>
+              <div className="flex flex-wrap items-center gap-2"><p className="text-xs font-black uppercase tracking-[.2em] text-[#f4b400]">{profile.role}</p>{profile.superfan_supports?.length ? <ZooCrewBadge compact /> : null}</div>
               <h2 className="mt-2 font-display text-2xl font-black">{profile.display_name}</h2>
               <p className="text-white/45">@{profile.username}</p>
               {profile.genres ? <p className="mt-4 text-sm text-white/65">{profile.genres}</p> : null}
