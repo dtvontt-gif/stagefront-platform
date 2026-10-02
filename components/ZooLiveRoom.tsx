@@ -40,7 +40,7 @@ function MediaTile({ participant, featured = false, caged = false, onSelect }: {
           </div>
         </div>
       )}
-      {!participant.local ? <audio ref={audioRef} autoPlay /> : null}
+      {!participant.local ? <audio ref={audioRef} autoPlay playsInline /> : null}
       {caged ? (
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-10">
           <div className="absolute inset-y-0 left-[20%] w-[5px] bg-gradient-to-r from-[#3a2917] via-[#c89c52] to-[#392716] shadow-[2px_0_7px_rgba(0,0,0,.8)] sm:w-2" />
@@ -48,11 +48,11 @@ function MediaTile({ participant, featured = false, caged = false, onSelect }: {
           <div className="absolute inset-y-0 right-[20%] w-[5px] bg-gradient-to-r from-[#3a2917] via-[#c89c52] to-[#392716] shadow-[2px_0_7px_rgba(0,0,0,.8)] sm:w-2" />
           <div className="absolute inset-x-0 top-0 h-2 bg-gradient-to-b from-[#d5ac63] via-[#59401f] to-[#21170c] shadow-[0_3px_8px_rgba(0,0,0,.85)] sm:h-3" />
           <div className="absolute inset-x-0 bottom-0 h-2 bg-gradient-to-b from-[#d5ac63] via-[#59401f] to-[#21170c] shadow-[0_-3px_8px_rgba(0,0,0,.85)] sm:h-3" />
-          <div className="absolute right-1.5 top-2.5 rounded bg-black/75 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider text-[#e9c477] sm:right-2 sm:top-3.5 sm:text-[9px]">Caged</div>
+          <div className="absolute bottom-2.5 right-1.5 rounded bg-black/75 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider text-[#e9c477] sm:bottom-3.5 sm:right-2 sm:text-[9px]">Caged</div>
         </div>
       ) : null}
-      <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/55 to-transparent ${featured ? "px-4 pb-4 pt-12 sm:px-6 sm:pb-6 sm:pt-20" : "px-2 pb-2 pt-7 sm:px-3 sm:pb-3"}`}>
-        <div className="flex items-end justify-between gap-2">
+      <div className={`absolute inset-x-0 top-0 z-20 bg-gradient-to-b from-black/95 via-black/55 to-transparent ${featured ? "px-4 pb-12 pt-4 sm:px-6 sm:pb-20 sm:pt-6" : "px-2 pb-7 pt-2 sm:px-3 sm:pb-10 sm:pt-3"}`}>
+        <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             {participant.owner ? <span className="mb-1 inline-flex rounded-full bg-[#f4b400] px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-black sm:text-[10px]">Owner</span> : null}
             <p className={`${featured ? "text-base sm:text-xl" : "text-[11px] sm:text-sm"} truncate font-black text-white`}>{participant.user_name || "Zoo Crew guest"}{participant.local ? " · You" : ""}</p>
@@ -74,6 +74,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
   const [audioOn, setAudioOn] = useState(false);
   const [videoOn, setVideoOn] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [soundUnlocked, setSoundUnlocked] = useState(false);
 
   const refresh = () => {
     const call = callRef.current;
@@ -143,14 +144,36 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
 
   async function toggleAudio() {
     const next = !audioOn;
-    callRef.current?.setLocalAudio(next);
-    setAudioOn(next);
+    const call = callRef.current;
+    if (!call) return;
+    try {
+      if (next && !call.localAudio()) await call.startCamera({ startAudioOff: false, startVideoOff: !videoOn });
+      call.setLocalAudio(next);
+      setAudioOn(next);
+    } catch {
+      setStatus("Microphone blocked. Allow microphone access in your browser settings.");
+    }
   }
 
   async function toggleVideo() {
     const next = !videoOn;
-    callRef.current?.setLocalVideo(next);
-    setVideoOn(next);
+    const call = callRef.current;
+    if (!call) return;
+    try {
+      if (next && !call.localVideo()) await call.startCamera({ startVideoOff: false, startAudioOff: !audioOn });
+      call.setLocalVideo(next);
+      setVideoOn(next);
+    } catch {
+      setStatus("Camera blocked. Allow camera access in your browser settings.");
+    }
+  }
+
+  async function unlockSound() {
+    const players = Array.from(document.querySelectorAll<HTMLAudioElement>("audio"));
+    const results = await Promise.allSettled(players.map((player) => player.play()));
+    const failed = results.some((result) => result.status === "rejected");
+    setSoundUnlocked(!failed);
+    setStatus(failed ? "Sound is blocked. Check silent mode and browser permissions." : "Sound is on");
   }
 
   function sendComment(event: FormEvent<HTMLFormElement>) {
@@ -183,7 +206,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
           <div className="flex items-center gap-2"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" /><p className="truncate text-xs font-black uppercase tracking-[.16em] text-[#f4b400]">Zoo Crew Vibe · Live</p></div>
           <p className="mt-1 truncate text-[11px] text-white/45">{status}</p>
         </div>
-        <div className="flex items-center gap-2"><span className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-white/70">👥 {people.length}</span><button onClick={leave} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-lg font-bold text-white">×</button></div>
+        <div className="flex items-center gap-2"><button onClick={unlockSound} className={`rounded-full px-3 py-1.5 text-[10px] font-black uppercase sm:text-xs ${soundUnlocked ? "bg-emerald-500/20 text-emerald-200" : "animate-pulse bg-[#f4b400] text-black"}`}>{soundUnlocked ? "🔊 Sound on" : "Tap for sound"}</button><span className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-white/70">👥 {people.length}</span><button onClick={leave} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-lg font-bold text-white">×</button></div>
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_88px] gap-1 bg-black p-1 sm:grid-cols-[minmax(0,1fr)_190px] sm:gap-2 sm:p-2 lg:grid-cols-[minmax(0,1fr)_230px]">
