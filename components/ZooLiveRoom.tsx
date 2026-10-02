@@ -6,7 +6,8 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 type ChatMessage = { id: string; name: string; body: string; createdAt: number };
 type RoomMessage =
   | { kind: "comment"; id: string; name: string; body: string; createdAt: number }
-  | { kind: "feature"; sessionId: string };
+  | { kind: "feature"; sessionId: string }
+  | { kind: "positions"; sessionIds: string[] };
 
 type Backdrop = "night" | "jungle" | "gold";
 
@@ -25,6 +26,7 @@ function MediaTile({ participant, featured = false, caged = false, onSelect, onS
   const audioOn = participant.tracks.audio.state === "playable";
   const userData = participant.userData && typeof participant.userData === "object" ? participant.userData as Record<string, unknown> : {};
   const backdrop = userData.backdrop === "jungle" || userData.backdrop === "gold" ? userData.backdrop : "night";
+  const roleLabel = userData.role === "owner" ? "Owner" : userData.role === "manager" ? "Manager" : userData.role === "moderator" ? "Moderator" : participant.owner ? "Moderator" : "";
 
   useEffect(() => {
     const video = videoRef.current;
@@ -64,7 +66,7 @@ function MediaTile({ participant, featured = false, caged = false, onSelect, onS
       <div className={`absolute inset-x-0 top-0 z-20 bg-gradient-to-b from-black/95 via-black/55 to-transparent ${featured ? "px-4 pb-12 pt-4 sm:px-6 sm:pb-20 sm:pt-6" : "px-2 pb-7 pt-2 sm:px-3 sm:pb-10 sm:pt-3"}`}>
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            {participant.owner ? <span className="mb-1 inline-flex rounded-full bg-[#f4b400] px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-black sm:text-[10px]">Owner</span> : null}
+            {roleLabel ? <span className="mb-1 inline-flex rounded-full bg-[#f4b400] px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-black sm:text-[10px]">{roleLabel}</span> : null}
             <p className={`${featured ? "text-base sm:text-xl" : "text-[11px] sm:text-sm"} truncate font-black text-white`}>{participant.user_name || "Zoo Crew guest"}{participant.local ? " · You" : ""}</p>
             {participant.local ? <p className="mt-0.5 text-[8px] font-bold uppercase tracking-wider text-[#f4b400] sm:text-[10px]">Tap your box for controls</p> : null}
           </div>
@@ -76,12 +78,13 @@ function MediaTile({ participant, featured = false, caged = false, onSelect, onS
   );
 }
 
-export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isOwner: boolean }) {
+export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole }: { roomUrl: string; isOwner: boolean; canModerate: boolean; staffRole: string | null }) {
   const callRef = useRef<DailyCall | null>(null);
   const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
   const microphoneTrackRef = useRef<MediaStreamTrack | null>(null);
   const [participants, setParticipants] = useState<Record<string, DailyParticipant>>({});
   const [featuredId, setFeaturedId] = useState("");
+  const [slotOrder, setSlotOrder] = useState<string[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [status, setStatus] = useState("Opening the habitat…");
   const [audioOn, setAudioOn] = useState(false);
@@ -91,6 +94,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
   const [controlsOpen, setControlsOpen] = useState(false);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [backdrop, setBackdrop] = useState<Backdrop>("night");
+  const [moderationTargetId, setModerationTargetId] = useState("");
 
   const refresh = () => {
     const call = callRef.current;
@@ -101,6 +105,10 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
     setAudioOn(local?.tracks.audio.state === "playable");
     setVideoOn(local?.tracks.video.state === "playable");
     setFeaturedId((current) => current && Object.values(next).some((person) => person.session_id === current) ? current : (Object.values(next).find((person) => !person.local)?.session_id || local?.session_id || ""));
+    setSlotOrder((current) => {
+      const available = Object.values(next).map((person) => person.session_id);
+      return [...current.filter((id) => available.includes(id)), ...available.filter((id) => !current.includes(id))];
+    });
   };
 
   useEffect(() => {
@@ -121,9 +129,6 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
       call.on("participant-left", update);
       call.on("track-started", update);
       call.on("track-stopped", update);
-      call.on("active-speaker-change", (event) => {
-        if (!isOwner && event.activeSpeaker.peerId) setFeaturedId(event.activeSpeaker.peerId);
-      });
       call.on("app-message", (event) => {
         const data = event.data as RoomMessage;
         const sender = Object.values(call?.participants() || {}).find((person) => person.session_id === event.fromId);
@@ -131,11 +136,13 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
           setMessages((current) => [...current.slice(-39), { id: data.id, name: data.name || sender?.user_name || "Guest", body: data.body.slice(0, 180), createdAt: data.createdAt }]);
         }
         if (data?.kind === "feature" && sender?.owner && typeof data.sessionId === "string") setFeaturedId(data.sessionId);
+        if (data?.kind === "positions" && sender?.owner && Array.isArray(data.sessionIds)) setSlotOrder(data.sessionIds.filter((id) => typeof id === "string"));
       });
       call.on("error", () => setStatus("The habitat connection was interrupted."));
       await call.join({ url: parsed.toString(), token, startVideoOff: true, startAudioOff: true });
       if (active) {
         refresh();
+        await call.setUserData({ role: staffRole, backdrop });
         setStatus("Live inside the Zoo Crew habitat");
       }
     }
@@ -149,15 +156,46 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
       microphoneTrackRef.current?.stop();
       callRef.current = null;
     };
-  }, [roomUrl, isOwner]);
+  }, [roomUrl, staffRole]);
 
-  const people = useMemo(() => Object.values(participants).sort((a, b) => Number(b.owner) - Number(a.owner) || Number(b.local) - Number(a.local)), [participants]);
+  const people = useMemo(() => {
+    const list = Object.values(participants);
+    return [...list].sort((a, b) => {
+      const aIndex = slotOrder.indexOf(a.session_id);
+      const bIndex = slotOrder.indexOf(b.session_id);
+      return (aIndex < 0 ? Number.MAX_SAFE_INTEGER : aIndex) - (bIndex < 0 ? Number.MAX_SAFE_INTEGER : bIndex);
+    });
+  }, [participants, slotOrder]);
   const featured = people.find((person) => person.session_id === featuredId) || people[0];
   const rail = people.filter((person) => person.session_id !== featured?.session_id);
+  const moderationTarget = people.find((person) => person.session_id === moderationTargetId);
 
   function feature(person: DailyParticipant) {
+    if (!canModerate) return;
     setFeaturedId(person.session_id);
-    if (isOwner) callRef.current?.sendAppMessage({ kind: "feature", sessionId: person.session_id } satisfies RoomMessage, "*");
+    callRef.current?.sendAppMessage({ kind: "feature", sessionId: person.session_id } satisfies RoomMessage, "*");
+    setModerationTargetId("");
+  }
+
+  function openParticipantControls(person: DailyParticipant) {
+    if (person.local) setControlsOpen(true);
+    else if (canModerate) setModerationTargetId(person.session_id);
+  }
+
+  function moveParticipant(direction: -1 | 1) {
+    const currentIndex = slotOrder.indexOf(moderationTargetId);
+    const nextIndex = currentIndex + direction;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= slotOrder.length) return;
+    const next = [...slotOrder];
+    [next[currentIndex], next[nextIndex]] = [next[nextIndex], next[currentIndex]];
+    setSlotOrder(next);
+    callRef.current?.sendAppMessage({ kind: "positions", sessionIds: next } satisfies RoomMessage, "*");
+  }
+
+  function moderateParticipant(kind: "audio" | "video") {
+    if (!canModerate || !moderationTargetId) return;
+    callRef.current?.updateParticipant(moderationTargetId, kind === "audio" ? { setAudio: false } : { setVideo: false });
+    setStatus(kind === "audio" ? "Participant microphone muted" : "Participant camera turned off");
   }
 
   async function acquireCamera(targetFacing = facingMode) {
@@ -280,7 +318,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_88px] gap-1 bg-black p-1 sm:grid-cols-[minmax(0,1fr)_190px] sm:gap-2 sm:p-2 lg:grid-cols-[minmax(0,1fr)_230px]">
         <div className="relative min-w-0 overflow-hidden rounded-2xl bg-[#0c100e] sm:rounded-3xl">
-          {featured ? <MediaTile participant={featured} featured onSelect={() => feature(featured)} onSelfSettings={() => setControlsOpen(true)} /> : <div className="grid h-full place-items-center text-center text-white/45"><div><p className="text-5xl">🦁</p><p className="mt-4 font-black uppercase">Waiting for the crew</p></div></div>}
+          {featured ? <MediaTile participant={featured} featured onSelect={() => openParticipantControls(featured)} onSelfSettings={() => setControlsOpen(true)} /> : <div className="grid h-full place-items-center text-center text-white/45"><div><p className="text-5xl">🦁</p><p className="mt-4 font-black uppercase">Waiting for the crew</p></div></div>}
           <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 mx-3 max-w-[90%] sm:bottom-5 sm:mx-5 sm:max-w-xl">
             <div className="grid gap-1.5">
               {messages.slice(-4).map((item) => <div key={item.id} className="w-fit max-w-full rounded-2xl bg-black/65 px-3 py-2 text-xs leading-5 text-white shadow-lg backdrop-blur-sm sm:text-sm"><strong className="mr-2 text-[#f4b400]">{item.name}</strong><span className="break-words">{item.body}</span></div>)}
@@ -290,7 +328,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
 
         <aside className="grid min-h-0 grid-rows-[1fr_auto] gap-1 sm:gap-2">
           <div className="grid min-h-0 auto-rows-[106px] gap-1 overflow-y-auto sm:auto-rows-[150px] sm:gap-2">
-            {rail.map((person) => <MediaTile key={person.session_id} participant={person} caged onSelect={() => feature(person)} onSelfSettings={() => setControlsOpen(true)} />)}
+            {rail.map((person) => <MediaTile key={person.session_id} participant={person} caged onSelect={() => openParticipantControls(person)} onSelfSettings={() => setControlsOpen(true)} />)}
             {Array.from({ length: Math.max(0, 4 - rail.length) }).map((_, index) => <div key={index} className="relative grid place-items-center overflow-hidden rounded-xl border border-[#8b6835]/35 bg-[linear-gradient(145deg,#11130f,#080908)] text-center text-[10px] font-bold uppercase text-white/25 sm:rounded-2xl sm:text-xs"><span className="relative z-10">Open<br />cage</span><div aria-hidden="true" className="pointer-events-none absolute inset-0"><div className="absolute inset-y-0 left-1/4 w-1.5 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" /><div className="absolute inset-y-0 left-1/2 w-1.5 -translate-x-1/2 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" /><div className="absolute inset-y-0 right-1/4 w-1.5 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" /></div></div>)}
           </div>
           <button onClick={copyInvite} className="grid min-h-20 place-items-center rounded-xl border border-[#f4b400]/25 bg-[#f4b400]/10 px-1 text-center text-[10px] font-black uppercase text-[#f4b400] sm:min-h-24 sm:rounded-2xl sm:text-xs"><span><span className="block text-2xl">＋</span>{copied ? "Link copied" : "Invite"}</span></button>
@@ -319,6 +357,20 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
             {(["night", "jungle", "gold"] as Backdrop[]).map((scene) => <button key={scene} onClick={() => void chooseBackdrop(scene)} className={`h-20 rounded-2xl border ${backdropClasses[scene]} text-xs font-black uppercase text-white ${backdrop === scene ? "border-[#f4b400] ring-2 ring-[#f4b400]/40" : "border-white/10"}`}>{scene === "night" ? "Night Zoo" : scene === "jungle" ? "Jungle" : "Gold Den"}</button>)}
           </div>
           <p className="mt-3 text-[11px] leading-4 text-white/45">Box backgrounds appear when your camera is off. True person-cutout virtual backgrounds are not supported reliably on iPhone browsers yet.</p>
+        </div>
+      </div> : null}
+
+      {canModerate && moderationTarget ? <div className="absolute inset-0 z-50 grid items-end bg-black/60 backdrop-blur-sm sm:place-items-center" onClick={() => setModerationTargetId("")}>
+        <div className="w-full rounded-t-[2rem] border border-[#f4b400]/25 bg-[#0c100e] p-5 shadow-2xl sm:max-w-md sm:rounded-[2rem]" onClick={(event) => event.stopPropagation()}>
+          <div className="flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-[.18em] text-[#f4b400]">Host & moderator controls</p><h2 className="mt-1 text-xl font-black text-white">{moderationTarget.user_name || "Participant"}</h2></div><button onClick={() => setModerationTargetId("")} className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-xl">×</button></div>
+          <button onClick={() => feature(moderationTarget)} className="mt-5 w-full rounded-2xl bg-[#f4b400] px-4 py-4 font-black text-black">🔄 Swap Position — Put on Main Stage</button>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button onClick={() => moveParticipant(-1)} className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black text-white">↑ Move Box Up</button>
+            <button onClick={() => moveParticipant(1)} className="rounded-2xl bg-white/10 px-3 py-3 text-sm font-black text-white">↓ Move Box Down</button>
+            <button onClick={() => moderateParticipant("audio")} className="rounded-2xl border border-red-400/25 bg-red-500/10 px-3 py-4 text-sm font-black text-red-200">🔇 Mute Their Mic</button>
+            <button onClick={() => moderateParticipant("video")} className="rounded-2xl border border-red-400/25 bg-red-500/10 px-3 py-4 text-sm font-black text-red-200">🚫 Turn Camera Off</button>
+          </div>
+          <p className="mt-3 text-[11px] leading-4 text-white/45">Only approved Zoo Crew owners, managers, and moderators receive these controls. Participants can turn their own devices back on afterward.</p>
         </div>
       </div> : null}
     </div>
