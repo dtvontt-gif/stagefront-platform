@@ -7,6 +7,8 @@ type ChatMessage = { id: string; name: string; body: string; createdAt: number }
 type RoomMessage =
   | { kind: "comment"; id: string; name: string; body: string; createdAt: number }
   | { kind: "feature"; sessionId: string }
+  | { kind: "self-stage"; sessionId: string }
+  | { kind: "self-cage"; sessionId: string; nextSessionId: string }
   | { kind: "positions"; sessionIds: string[] };
 
 type Backdrop = "night" | "jungle" | "gold";
@@ -70,7 +72,6 @@ function MediaTile({ participant, featured = false, caged = false, outputDeviceI
           <div className="min-w-0">
             {roleLabel ? <span className="mb-1 inline-flex rounded-full bg-[#f4b400] px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-black sm:text-[10px]">{roleLabel}</span> : null}
             <p className={`${featured ? "text-base sm:text-xl" : "text-[11px] sm:text-sm"} truncate font-black text-white`}>{participant.user_name || "Zoo Crew guest"}{participant.local ? " · You" : ""}</p>
-            {participant.local ? <p className="mt-0.5 text-[8px] font-bold uppercase tracking-wider text-[#f4b400] sm:text-[10px]">Tap your box for controls</p> : null}
           </div>
           <span aria-label={audioOn ? "Microphone on" : "Microphone muted"} className={`${featured ? "text-lg" : "text-xs"}`}>{audioOn ? "🎙️" : "🔇"}</span>
         </div>
@@ -92,7 +93,6 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole }
   const [audioOn, setAudioOn] = useState(false);
   const [videoOn, setVideoOn] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [soundUnlocked, setSoundUnlocked] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [backdrop, setBackdrop] = useState<Backdrop>("night");
@@ -144,6 +144,8 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole }
           setMessages((current) => [...current.slice(-39), { id: data.id, name: data.name || sender?.user_name || "Guest", body: data.body.slice(0, 180), createdAt: data.createdAt }]);
         }
         if (data?.kind === "feature" && sender?.owner && typeof data.sessionId === "string") setFeaturedId(data.sessionId);
+        if (data?.kind === "self-stage" && sender?.session_id === data.sessionId) setFeaturedId(data.sessionId);
+        if (data?.kind === "self-cage" && sender?.session_id === data.sessionId && typeof data.nextSessionId === "string" && Object.values(call?.participants() || {}).some((person) => person.session_id === data.nextSessionId && person.session_id !== sender.session_id)) setFeaturedId(data.nextSessionId);
         if (data?.kind === "positions" && sender?.owner && Array.isArray(data.sessionIds)) setSlotOrder(data.sessionIds.filter((id) => typeof id === "string"));
       });
       call.on("error", () => setStatus("The habitat connection was interrupted."));
@@ -183,6 +185,29 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole }
     setFeaturedId(person.session_id);
     callRef.current?.sendAppMessage({ kind: "feature", sessionId: person.session_id } satisfies RoomMessage, "*");
     setModerationTargetId("");
+  }
+
+  function moveSelfToStage() {
+    const local = callRef.current?.participants().local;
+    if (!local) return;
+    setFeaturedId(local.session_id);
+    callRef.current?.sendAppMessage({ kind: "self-stage", sessionId: local.session_id } satisfies RoomMessage, "*");
+    setControlsOpen(false);
+    setStatus("You moved to the main stage");
+  }
+
+  function moveSelfToCage() {
+    const current = Object.values(callRef.current?.participants() || {});
+    const local = current.find((person) => person.local);
+    const next = current.find((person) => !person.local);
+    if (!local || !next) {
+      setStatus("Someone else must be inside before you can move to a cage.");
+      return;
+    }
+    setFeaturedId(next.session_id);
+    callRef.current?.sendAppMessage({ kind: "self-cage", sessionId: local.session_id, nextSessionId: next.session_id } satisfies RoomMessage, "*");
+    setControlsOpen(false);
+    setStatus("Your box was moved to a cage");
   }
 
   function openParticipantControls(person: DailyParticipant) {
@@ -269,14 +294,6 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole }
     }
   }
 
-  async function unlockSound() {
-    const players = Array.from(document.querySelectorAll<HTMLAudioElement>("audio"));
-    const results = await Promise.allSettled(players.map((player) => player.play()));
-    const failed = results.some((result) => result.status === "rejected");
-    setSoundUnlocked(!failed);
-    setStatus(failed ? "Sound is blocked. Check silent mode and browser permissions." : "Sound is on");
-  }
-
   async function openAudioSettings() {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
@@ -359,7 +376,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole }
           <div className="flex items-center gap-2"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" /><p className="truncate text-xs font-black uppercase tracking-[.16em] text-[#f4b400]">Zoo Crew Vibe · Live</p></div>
           <p className="mt-1 truncate text-[11px] text-white/45">{status}</p>
         </div>
-        <div className="flex items-center gap-2"><button onClick={unlockSound} className={`rounded-full px-3 py-1.5 text-[10px] font-black uppercase sm:text-xs ${soundUnlocked ? "bg-emerald-500/20 text-emerald-200" : "animate-pulse bg-[#f4b400] text-black"}`}>{soundUnlocked ? "🔊 Sound on" : "Tap for sound"}</button><button onClick={() => setMembersOpen(true)} aria-label="View members" className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-white/70">👥 {people.length}</button><button onClick={leave} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-lg font-bold text-white">×</button></div>
+        <div className="flex items-center gap-2"><button onClick={() => setMembersOpen(true)} aria-label="View members" className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-white/70">👥 {people.length}</button><button onClick={leave} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-lg font-bold text-white">×</button></div>
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_88px] gap-1 bg-black p-1 sm:grid-cols-[minmax(0,1fr)_190px] sm:gap-2 sm:p-2 lg:grid-cols-[minmax(0,1fr)_230px]">
@@ -416,6 +433,11 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole }
             <button onClick={toggleVideo} className={`rounded-2xl px-2 py-4 text-sm font-black ${videoOn ? "bg-emerald-500 text-white" : "bg-white/10 text-white"}`}><span className="block text-2xl">📹</span>{videoOn ? "Camera on" : "Camera off"}</button>
             <button onClick={toggleAudio} className={`rounded-2xl px-2 py-4 text-sm font-black ${audioOn ? "bg-emerald-500 text-white" : "bg-white/10 text-white"}`}><span className="block text-2xl">🎙️</span>{audioOn ? "Mic on" : "Mic off"}</button>
             <button onClick={flipCamera} className="rounded-2xl bg-white/10 px-2 py-4 text-sm font-black text-white"><span className="block text-2xl">🔄</span>Flip camera</button>
+          </div>
+          <p className="mt-5 text-xs font-black uppercase tracking-[.16em] text-white/50">Your box position</p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button onClick={moveSelfToStage} className="rounded-2xl bg-[#f4b400] px-3 py-4 text-sm font-black text-black">⬆️ Move Me to Main Stage</button>
+            <button onClick={moveSelfToCage} className="rounded-2xl border border-[#f4b400]/25 bg-white/10 px-3 py-4 text-sm font-black text-white">⬇️ Shrink Me to Cage</button>
           </div>
           <p className="mt-5 text-xs font-black uppercase tracking-[.16em] text-white/50">Choose your box background</p>
           <div className="mt-2 grid grid-cols-3 gap-2">
