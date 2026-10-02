@@ -8,13 +8,23 @@ type RoomMessage =
   | { kind: "comment"; id: string; name: string; body: string; createdAt: number }
   | { kind: "feature"; sessionId: string };
 
-function MediaTile({ participant, featured = false, caged = false, onSelect }: { participant: DailyParticipant; featured?: boolean; caged?: boolean; onSelect?: () => void }) {
+type Backdrop = "night" | "jungle" | "gold";
+
+const backdropClasses: Record<Backdrop, string> = {
+  night: "bg-[radial-gradient(circle_at_72%_20%,rgba(235,238,207,.35),transparent_13%),linear-gradient(160deg,#071b1a,#030706_72%)]",
+  jungle: "bg-[radial-gradient(circle_at_25%_30%,rgba(34,197,94,.34),transparent_24%),linear-gradient(145deg,#12351d,#041008_75%)]",
+  gold: "bg-[radial-gradient(circle_at_50%_25%,rgba(244,180,0,.4),transparent_28%),linear-gradient(145deg,#402907,#090603_76%)]",
+};
+
+function MediaTile({ participant, featured = false, caged = false, onSelect, onSelfSettings }: { participant: DailyParticipant; featured?: boolean; caged?: boolean; onSelect?: () => void; onSelfSettings?: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoTrack = participant.tracks.video.persistentTrack;
   const audioTrack = participant.tracks.audio.persistentTrack;
   const videoOn = participant.tracks.video.state === "playable" && Boolean(videoTrack);
   const audioOn = participant.tracks.audio.state === "playable";
+  const userData = participant.userData && typeof participant.userData === "object" ? participant.userData as Record<string, unknown> : {};
+  const backdrop = userData.backdrop === "jungle" || userData.backdrop === "gold" ? userData.backdrop : "night";
 
   useEffect(() => {
     const video = videoRef.current;
@@ -32,9 +42,9 @@ function MediaTile({ participant, featured = false, caged = false, onSelect }: {
   }, [audioTrack, participant.local]);
 
   return (
-    <button type="button" onClick={onSelect} className={`group relative h-full w-full overflow-hidden bg-[#121313] text-left ${featured ? "rounded-2xl sm:rounded-3xl" : "rounded-xl sm:rounded-2xl"}`}>
+    <button type="button" onClick={participant.local ? onSelfSettings : onSelect} className={`group relative h-full w-full overflow-hidden bg-[#121313] text-left ${featured ? "rounded-2xl sm:rounded-3xl" : "rounded-xl sm:rounded-2xl"}`}>
       {videoOn ? <video ref={videoRef} playsInline muted={participant.local} autoPlay className={`h-full w-full object-cover ${participant.local ? "-scale-x-100" : ""}`} /> : (
-        <div className="grid h-full place-items-center bg-[radial-gradient(circle_at_50%_35%,rgba(244,180,0,.16),transparent_34%),linear-gradient(145deg,#112018,#090b0a)]">
+        <div className={`grid h-full place-items-center ${backdropClasses[backdrop]}`}>
           <div className={`${featured ? "h-24 w-24 text-4xl sm:h-36 sm:w-36 sm:text-6xl" : "h-12 w-12 text-xl sm:h-16 sm:w-16 sm:text-2xl"} grid place-items-center rounded-full border border-[#f4b400]/35 bg-black/55 font-black text-[#f4b400]`}>
             {(participant.user_name || "Z").slice(0, 1).toUpperCase()}
           </div>
@@ -56,6 +66,7 @@ function MediaTile({ participant, featured = false, caged = false, onSelect }: {
           <div className="min-w-0">
             {participant.owner ? <span className="mb-1 inline-flex rounded-full bg-[#f4b400] px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-black sm:text-[10px]">Owner</span> : null}
             <p className={`${featured ? "text-base sm:text-xl" : "text-[11px] sm:text-sm"} truncate font-black text-white`}>{participant.user_name || "Zoo Crew guest"}{participant.local ? " · You" : ""}</p>
+            {participant.local ? <p className="mt-0.5 text-[8px] font-bold uppercase tracking-wider text-[#f4b400] sm:text-[10px]">Tap your box for controls</p> : null}
           </div>
           <span aria-label={audioOn ? "Microphone on" : "Microphone muted"} className={`${featured ? "text-lg" : "text-xs"}`}>{audioOn ? "🎙️" : "🔇"}</span>
         </div>
@@ -67,6 +78,8 @@ function MediaTile({ participant, featured = false, caged = false, onSelect }: {
 
 export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isOwner: boolean }) {
   const callRef = useRef<DailyCall | null>(null);
+  const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
+  const microphoneTrackRef = useRef<MediaStreamTrack | null>(null);
   const [participants, setParticipants] = useState<Record<string, DailyParticipant>>({});
   const [featuredId, setFeaturedId] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -75,6 +88,9 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
   const [videoOn, setVideoOn] = useState(false);
   const [copied, setCopied] = useState(false);
   const [soundUnlocked, setSoundUnlocked] = useState(false);
+  const [controlsOpen, setControlsOpen] = useState(false);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+  const [backdrop, setBackdrop] = useState<Backdrop>("night");
 
   const refresh = () => {
     const call = callRef.current;
@@ -129,6 +145,8 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
       if (call) {
         void call.leave().catch(() => undefined).finally(() => call?.destroy());
       }
+      cameraTrackRef.current?.stop();
+      microphoneTrackRef.current?.stop();
       callRef.current = null;
     };
   }, [roomUrl, isOwner]);
@@ -142,14 +160,45 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
     if (isOwner) callRef.current?.sendAppMessage({ kind: "feature", sessionId: person.session_id } satisfies RoomMessage, "*");
   }
 
+  async function acquireCamera(targetFacing = facingMode) {
+    const call = callRef.current;
+    if (!call) return;
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: targetFacing }, audio: false });
+    const track = stream.getVideoTracks()[0];
+    if (!track) throw new Error("No camera was found.");
+    const previous = cameraTrackRef.current;
+    cameraTrackRef.current = track;
+    await call.updateInputSettings({ video: { settings: { customTrack: track } } });
+    call.setLocalVideo(true);
+    previous?.stop();
+    setVideoOn(true);
+  }
+
+  async function acquireMicrophone() {
+    const call = callRef.current;
+    if (!call) return;
+    const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+    const track = stream.getAudioTracks()[0];
+    if (!track) throw new Error("No microphone was found.");
+    const previous = microphoneTrackRef.current;
+    microphoneTrackRef.current = track;
+    await call.updateInputSettings({ audio: { settings: { customTrack: track } } });
+    call.setLocalAudio(true);
+    previous?.stop();
+    setAudioOn(true);
+  }
+
   async function toggleAudio() {
     const next = !audioOn;
     const call = callRef.current;
     if (!call) return;
     try {
-      if (next && !call.localAudio()) await call.startCamera({ startAudioOff: false, startVideoOff: !videoOn });
-      call.setLocalAudio(next);
-      setAudioOn(next);
+      const track = call.participants().local?.tracks.audio.persistentTrack;
+      if (next && (!track || track.readyState === "ended")) await acquireMicrophone();
+      else {
+        call.setLocalAudio(next);
+        setAudioOn(next);
+      }
     } catch {
       setStatus("Microphone blocked. Allow microphone access in your browser settings.");
     }
@@ -160,9 +209,12 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
     const call = callRef.current;
     if (!call) return;
     try {
-      if (next && !call.localVideo()) await call.startCamera({ startVideoOff: false, startAudioOff: !audioOn });
-      call.setLocalVideo(next);
-      setVideoOn(next);
+      const track = call.participants().local?.tracks.video.persistentTrack;
+      if (next && (!track || track.readyState === "ended")) await acquireCamera();
+      else {
+        call.setLocalVideo(next);
+        setVideoOn(next);
+      }
     } catch {
       setStatus("Camera blocked. Allow camera access in your browser settings.");
     }
@@ -174,6 +226,23 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
     const failed = results.some((result) => result.status === "rejected");
     setSoundUnlocked(!failed);
     setStatus(failed ? "Sound is blocked. Check silent mode and browser permissions." : "Sound is on");
+  }
+
+  async function flipCamera() {
+    const nextFacing = facingMode === "user" ? "environment" : "user";
+    setFacingMode(nextFacing);
+    if (!videoOn) return;
+    try {
+      await acquireCamera(nextFacing);
+    } catch {
+      setStatus("Could not switch cameras on this device.");
+    }
+  }
+
+  async function chooseBackdrop(next: Backdrop) {
+    setBackdrop(next);
+    const current = participants.local?.userData && typeof participants.local.userData === "object" ? participants.local.userData as Record<string, unknown> : {};
+    await callRef.current?.setUserData({ ...current, backdrop: next });
   }
 
   function sendComment(event: FormEvent<HTMLFormElement>) {
@@ -211,7 +280,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_88px] gap-1 bg-black p-1 sm:grid-cols-[minmax(0,1fr)_190px] sm:gap-2 sm:p-2 lg:grid-cols-[minmax(0,1fr)_230px]">
         <div className="relative min-w-0 overflow-hidden rounded-2xl bg-[#0c100e] sm:rounded-3xl">
-          {featured ? <MediaTile participant={featured} featured onSelect={() => feature(featured)} /> : <div className="grid h-full place-items-center text-center text-white/45"><div><p className="text-5xl">🦁</p><p className="mt-4 font-black uppercase">Waiting for the crew</p></div></div>}
+          {featured ? <MediaTile participant={featured} featured onSelect={() => feature(featured)} onSelfSettings={() => setControlsOpen(true)} /> : <div className="grid h-full place-items-center text-center text-white/45"><div><p className="text-5xl">🦁</p><p className="mt-4 font-black uppercase">Waiting for the crew</p></div></div>}
           <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 mx-3 max-w-[90%] sm:bottom-5 sm:mx-5 sm:max-w-xl">
             <div className="grid gap-1.5">
               {messages.slice(-4).map((item) => <div key={item.id} className="w-fit max-w-full rounded-2xl bg-black/65 px-3 py-2 text-xs leading-5 text-white shadow-lg backdrop-blur-sm sm:text-sm"><strong className="mr-2 text-[#f4b400]">{item.name}</strong><span className="break-words">{item.body}</span></div>)}
@@ -221,7 +290,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
 
         <aside className="grid min-h-0 grid-rows-[1fr_auto] gap-1 sm:gap-2">
           <div className="grid min-h-0 auto-rows-[106px] gap-1 overflow-y-auto sm:auto-rows-[150px] sm:gap-2">
-            {rail.map((person) => <MediaTile key={person.session_id} participant={person} caged onSelect={() => feature(person)} />)}
+            {rail.map((person) => <MediaTile key={person.session_id} participant={person} caged onSelect={() => feature(person)} onSelfSettings={() => setControlsOpen(true)} />)}
             {Array.from({ length: Math.max(0, 4 - rail.length) }).map((_, index) => <div key={index} className="relative grid place-items-center overflow-hidden rounded-xl border border-[#8b6835]/35 bg-[linear-gradient(145deg,#11130f,#080908)] text-center text-[10px] font-bold uppercase text-white/25 sm:rounded-2xl sm:text-xs"><span className="relative z-10">Open<br />cage</span><div aria-hidden="true" className="pointer-events-none absolute inset-0"><div className="absolute inset-y-0 left-1/4 w-1.5 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" /><div className="absolute inset-y-0 left-1/2 w-1.5 -translate-x-1/2 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" /><div className="absolute inset-y-0 right-1/4 w-1.5 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" /></div></div>)}
           </div>
           <button onClick={copyInvite} className="grid min-h-20 place-items-center rounded-xl border border-[#f4b400]/25 bg-[#f4b400]/10 px-1 text-center text-[10px] font-black uppercase text-[#f4b400] sm:min-h-24 sm:rounded-2xl sm:text-xs"><span><span className="block text-2xl">＋</span>{copied ? "Link copied" : "Invite"}</span></button>
@@ -236,6 +305,22 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
           <button type="button" onClick={toggleAudio} aria-label={audioOn ? "Mute microphone" : "Unmute microphone"} className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-lg ${audioOn ? "bg-emerald-500 text-white" : "bg-white/10 text-white"}`}>🎙️</button>
         </form>
       </div>
+
+      {controlsOpen ? <div className="absolute inset-0 z-50 grid items-end bg-black/60 backdrop-blur-sm sm:place-items-center" onClick={() => setControlsOpen(false)}>
+        <div className="w-full rounded-t-[2rem] border border-[#f4b400]/25 bg-[#0c100e] p-5 shadow-2xl sm:max-w-md sm:rounded-[2rem]" onClick={(event) => event.stopPropagation()}>
+          <div className="flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-[.18em] text-[#f4b400]">Your animal controls</p><h2 className="mt-1 text-xl font-black text-white">Camera, mic & box scene</h2></div><button onClick={() => setControlsOpen(false)} className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-xl">×</button></div>
+          <div className="mt-5 grid grid-cols-3 gap-2">
+            <button onClick={toggleVideo} className={`rounded-2xl px-2 py-4 text-sm font-black ${videoOn ? "bg-emerald-500 text-white" : "bg-white/10 text-white"}`}><span className="block text-2xl">📹</span>{videoOn ? "Camera on" : "Camera off"}</button>
+            <button onClick={toggleAudio} className={`rounded-2xl px-2 py-4 text-sm font-black ${audioOn ? "bg-emerald-500 text-white" : "bg-white/10 text-white"}`}><span className="block text-2xl">🎙️</span>{audioOn ? "Mic on" : "Mic off"}</button>
+            <button onClick={flipCamera} className="rounded-2xl bg-white/10 px-2 py-4 text-sm font-black text-white"><span className="block text-2xl">🔄</span>Flip camera</button>
+          </div>
+          <p className="mt-5 text-xs font-black uppercase tracking-[.16em] text-white/50">Choose your box background</p>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {(["night", "jungle", "gold"] as Backdrop[]).map((scene) => <button key={scene} onClick={() => void chooseBackdrop(scene)} className={`h-20 rounded-2xl border ${backdropClasses[scene]} text-xs font-black uppercase text-white ${backdrop === scene ? "border-[#f4b400] ring-2 ring-[#f4b400]/40" : "border-white/10"}`}>{scene === "night" ? "Night Zoo" : scene === "jungle" ? "Jungle" : "Gold Den"}</button>)}
+          </div>
+          <p className="mt-3 text-[11px] leading-4 text-white/45">Box backgrounds appear when your camera is off. True person-cutout virtual backgrounds are not supported reliably on iPhone browsers yet.</p>
+        </div>
+      </div> : null}
     </div>
   );
 }
