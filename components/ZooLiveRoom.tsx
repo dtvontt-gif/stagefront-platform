@@ -4,7 +4,7 @@ import type { DailyCall, DailyParticipant } from "@daily-co/daily-js";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type ChatReply = { id: string; name: string; body: string };
-type ChatMessage = { id: string; name: string; body: string; createdAt: number; senderId?: string; replyTo?: ChatReply; likes: number };
+type ChatMessage = { id: string; name: string; body: string; createdAt: number; senderId?: string; username?: string; profileImageUrl?: string; role?: string; replyTo?: ChatReply; likes: number };
 type RoomMessage =
   | { kind: "comment"; id: string; name: string; body: string; createdAt: number; replyTo?: ChatReply }
   | { kind: "comment-like"; commentId: string }
@@ -89,12 +89,13 @@ function MediaTile({ participant, featured = false, caged = false, outputDeviceI
   );
 }
 
-export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlLive, initialMode, staffRole, profileImageUrl, onEndLive }: { roomUrl: string; isOwner: boolean; canModerate: boolean; canControlLive: boolean; initialMode: "viewer" | "stage"; staffRole: string | null; profileImageUrl: string | null; onEndLive: () => Promise<void> }) {
+export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlLive, initialMode, staffRole, profileImageUrl, profileUsername, onEndLive }: { roomUrl: string; isOwner: boolean; canModerate: boolean; canControlLive: boolean; initialMode: "viewer" | "stage"; staffRole: string | null; profileImageUrl: string | null; profileUsername: string | null; onEndLive: () => Promise<void> }) {
   const callRef = useRef<DailyCall | null>(null);
   const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
   const microphoneTrackRef = useRef<MediaStreamTrack | null>(null);
   const commentsRef = useRef<HTMLDivElement | null>(null);
   const autoScrollRef = useRef(true);
+  const longPressTimerRef = useRef<number | null>(null);
   const [participants, setParticipants] = useState<Record<string, DailyParticipant>>({});
   const [featuredId, setFeaturedId] = useState("");
   const [slotOrder, setSlotOrder] = useState<string[]>([]);
@@ -119,6 +120,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
   const [replyTo, setReplyTo] = useState<ChatReply | null>(null);
   const [pinnedCommentId, setPinnedCommentId] = useState<string | null>(null);
   const [likedComments, setLikedComments] = useState<string[]>([]);
+  const [commentMenuId, setCommentMenuId] = useState<string | null>(null);
 
   useEffect(() => {
     const panel = commentsRef.current;
@@ -164,7 +166,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
         const senderData = sender?.userData && typeof sender.userData === "object" ? sender.userData as Record<string, unknown> : {};
         const senderCanModerate = senderData.role === "owner" || senderData.role === "manager" || senderData.role === "moderator";
         if (data?.kind === "comment" && typeof data.body === "string") {
-          setMessages((current) => [...current.slice(-99), { id: data.id, name: data.name || sender?.user_name || "Guest", body: data.body.slice(0, 180), createdAt: data.createdAt, senderId: sender?.session_id, replyTo: data.replyTo, likes: 0 }]);
+          setMessages((current) => [...current.slice(-99), { id: data.id, name: data.name || sender?.user_name || "Guest", body: data.body.slice(0, 180), createdAt: data.createdAt, senderId: sender?.session_id, username: typeof senderData.username === "string" ? senderData.username : undefined, profileImageUrl: typeof senderData.profileImageUrl === "string" ? senderData.profileImageUrl : undefined, role: typeof senderData.role === "string" ? senderData.role : undefined, replyTo: data.replyTo, likes: 0 }]);
         }
         if (data?.kind === "comment-like" && typeof data.commentId === "string") setMessages((current) => current.map((item) => item.id === data.commentId ? { ...item, likes: item.likes + 1 } : item));
         if (data?.kind === "comment-delete" && typeof data.commentId === "string") setMessages((current) => {
@@ -193,7 +195,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
       await call.join({ url: parsed.toString(), token, startVideoOff: true, startAudioOff: true });
       if (active) {
         refresh();
-        await call.setUserData({ role: staffRole, backdrop, profileImageUrl, mode: initialMode });
+        await call.setUserData({ role: staffRole, backdrop, profileImageUrl, username: profileUsername, mode: initialMode });
         setStatus(initialMode === "viewer" ? "Watching from the viewer lobby" : "Live inside the Zoo Crew habitat");
       }
     }
@@ -207,7 +209,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
       microphoneTrackRef.current?.stop();
       callRef.current = null;
     };
-  }, [roomUrl, staffRole, profileImageUrl, initialMode, canModerate]);
+  }, [roomUrl, staffRole, profileImageUrl, profileUsername, initialMode, canModerate]);
 
   const people = useMemo(() => {
     const list = Object.values(participants).filter((person) => {
@@ -228,6 +230,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
   const rail = people.filter((person) => person.session_id !== featured?.session_id);
   const moderationTarget = people.find((person) => person.session_id === moderationTargetId);
   const pinnedComment = messages.find((item) => item.id === pinnedCommentId);
+  const menuComment = messages.find((item) => item.id === commentMenuId);
 
   function feature(person: DailyParticipant) {
     if (!canModerate) return;
@@ -401,7 +404,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
     const body = String(new FormData(form).get("comment") || "").trim().slice(0, 180);
     const local = participants.local;
     if (!body || !local) return;
-    const comment: ChatMessage = { id: crypto.randomUUID(), name: local.user_name || "Guest", body, createdAt: Date.now(), senderId: local.session_id, replyTo: replyTo || undefined, likes: 0 };
+    const comment: ChatMessage = { id: crypto.randomUUID(), name: local.user_name || "Guest", body, createdAt: Date.now(), senderId: local.session_id, username: profileUsername || undefined, profileImageUrl: profileImageUrl || undefined, role: staffRole || undefined, replyTo: replyTo || undefined, likes: 0 };
     setMessages((current) => [...current.slice(-99), comment]);
     callRef.current?.sendAppMessage({ kind: "comment", id: comment.id, name: comment.name, body: comment.body, createdAt: comment.createdAt, replyTo: comment.replyTo } satisfies RoomMessage, "*");
     setReplyTo(null);
@@ -428,6 +431,24 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
     const next = pinnedCommentId === commentId ? null : commentId;
     setPinnedCommentId(next);
     callRef.current?.sendAppMessage({ kind: "comment-pin", commentId: next } satisfies RoomMessage, "*");
+  }
+
+  function beginCommentPress(commentId: string) {
+    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = window.setTimeout(() => {
+      setCommentMenuId(commentId);
+      if (navigator.vibrate) navigator.vibrate(35);
+    }, 500);
+  }
+
+  function cancelCommentPress() {
+    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = null;
+  }
+
+  function replyFromMenu(comment: ChatMessage) {
+    setReplyTo({ id: comment.id, name: comment.name, body: comment.body });
+    setCommentMenuId(null);
   }
 
   function requestStage() {
@@ -484,18 +505,13 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_88px] gap-1 bg-black p-1 sm:grid-cols-[minmax(0,1fr)_190px] sm:gap-2 sm:p-2 lg:grid-cols-[minmax(0,1fr)_230px]">
         <div className="relative min-w-0 overflow-hidden rounded-2xl bg-[#0c100e] sm:rounded-3xl">
           {featured ? <MediaTile participant={featured} featured outputDeviceId={outputDeviceId} onSelect={() => openParticipantControls(featured)} onSelfSettings={() => setControlsOpen(true)} /> : <div className="grid h-full place-items-center text-center text-white/45"><div><p className="text-5xl">🦁</p><p className="mt-4 font-black uppercase">Waiting for the crew</p></div></div>}
-          {pinnedComment ? <div className="absolute inset-x-3 top-20 z-30 max-w-xl rounded-2xl border border-[#f4b400]/45 bg-black/80 px-3 py-2 text-xs text-white shadow-xl backdrop-blur-sm sm:inset-x-5 sm:text-sm"><span className="mr-2 text-[#f4b400]">📌 {pinnedComment.name}</span>{pinnedComment.body}</div> : null}
+          {pinnedComment ? <div className="absolute inset-x-3 top-20 z-30 max-w-xl rounded-xl border-l-2 border-[#f4b400] bg-black/20 px-3 py-2 text-xs font-semibold text-white [text-shadow:0_1px_4px_#000] sm:inset-x-5 sm:text-sm"><span className="mr-2 text-[#f4b400]">📌 {pinnedComment.name}</span>{pinnedComment.body}</div> : null}
           <div ref={commentsRef} onScroll={(event) => { const panel = event.currentTarget; autoScrollRef.current = panel.scrollHeight - panel.scrollTop - panel.clientHeight < 45; }} className="absolute inset-x-0 bottom-2 z-20 mx-2 max-h-[46%] max-w-[94%] overflow-y-auto overscroll-contain rounded-2xl px-1 py-2 [scrollbar-width:none] sm:bottom-4 sm:mx-4 sm:max-w-xl">
             <div className="grid gap-1.5">
-              {messages.map((item) => <div key={item.id} className="w-fit max-w-full rounded-2xl bg-black/65 px-3 py-2 text-xs leading-5 text-white shadow-lg backdrop-blur-sm sm:text-sm">
+              {messages.map((item) => <div key={item.id} onPointerDown={() => beginCommentPress(item.id)} onPointerUp={cancelCommentPress} onPointerCancel={cancelCommentPress} onPointerLeave={cancelCommentPress} onContextMenu={(event) => { event.preventDefault(); cancelCommentPress(); setCommentMenuId(item.id); }} className="w-fit max-w-full select-none px-2 py-1 text-xs font-semibold leading-5 text-white [text-shadow:0_1px_2px_#000,0_0_5px_#000] sm:text-sm">
                 {item.replyTo ? <div className="mb-1 border-l-2 border-[#f4b400]/60 pl-2 text-[10px] leading-4 text-white/55">Replying to {item.replyTo.name}: {item.replyTo.body.slice(0, 55)}</div> : null}
                 <div><strong className="mr-2 text-[#f4b400]">{item.name}</strong><span className="break-words">{item.body}</span></div>
-                <div className="mt-1 flex items-center gap-3 text-[10px] font-bold text-white/45">
-                  <button type="button" onClick={() => setReplyTo({ id: item.id, name: item.name, body: item.body })}>Reply</button>
-                  <button type="button" onClick={() => likeComment(item.id)} className={likedComments.includes(item.id) ? "text-pink-400" : ""}>♥ {item.likes || ""}</button>
-                  {canModerate ? <button type="button" onClick={() => pinComment(item.id)}>{pinnedCommentId === item.id ? "Unpin" : "Pin"}</button> : null}
-                  {canModerate || item.senderId === participants.local?.session_id ? <button type="button" onClick={() => deleteComment(item.id)} className="text-red-300/80">Delete</button> : null}
-                </div>
+                {item.likes ? <div className="text-[10px] text-pink-300">♥ {item.likes}</div> : null}
               </div>)}
             </div>
           </div>
@@ -518,6 +534,24 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
           {viewerMode ? <button type="button" onClick={requestStage} disabled={stageRequested} aria-label="Request to join the stage" className={`shrink-0 rounded-full px-3 py-3 text-[10px] font-black uppercase ${stageRequested ? "bg-emerald-900 text-emerald-200" : "bg-white/10 text-white"}`}>{stageRequested ? "Requested" : "Join stage"}</button> : <><button type="button" onClick={toggleVideo} aria-label={videoOn ? "Turn camera off" : "Turn camera on"} className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-lg ${videoOn ? "bg-emerald-500 text-white" : "bg-white/10 text-white"}`}>📹</button><button type="button" onClick={toggleAudio} aria-label={audioOn ? "Mute microphone" : "Unmute microphone"} className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-lg ${audioOn ? "bg-emerald-500 text-white" : "bg-white/10 text-white"}`}>🎙️</button><button type="button" onClick={openAudioSettings} aria-label="Audio and Bluetooth settings" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-lg text-white">🎧</button></>}
         </form>
       </div>
+
+      {menuComment ? <div className="absolute inset-0 z-[70] grid items-end bg-black/55 backdrop-blur-[2px]" onClick={() => setCommentMenuId(null)}>
+        <div className="w-full rounded-t-[2rem] border-t border-[#f4b400]/30 bg-[#0c100e] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_-20px_70px_rgba(0,0,0,.75)]" onClick={(event) => event.stopPropagation()}>
+          <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-white/20" />
+          <div className="mx-auto flex max-w-lg items-center gap-3 border-b border-white/10 pb-4">
+            {menuComment.profileImageUrl ? <img src={menuComment.profileImageUrl} alt="" className="h-11 w-11 rounded-full border border-[#f4b400]/40 object-cover" /> : <div className="grid h-11 w-11 place-items-center rounded-full bg-[#f4b400]/15 font-black text-[#f4b400]">{menuComment.name.slice(0, 1).toUpperCase()}</div>}
+            <div className="min-w-0"><p className="font-black text-white">{menuComment.name}</p><p className="truncate text-xs text-white/45">{menuComment.body}</p></div>
+          </div>
+          <div className="mx-auto mt-4 grid max-w-lg grid-cols-2 gap-2">
+            <button type="button" onClick={() => replyFromMenu(menuComment)} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">↩ Reply</button>
+            <button type="button" onClick={() => { likeComment(menuComment.id); setCommentMenuId(null); }} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">♥ Like{menuComment.likes ? ` · ${menuComment.likes}` : ""}</button>
+            {menuComment.username ? <a href={`/singers/${encodeURIComponent(menuComment.username)}`} className="rounded-2xl bg-white/10 px-4 py-4 text-center text-sm font-black text-white">👤 View Profile</a> : <button type="button" disabled className="rounded-2xl bg-white/5 px-4 py-4 text-sm font-black text-white/30">👤 Profile unavailable</button>}
+            {canModerate ? <button type="button" onClick={() => { pinComment(menuComment.id); setCommentMenuId(null); }} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">📌 {pinnedCommentId === menuComment.id ? "Unpin" : "Pin"}</button> : null}
+            {canModerate || menuComment.senderId === participants.local?.session_id ? <button type="button" onClick={() => { deleteComment(menuComment.id); setCommentMenuId(null); }} className="col-span-2 rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-4 text-sm font-black text-red-200">Delete Comment</button> : null}
+          </div>
+          <button type="button" onClick={() => setCommentMenuId(null)} className="mx-auto mt-3 block w-full max-w-lg rounded-2xl bg-white/[.06] px-4 py-3 text-sm font-bold text-white/60">Cancel</button>
+        </div>
+      </div> : null}
 
       {membersOpen ? <div className="absolute inset-0 z-50 grid items-end bg-black/60 backdrop-blur-sm sm:place-items-center" onClick={() => setMembersOpen(false)}>
         <div className="max-h-[75vh] w-full overflow-y-auto rounded-t-[2rem] border border-[#f4b400]/25 bg-[#0c100e] p-5 shadow-2xl sm:max-w-md sm:rounded-[2rem]" onClick={(event) => event.stopPropagation()}>

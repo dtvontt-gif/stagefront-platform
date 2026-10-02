@@ -13,6 +13,7 @@ export default function LiveHouse() {
   const [canModerate, setCanModerate] = useState(false);
   const [staffRole, setStaffRole] = useState<string | null>(null);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [profileUsername, setProfileUsername] = useState<string | null>(null);
   const [canControlLive, setCanControlLive] = useState(false);
   const [entryMode, setEntryMode] = useState<"viewer" | "stage">("viewer");
 
@@ -71,7 +72,7 @@ export default function LiveHouse() {
       return;
     }
     const response = await fetch("/api/live/room", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "enter", mode: requestedMode }) });
-    const result = (await response.json().catch(() => ({}))) as { roomUrl?: string; message?: string; isOwner?: boolean; canModerate?: boolean; canControlLive?: boolean; entryMode?: "viewer" | "stage"; role?: string | null; profileImageUrl?: string | null };
+    const result = (await response.json().catch(() => ({}))) as { roomUrl?: string; message?: string; isOwner?: boolean; canModerate?: boolean; canControlLive?: boolean; entryMode?: "viewer" | "stage"; role?: string | null; username?: string | null; profileImageUrl?: string | null };
     if (!response.ok || !result.roomUrl) {
       setState("error");
       setMessage(result.message || "The Live House could not open.");
@@ -83,6 +84,7 @@ export default function LiveHouse() {
     setCanControlLive(Boolean(result.canControlLive));
     setStaffRole(result.role || null);
     setProfileImageUrl(result.profileImageUrl || null);
+    setProfileUsername(result.username || null);
     setEntryMode(result.entryMode || "viewer");
     setState("ready");
   }
@@ -112,7 +114,7 @@ export default function LiveHouse() {
   if (state === "ready") {
     return (
       <section className="fixed inset-0 z-[100] h-dvh overflow-hidden bg-black">
-        <ZooLiveRoom roomUrl={roomUrl} isOwner={owner} canModerate={canModerate} canControlLive={canControlLive} initialMode={entryMode} staffRole={staffRole} profileImageUrl={profileImageUrl} onEndLive={endLive} />
+        <ZooLiveRoom roomUrl={roomUrl} isOwner={owner} canModerate={canModerate} canControlLive={canControlLive} initialMode={entryMode} staffRole={staffRole} profileImageUrl={profileImageUrl} profileUsername={profileUsername} onEndLive={endLive} />
       </section>
     );
   }
