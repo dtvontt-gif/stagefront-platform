@@ -17,7 +17,7 @@ const backdropClasses: Record<Backdrop, string> = {
   gold: "bg-[radial-gradient(circle_at_50%_25%,rgba(244,180,0,.4),transparent_28%),linear-gradient(145deg,#402907,#090603_76%)]",
 };
 
-function MediaTile({ participant, featured = false, caged = false, onSelect, onSelfSettings }: { participant: DailyParticipant; featured?: boolean; caged?: boolean; onSelect?: () => void; onSelfSettings?: () => void }) {
+function MediaTile({ participant, featured = false, caged = false, outputDeviceId, onSelect, onSelfSettings }: { participant: DailyParticipant; featured?: boolean; caged?: boolean; outputDeviceId?: string; onSelect?: () => void; onSelfSettings?: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoTrack = participant.tracks.video.persistentTrack;
@@ -33,15 +33,18 @@ function MediaTile({ participant, featured = false, caged = false, onSelect, onS
     if (!video) return;
     video.srcObject = videoTrack ? new MediaStream([videoTrack]) : null;
     if (videoTrack) void video.play().catch(() => undefined);
-  }, [videoTrack]);
+  }, [videoTrack, videoOn]);
 
   useEffect(() => {
     if (participant.local) return;
     const audio = audioRef.current;
     if (!audio) return;
     audio.srcObject = audioTrack ? new MediaStream([audioTrack]) : null;
+    if (outputDeviceId && "setSinkId" in audio) {
+      void (audio as HTMLAudioElement & { setSinkId: (deviceId: string) => Promise<void> }).setSinkId(outputDeviceId).catch(() => undefined);
+    }
     if (audioTrack) void audio.play().catch(() => undefined);
-  }, [audioTrack, participant.local]);
+  }, [audioTrack, outputDeviceId, participant.local]);
 
   return (
     <button type="button" onClick={participant.local ? onSelfSettings : onSelect} className={`group relative h-full w-full overflow-hidden bg-[#121313] text-left ${featured ? "rounded-2xl sm:rounded-3xl" : "rounded-xl sm:rounded-2xl"}`}>
@@ -56,7 +59,6 @@ function MediaTile({ participant, featured = false, caged = false, onSelect, onS
       {caged ? (
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-10">
           <div className="absolute inset-y-0 left-[20%] w-[5px] bg-gradient-to-r from-[#3a2917] via-[#c89c52] to-[#392716] shadow-[2px_0_7px_rgba(0,0,0,.8)] sm:w-2" />
-          <div className="absolute inset-y-0 left-1/2 w-[5px] -translate-x-1/2 bg-gradient-to-r from-[#3a2917] via-[#d3aa61] to-[#392716] shadow-[2px_0_7px_rgba(0,0,0,.8)] sm:w-2" />
           <div className="absolute inset-y-0 right-[20%] w-[5px] bg-gradient-to-r from-[#3a2917] via-[#c89c52] to-[#392716] shadow-[2px_0_7px_rgba(0,0,0,.8)] sm:w-2" />
           <div className="absolute inset-x-0 top-0 h-2 bg-gradient-to-b from-[#d5ac63] via-[#59401f] to-[#21170c] shadow-[0_3px_8px_rgba(0,0,0,.85)] sm:h-3" />
           <div className="absolute inset-x-0 bottom-0 h-2 bg-gradient-to-b from-[#d5ac63] via-[#59401f] to-[#21170c] shadow-[0_-3px_8px_rgba(0,0,0,.85)] sm:h-3" />
@@ -95,6 +97,12 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole }
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [backdrop, setBackdrop] = useState<Backdrop>("night");
   const [moderationTargetId, setModerationTargetId] = useState("");
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [audioSettingsOpen, setAudioSettingsOpen] = useState(false);
+  const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
+  const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([]);
+  const [inputDeviceId, setInputDeviceId] = useState("");
+  const [outputDeviceId, setOutputDeviceId] = useState("");
 
   const refresh = () => {
     const call = callRef.current;
@@ -212,10 +220,13 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole }
     setVideoOn(true);
   }
 
-  async function acquireMicrophone() {
+  async function acquireMicrophone(deviceId = inputDeviceId) {
     const call = callRef.current;
     if (!call) return;
-    const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: false,
+      audio: deviceId ? { deviceId: { exact: deviceId }, echoCancellation: true, noiseSuppression: true } : { echoCancellation: true, noiseSuppression: true },
+    });
     const track = stream.getAudioTracks()[0];
     if (!track) throw new Error("No microphone was found.");
     const previous = microphoneTrackRef.current;
@@ -266,6 +277,41 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole }
     setStatus(failed ? "Sound is blocked. Check silent mode and browser permissions." : "Sound is on");
   }
 
+  async function openAudioSettings() {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setAudioInputs(devices.filter((device) => device.kind === "audioinput"));
+      setAudioOutputs(devices.filter((device) => device.kind === "audiooutput"));
+      setAudioSettingsOpen(true);
+    } catch {
+      setStatus("Audio devices could not be loaded. Check browser permissions.");
+    }
+  }
+
+  async function chooseMicrophone(deviceId: string) {
+    setInputDeviceId(deviceId);
+    try {
+      await acquireMicrophone(deviceId);
+      setStatus("Bluetooth microphone selected");
+    } catch {
+      setStatus("That microphone could not connect. Reconnect Bluetooth and try again.");
+    }
+  }
+
+  async function chooseSpeaker(deviceId: string) {
+    setOutputDeviceId(deviceId);
+    try {
+      await callRef.current?.setOutputDeviceAsync({ outputDeviceId: deviceId });
+      const players = Array.from(document.querySelectorAll<HTMLAudioElement>("audio"));
+      await Promise.all(players.map((player) => "setSinkId" in player
+        ? (player as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(deviceId)
+        : Promise.resolve()));
+      setStatus("Bluetooth speaker selected");
+    } catch {
+      setStatus("Android blocked speaker switching. Select Bluetooth in the phone media-output panel.");
+    }
+  }
+
   async function flipCamera() {
     const nextFacing = facingMode === "user" ? "environment" : "user";
     setFacingMode(nextFacing);
@@ -313,12 +359,12 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole }
           <div className="flex items-center gap-2"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" /><p className="truncate text-xs font-black uppercase tracking-[.16em] text-[#f4b400]">Zoo Crew Vibe · Live</p></div>
           <p className="mt-1 truncate text-[11px] text-white/45">{status}</p>
         </div>
-        <div className="flex items-center gap-2"><button onClick={unlockSound} className={`rounded-full px-3 py-1.5 text-[10px] font-black uppercase sm:text-xs ${soundUnlocked ? "bg-emerald-500/20 text-emerald-200" : "animate-pulse bg-[#f4b400] text-black"}`}>{soundUnlocked ? "🔊 Sound on" : "Tap for sound"}</button><span className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-white/70">👥 {people.length}</span><button onClick={leave} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-lg font-bold text-white">×</button></div>
+        <div className="flex items-center gap-2"><button onClick={unlockSound} className={`rounded-full px-3 py-1.5 text-[10px] font-black uppercase sm:text-xs ${soundUnlocked ? "bg-emerald-500/20 text-emerald-200" : "animate-pulse bg-[#f4b400] text-black"}`}>{soundUnlocked ? "🔊 Sound on" : "Tap for sound"}</button><button onClick={() => setMembersOpen(true)} aria-label="View members" className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-white/70">👥 {people.length}</button><button onClick={leave} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-lg font-bold text-white">×</button></div>
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_88px] gap-1 bg-black p-1 sm:grid-cols-[minmax(0,1fr)_190px] sm:gap-2 sm:p-2 lg:grid-cols-[minmax(0,1fr)_230px]">
         <div className="relative min-w-0 overflow-hidden rounded-2xl bg-[#0c100e] sm:rounded-3xl">
-          {featured ? <MediaTile participant={featured} featured onSelect={() => openParticipantControls(featured)} onSelfSettings={() => setControlsOpen(true)} /> : <div className="grid h-full place-items-center text-center text-white/45"><div><p className="text-5xl">🦁</p><p className="mt-4 font-black uppercase">Waiting for the crew</p></div></div>}
+          {featured ? <MediaTile participant={featured} featured outputDeviceId={outputDeviceId} onSelect={() => openParticipantControls(featured)} onSelfSettings={() => setControlsOpen(true)} /> : <div className="grid h-full place-items-center text-center text-white/45"><div><p className="text-5xl">🦁</p><p className="mt-4 font-black uppercase">Waiting for the crew</p></div></div>}
           <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 mx-3 max-w-[90%] sm:bottom-5 sm:mx-5 sm:max-w-xl">
             <div className="grid gap-1.5">
               {messages.slice(-4).map((item) => <div key={item.id} className="w-fit max-w-full rounded-2xl bg-black/65 px-3 py-2 text-xs leading-5 text-white shadow-lg backdrop-blur-sm sm:text-sm"><strong className="mr-2 text-[#f4b400]">{item.name}</strong><span className="break-words">{item.body}</span></div>)}
@@ -328,8 +374,8 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole }
 
         <aside className="grid min-h-0 grid-rows-[1fr_auto] gap-1 sm:gap-2">
           <div className="grid min-h-0 auto-rows-[106px] gap-1 overflow-y-auto sm:auto-rows-[150px] sm:gap-2">
-            {rail.map((person) => <MediaTile key={person.session_id} participant={person} caged onSelect={() => openParticipantControls(person)} onSelfSettings={() => setControlsOpen(true)} />)}
-            {Array.from({ length: Math.max(0, 4 - rail.length) }).map((_, index) => <div key={index} className="relative grid place-items-center overflow-hidden rounded-xl border border-[#8b6835]/35 bg-[linear-gradient(145deg,#11130f,#080908)] text-center text-[10px] font-bold uppercase text-white/25 sm:rounded-2xl sm:text-xs"><span className="relative z-10">Open<br />cage</span><div aria-hidden="true" className="pointer-events-none absolute inset-0"><div className="absolute inset-y-0 left-1/4 w-1.5 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" /><div className="absolute inset-y-0 left-1/2 w-1.5 -translate-x-1/2 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" /><div className="absolute inset-y-0 right-1/4 w-1.5 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" /></div></div>)}
+            {rail.map((person) => <MediaTile key={person.session_id} participant={person} caged outputDeviceId={outputDeviceId} onSelect={() => openParticipantControls(person)} onSelfSettings={() => setControlsOpen(true)} />)}
+            {Array.from({ length: Math.max(0, 4 - rail.length) }).map((_, index) => <div key={index} className="relative grid place-items-center overflow-hidden rounded-xl border border-[#8b6835]/35 bg-[linear-gradient(145deg,#11130f,#080908)] text-center text-[10px] font-bold uppercase text-white/25 sm:rounded-2xl sm:text-xs"><span className="relative z-10">Open<br />cage</span><div aria-hidden="true" className="pointer-events-none absolute inset-0"><div className="absolute inset-y-0 left-1/4 w-1.5 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" /><div className="absolute inset-y-0 right-1/4 w-1.5 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" /></div></div>)}
           </div>
           <button onClick={copyInvite} className="grid min-h-20 place-items-center rounded-xl border border-[#f4b400]/25 bg-[#f4b400]/10 px-1 text-center text-[10px] font-black uppercase text-[#f4b400] sm:min-h-24 sm:rounded-2xl sm:text-xs"><span><span className="block text-2xl">＋</span>{copied ? "Link copied" : "Invite"}</span></button>
         </aside>
@@ -341,8 +387,27 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole }
           <button className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#f4b400] font-black text-black">➤</button>
           <button type="button" onClick={toggleVideo} aria-label={videoOn ? "Turn camera off" : "Turn camera on"} className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-lg ${videoOn ? "bg-emerald-500 text-white" : "bg-white/10 text-white"}`}>📹</button>
           <button type="button" onClick={toggleAudio} aria-label={audioOn ? "Mute microphone" : "Unmute microphone"} className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-lg ${audioOn ? "bg-emerald-500 text-white" : "bg-white/10 text-white"}`}>🎙️</button>
+          <button type="button" onClick={openAudioSettings} aria-label="Audio and Bluetooth settings" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-lg text-white">🎧</button>
         </form>
       </div>
+
+      {membersOpen ? <div className="absolute inset-0 z-50 grid items-end bg-black/60 backdrop-blur-sm sm:place-items-center" onClick={() => setMembersOpen(false)}>
+        <div className="max-h-[75vh] w-full overflow-y-auto rounded-t-[2rem] border border-[#f4b400]/25 bg-[#0c100e] p-5 shadow-2xl sm:max-w-md sm:rounded-[2rem]" onClick={(event) => event.stopPropagation()}>
+          <div className="flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-[.18em] text-[#f4b400]">Inside the habitat</p><h2 className="mt-1 text-xl font-black text-white">View Members · {people.length}</h2></div><button onClick={() => setMembersOpen(false)} className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-xl">×</button></div>
+          <div className="mt-4 grid gap-2">{people.map((person) => <div key={person.session_id} className="flex items-center justify-between rounded-2xl bg-white/[.06] px-4 py-3"><div><p className="font-black text-white">{person.user_name || "Zoo Crew guest"}{person.local ? " · You" : ""}</p><p className="text-xs text-white/45">{person.tracks.audio.state === "playable" ? "Mic on" : "Muted"} · {person.tracks.video.state === "playable" ? "Camera on" : "Camera off"}</p></div><span>{person.tracks.audio.state === "playable" ? "🎙️" : "🔇"}</span></div>)}</div>
+        </div>
+      </div> : null}
+
+      {audioSettingsOpen ? <div className="absolute inset-0 z-50 grid items-end bg-black/60 backdrop-blur-sm sm:place-items-center" onClick={() => setAudioSettingsOpen(false)}>
+        <div className="w-full rounded-t-[2rem] border border-[#f4b400]/25 bg-[#0c100e] p-5 shadow-2xl sm:max-w-md sm:rounded-[2rem]" onClick={(event) => event.stopPropagation()}>
+          <div className="flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-[.18em] text-[#f4b400]">Android & Bluetooth</p><h2 className="mt-1 text-xl font-black text-white">Audio Devices</h2></div><button onClick={() => setAudioSettingsOpen(false)} className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-xl">×</button></div>
+          <label className="mt-5 block text-xs font-black uppercase tracking-wider text-white/55">Microphone</label>
+          <select value={inputDeviceId} onChange={(event) => void chooseMicrophone(event.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#171b18] p-3 text-white"><option value="">Phone default</option>{audioInputs.map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Microphone ${index + 1}`}</option>)}</select>
+          <label className="mt-4 block text-xs font-black uppercase tracking-wider text-white/55">Speaker / headphones</label>
+          <select value={outputDeviceId} onChange={(event) => void chooseSpeaker(event.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#171b18] p-3 text-white"><option value="">Phone default</option>{audioOutputs.map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Audio output ${index + 1}`}</option>)}</select>
+          <p className="mt-4 text-[11px] leading-5 text-white/45">Connect Bluetooth before entering the Live House. If Android does not list the speaker here, use the phone’s Media output panel, select the Bluetooth device, then tap “Tap for sound” again.</p>
+        </div>
+      </div> : null}
 
       {controlsOpen ? <div className="absolute inset-0 z-50 grid items-end bg-black/60 backdrop-blur-sm sm:place-items-center" onClick={() => setControlsOpen(false)}>
         <div className="w-full rounded-t-[2rem] border border-[#f4b400]/25 bg-[#0c100e] p-5 shadow-2xl sm:max-w-md sm:rounded-[2rem]" onClick={(event) => event.stopPropagation()}>
