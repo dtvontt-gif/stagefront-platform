@@ -3,9 +3,10 @@
 import type { DailyCall, DailyParticipant } from "@daily-co/daily-js";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import ZooGiftAnimation, { type ActiveZooGift, type ZooGiftId, zooGiftCatalog } from "@/components/ZooGiftAnimation";
+import ZooCrewBadge from "@/components/ZooCrewBadge";
 
 type ChatReply = { id: string; name: string; body: string };
-type ChatMessage = { id: string; name: string; body: string; createdAt: number; senderId?: string; username?: string; profileImageUrl?: string; role?: string; replyTo?: ChatReply; likes: number };
+type ChatMessage = { id: string; name: string; body: string; createdAt: number; senderId?: string; userId?: string; username?: string; profileImageUrl?: string; role?: string; replyTo?: ChatReply; likes: number };
 type RoomMessage =
   | { kind: "comment"; id: string; name: string; body: string; createdAt: number; replyTo?: ChatReply }
   | { kind: "comment-like"; commentId: string }
@@ -28,7 +29,7 @@ const backdropClasses: Record<Backdrop, string> = {
   gold: "bg-[radial-gradient(circle_at_50%_25%,rgba(244,180,0,.4),transparent_28%),linear-gradient(145deg,#402907,#090603_76%)]",
 };
 
-function MediaTile({ participant, featured = false, caged = false, outputDeviceId, onSelect, onSelfSettings }: { participant: DailyParticipant; featured?: boolean; caged?: boolean; outputDeviceId?: string; onSelect?: () => void; onSelfSettings?: () => void }) {
+function MediaTile({ participant, featured = false, caged = false, isSuperfan = false, outputDeviceId, onSelect, onSelfSettings }: { participant: DailyParticipant; featured?: boolean; caged?: boolean; isSuperfan?: boolean; outputDeviceId?: string; onSelect?: () => void; onSelfSettings?: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoTrack = participant.tracks.video.persistentTrack;
@@ -82,6 +83,7 @@ function MediaTile({ participant, featured = false, caged = false, outputDeviceI
           <div className="min-w-0">
             {roleLabel ? <span className="mb-1 inline-flex rounded-full bg-[#f4b400] px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-black sm:text-[10px]">{roleLabel}</span> : null}
             <p className={`${featured ? "text-base sm:text-xl" : "text-[11px] sm:text-sm"} truncate font-black text-white`}>{participant.user_name || "Zoo Crew guest"}{participant.local ? " · You" : ""}</p>
+            {isSuperfan ? <span className="mt-1 inline-flex"><ZooCrewBadge compact /></span> : null}
           </div>
           <span aria-label={audioOn ? "Microphone on" : "Microphone muted"} className={`${featured ? "text-lg" : "text-xs"}`}>{audioOn ? "🎙️" : "🔇"}</span>
         </div>
@@ -102,6 +104,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
   const [featuredId, setFeaturedId] = useState("");
   const [slotOrder, setSlotOrder] = useState<string[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [superfanIds, setSuperfanIds] = useState<Set<string>>(() => new Set());
   const [status, setStatus] = useState("Opening the habitat…");
   const [audioOn, setAudioOn] = useState(false);
   const [videoOn, setVideoOn] = useState(false);
@@ -179,7 +182,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
         const senderData = sender?.userData && typeof sender.userData === "object" ? sender.userData as Record<string, unknown> : {};
         const senderCanModerate = senderData.role === "owner" || senderData.role === "manager" || senderData.role === "moderator";
         if (data?.kind === "comment" && typeof data.body === "string") {
-          setMessages((current) => [...current.slice(-99), { id: data.id, name: data.name || sender?.user_name || "Guest", body: data.body.slice(0, 180), createdAt: data.createdAt, senderId: sender?.session_id, username: typeof senderData.username === "string" ? senderData.username : undefined, profileImageUrl: typeof senderData.profileImageUrl === "string" ? senderData.profileImageUrl : undefined, role: typeof senderData.role === "string" ? senderData.role : undefined, replyTo: data.replyTo, likes: 0 }]);
+          setMessages((current) => [...current.slice(-99), { id: data.id, name: sender?.user_name || "Guest", body: data.body.slice(0, 180), createdAt: data.createdAt, senderId: sender?.session_id, userId: sender?.user_id, username: typeof senderData.username === "string" ? senderData.username : undefined, profileImageUrl: typeof senderData.profileImageUrl === "string" ? senderData.profileImageUrl : undefined, role: typeof senderData.role === "string" ? senderData.role : undefined, replyTo: data.replyTo, likes: 0 }]);
         }
         if (data?.kind === "comment-like" && typeof data.commentId === "string") setMessages((current) => current.map((item) => item.id === data.commentId ? { ...item, likes: item.likes + 1 } : item));
         if (data?.kind === "comment-delete" && typeof data.commentId === "string") setMessages((current) => {
@@ -227,6 +230,35 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
       callRef.current = null;
     };
   }, [roomUrl, staffRole, profileImageUrl, profileUsername, initialMode, canModerate]);
+
+  const membershipUserIds = useMemo(() => {
+    const currentMembers = Object.values(participants).map((person) => person.user_id).filter(Boolean);
+    const recentCommenters = messages.map((message) => message.userId).filter((id): id is string => Boolean(id)).reverse();
+    return [...new Set([...currentMembers, ...recentCommenters])].slice(0, 100).sort().join(",");
+  }, [participants, messages]);
+
+  useEffect(() => {
+    if (!membershipUserIds) return;
+    let active = true;
+    async function refreshSuperfans() {
+      try {
+        const response = await fetch("/api/live/superfans", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userIds: membershipUserIds.split(",") }),
+          cache: "no-store",
+        });
+        if (!response.ok) return;
+        const data = await response.json() as { userIds?: string[] };
+        if (active) setSuperfanIds(new Set(data.userIds || []));
+      } catch {
+        // Keep the last verified badges during a temporary connection failure.
+      }
+    }
+    void refreshSuperfans();
+    const timer = window.setInterval(() => void refreshSuperfans(), 60_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [membershipUserIds]);
 
   const people = useMemo(() => {
     const list = Object.values(participants).filter((person) => {
@@ -421,7 +453,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
     const body = String(new FormData(form).get("comment") || "").trim().slice(0, 180);
     const local = participants.local;
     if (!body || !local) return;
-    const comment: ChatMessage = { id: crypto.randomUUID(), name: local.user_name || "Guest", body, createdAt: Date.now(), senderId: local.session_id, username: profileUsername || undefined, profileImageUrl: profileImageUrl || undefined, role: staffRole || undefined, replyTo: replyTo || undefined, likes: 0 };
+    const comment: ChatMessage = { id: crypto.randomUUID(), name: local.user_name || "Guest", body, createdAt: Date.now(), senderId: local.session_id, userId: local.user_id, username: profileUsername || undefined, profileImageUrl: profileImageUrl || undefined, role: staffRole || undefined, replyTo: replyTo || undefined, likes: 0 };
     setMessages((current) => [...current.slice(-99), comment]);
     callRef.current?.sendAppMessage({ kind: "comment", id: comment.id, name: comment.name, body: comment.body, createdAt: comment.createdAt, replyTo: comment.replyTo } satisfies RoomMessage, "*");
     setReplyTo(null);
@@ -533,14 +565,14 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_88px] gap-1 bg-black p-1 sm:grid-cols-[minmax(0,1fr)_190px] sm:gap-2 sm:p-2 lg:grid-cols-[minmax(0,1fr)_230px]">
         <div className="relative min-w-0 overflow-hidden rounded-2xl bg-[#0c100e] sm:rounded-3xl">
-          {featured ? <MediaTile participant={featured} featured outputDeviceId={outputDeviceId} onSelect={() => openParticipantControls(featured)} onSelfSettings={() => setControlsOpen(true)} /> : <div className="grid h-full place-items-center text-center text-white/45"><div><p className="text-5xl">🦁</p><p className="mt-4 font-black uppercase">Waiting for the crew</p></div></div>}
+          {featured ? <MediaTile participant={featured} featured isSuperfan={superfanIds.has(featured.user_id)} outputDeviceId={outputDeviceId} onSelect={() => openParticipantControls(featured)} onSelfSettings={() => setControlsOpen(true)} /> : <div className="grid h-full place-items-center text-center text-white/45"><div><p className="text-5xl">🦁</p><p className="mt-4 font-black uppercase">Waiting for the crew</p></div></div>}
           <ZooGiftAnimation gift={activeGift} />
-          {pinnedComment ? <div className="absolute inset-x-3 top-20 z-30 max-w-xl rounded-xl border-l-2 border-[#f4b400] bg-black/20 px-3 py-2 text-xs font-semibold text-white [text-shadow:0_1px_4px_#000] sm:inset-x-5 sm:text-sm"><span className="mr-2 text-[#f4b400]">📌 {pinnedComment.name}</span>{pinnedComment.body}</div> : null}
+          {pinnedComment ? <div className="absolute inset-x-3 top-20 z-30 max-w-xl rounded-xl border-l-2 border-[#f4b400] bg-black/20 px-3 py-2 text-xs font-semibold text-white [text-shadow:0_1px_4px_#000] sm:inset-x-5 sm:text-sm"><span className="mr-2 text-[#f4b400]">📌 {pinnedComment.name}</span>{pinnedComment.userId && superfanIds.has(pinnedComment.userId) ? <span className="mr-2 inline-flex align-middle"><ZooCrewBadge compact /></span> : null}{pinnedComment.body}</div> : null}
           <div ref={commentsRef} onScroll={(event) => { const panel = event.currentTarget; autoScrollRef.current = panel.scrollHeight - panel.scrollTop - panel.clientHeight < 45; }} className="absolute inset-x-0 bottom-2 z-20 mx-2 max-h-[46%] max-w-[94%] overflow-y-auto overscroll-contain rounded-2xl px-1 py-2 [scrollbar-width:none] sm:bottom-4 sm:mx-4 sm:max-w-xl">
             <div className="grid gap-1.5">
               {messages.map((item) => <div key={item.id} onPointerDown={() => beginCommentPress(item.id)} onPointerUp={cancelCommentPress} onPointerCancel={cancelCommentPress} onPointerLeave={cancelCommentPress} onContextMenu={(event) => { event.preventDefault(); cancelCommentPress(); setCommentMenuId(item.id); }} className="w-fit max-w-full select-none px-2 py-1 text-xs font-semibold leading-5 text-white [text-shadow:0_1px_2px_#000,0_0_5px_#000] sm:text-sm">
                 {item.replyTo ? <div className="mb-1 border-l-2 border-[#f4b400]/60 pl-2 text-[10px] leading-4 text-white/55">Replying to {item.replyTo.name}: {item.replyTo.body.slice(0, 55)}</div> : null}
-                <div><strong className="mr-2 text-[#f4b400]">{item.name}</strong><span className="break-words">{item.body}</span></div>
+                <div><strong className="mr-2 text-[#f4b400]">{item.name}</strong>{item.userId && superfanIds.has(item.userId) ? <span className="mr-2 inline-flex align-middle"><ZooCrewBadge compact /></span> : null}<span className="break-words">{item.body}</span></div>
                 {item.likes ? <div className="text-[10px] text-pink-300">♥ {item.likes}</div> : null}
               </div>)}
             </div>
@@ -549,7 +581,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
 
         <aside className="grid min-h-0 grid-rows-[1fr_auto] gap-1 sm:gap-2">
           <div className="grid min-h-0 auto-rows-[106px] gap-1 overflow-y-auto sm:auto-rows-[150px] sm:gap-2">
-            {rail.map((person) => <MediaTile key={person.session_id} participant={person} caged outputDeviceId={outputDeviceId} onSelect={() => openParticipantControls(person)} onSelfSettings={() => setControlsOpen(true)} />)}
+            {rail.map((person) => <MediaTile key={person.session_id} participant={person} caged isSuperfan={superfanIds.has(person.user_id)} outputDeviceId={outputDeviceId} onSelect={() => openParticipantControls(person)} onSelfSettings={() => setControlsOpen(true)} />)}
             {Array.from({ length: Math.max(0, 4 - rail.length) }).map((_, index) => <div key={index} className="relative grid place-items-center overflow-hidden rounded-xl border border-[#8b6835]/35 bg-[linear-gradient(145deg,#11130f,#080908)] text-center text-[10px] font-bold uppercase text-white/25 sm:rounded-2xl sm:text-xs"><span className="relative z-10">Open<br />cage</span><div aria-hidden="true" className="pointer-events-none absolute inset-0"><div className="absolute inset-y-0 left-1/4 w-1.5 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" /><div className="absolute inset-y-0 right-1/4 w-1.5 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" /></div></div>)}
           </div>
           <button onClick={copyInvite} className="grid min-h-20 place-items-center rounded-xl border border-[#f4b400]/25 bg-[#f4b400]/10 px-1 text-center text-[10px] font-black uppercase text-[#f4b400] sm:min-h-24 sm:rounded-2xl sm:text-xs"><span><span className="block text-2xl">＋</span>{copied ? "Link copied" : "Invite"}</span></button>
@@ -587,7 +619,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
           <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-white/20" />
           <div className="mx-auto flex max-w-lg items-center gap-3 border-b border-white/10 pb-4">
             {menuComment.profileImageUrl ? <img src={menuComment.profileImageUrl} alt="" className="h-11 w-11 rounded-full border border-[#f4b400]/40 object-cover" /> : <div className="grid h-11 w-11 place-items-center rounded-full bg-[#f4b400]/15 font-black text-[#f4b400]">{menuComment.name.slice(0, 1).toUpperCase()}</div>}
-            <div className="min-w-0"><p className="font-black text-white">{menuComment.name}</p><p className="truncate text-xs text-white/45">{menuComment.body}</p></div>
+            <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="font-black text-white">{menuComment.name}</p>{menuComment.userId && superfanIds.has(menuComment.userId) ? <ZooCrewBadge compact /> : null}</div><p className="truncate text-xs text-white/45">{menuComment.body}</p></div>
           </div>
           <div className="mx-auto mt-4 grid max-w-lg grid-cols-2 gap-2">
             <button type="button" onClick={() => replyFromMenu(menuComment)} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">↩ Reply</button>
@@ -603,9 +635,9 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
       {membersOpen ? <div className="absolute inset-0 z-50 grid items-end bg-black/60 backdrop-blur-sm sm:place-items-center" onClick={() => setMembersOpen(false)}>
         <div className="max-h-[75vh] w-full overflow-y-auto rounded-t-[2rem] border border-[#f4b400]/25 bg-[#0c100e] p-5 shadow-2xl sm:max-w-md sm:rounded-[2rem]" onClick={(event) => event.stopPropagation()}>
           <div className="flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-[.18em] text-[#f4b400]">Inside the habitat</p><h2 className="mt-1 text-xl font-black text-white">Stage {people.length} · Lobby {audience.length}</h2></div><button onClick={() => setMembersOpen(false)} className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-xl">×</button></div>
-          <div className="mt-4 grid gap-2">{people.map((person) => <div key={person.session_id} className="flex items-center justify-between rounded-2xl bg-white/[.06] px-4 py-3"><div><p className="font-black text-white">{person.user_name || "Zoo Crew guest"}{person.local ? " · You" : ""}</p><p className="text-xs text-white/45">{person.tracks.audio.state === "playable" ? "Mic on" : "Muted"} · {person.tracks.video.state === "playable" ? "Camera on" : "Camera off"}</p></div><span>{person.tracks.audio.state === "playable" ? "🎙️" : "🔇"}</span></div>)}</div>
+          <div className="mt-4 grid gap-2">{people.map((person) => <div key={person.session_id} className="flex items-center justify-between rounded-2xl bg-white/[.06] px-4 py-3"><div><div className="flex flex-wrap items-center gap-2"><p className="font-black text-white">{person.user_name || "Zoo Crew guest"}{person.local ? " · You" : ""}</p>{superfanIds.has(person.user_id) ? <ZooCrewBadge compact /> : null}</div><p className="text-xs text-white/45">{person.tracks.audio.state === "playable" ? "Mic on" : "Muted"} · {person.tracks.video.state === "playable" ? "Camera on" : "Camera off"}</p></div><span>{person.tracks.audio.state === "playable" ? "🎙️" : "🔇"}</span></div>)}</div>
           <p className="mt-5 text-xs font-black uppercase tracking-[.16em] text-white/45">Viewer lobby</p>
-          <div className="mt-2 grid gap-2">{audience.length ? audience.map((person) => <div key={person.session_id} className="flex items-center justify-between gap-3 rounded-2xl bg-white/[.04] px-4 py-3"><div className="min-w-0"><p className="truncate font-black text-white">{person.user_name || "Viewer"}{person.local ? " · You" : ""}</p><p className="text-xs text-white/40">Watching and commenting{stageRequests.includes(person.session_id) ? " · Requested stage" : ""}</p></div>{canModerate && !person.local ? <button onClick={() => void approveStage(person.session_id)} className={`shrink-0 rounded-full px-3 py-2 text-[10px] font-black uppercase ${stageRequests.includes(person.session_id) ? "bg-[#f4b400] text-black" : "bg-white/10 text-white"}`}>{stageRequests.includes(person.session_id) ? "Approve" : "Invite"}</button> : null}</div>) : <p className="rounded-2xl bg-white/[.04] p-4 text-sm text-white/40">No viewers in the lobby yet.</p>}</div>
+          <div className="mt-2 grid gap-2">{audience.length ? audience.map((person) => <div key={person.session_id} className="flex items-center justify-between gap-3 rounded-2xl bg-white/[.04] px-4 py-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="truncate font-black text-white">{person.user_name || "Viewer"}{person.local ? " · You" : ""}</p>{superfanIds.has(person.user_id) ? <ZooCrewBadge compact /> : null}</div><p className="text-xs text-white/40">Watching and commenting{stageRequests.includes(person.session_id) ? " · Requested stage" : ""}</p></div>{canModerate && !person.local ? <button onClick={() => void approveStage(person.session_id)} className={`shrink-0 rounded-full px-3 py-2 text-[10px] font-black uppercase ${stageRequests.includes(person.session_id) ? "bg-[#f4b400] text-black" : "bg-white/10 text-white"}`}>{stageRequests.includes(person.session_id) ? "Approve" : "Invite"}</button> : null}</div>) : <p className="rounded-2xl bg-white/[.04] p-4 text-sm text-white/40">No viewers in the lobby yet.</p>}</div>
         </div>
       </div> : null}
 
