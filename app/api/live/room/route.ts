@@ -37,20 +37,20 @@ async function getOrCreateRoom(apiKey: string): Promise<DailyRoom> {
 
 async function memberIdentity(userId: string, email: string) {
   const config = serviceConfiguration();
-  const fallback = { name: email.split("@")[0], profileImageUrl: null as string | null };
+  const fallback = { name: email.split("@")[0], username: email.split("@")[0], profileImageUrl: null as string | null };
   if (!config) return fallback;
   const headers = { apikey: config.serviceKey, Authorization: `Bearer ${config.serviceKey}` };
-  const profileQuery = new URLSearchParams({ select: "display_name,profile_image_path", user_id: `eq.${userId}`, limit: "1" });
+  const profileQuery = new URLSearchParams({ select: "display_name,username,profile_image_path", user_id: `eq.${userId}`, limit: "1" });
   const profileResponse = await fetch(`${config.url}/rest/v1/stagefront_profiles?${profileQuery}`, { headers, cache: "no-store" });
   if (profileResponse.ok) {
-    const [profile] = (await profileResponse.json()) as { display_name?: string; profile_image_path?: string | null }[];
-    if (profile) return { name: profile.display_name?.trim() || fallback.name, profileImageUrl: profileImageUrl(config.url, profile.profile_image_path) };
+    const [profile] = (await profileResponse.json()) as { display_name?: string; username?: string; profile_image_path?: string | null }[];
+    if (profile) return { name: profile.display_name?.trim() || fallback.name, username: profile.username?.trim() || fallback.username, profileImageUrl: profileImageUrl(config.url, profile.profile_image_path) };
   }
-  const founderQuery = new URLSearchParams({ select: "display_name,profile_image_path", email: `eq.${email.toLowerCase()}`, limit: "1" });
+  const founderQuery = new URLSearchParams({ select: "display_name,username,profile_image_path", email: `eq.${email.toLowerCase()}`, limit: "1" });
   const response = await fetch(`${config.url}/rest/v1/founding_members?${founderQuery}`, { headers, cache: "no-store" });
   if (!response.ok) return fallback;
-  const [member] = (await response.json()) as { display_name?: string; profile_image_path?: string | null }[];
-  return member ? { name: member.display_name?.trim() || fallback.name, profileImageUrl: profileImageUrl(config.url, member.profile_image_path) } : fallback;
+  const [member] = (await response.json()) as { display_name?: string; username?: string; profile_image_path?: string | null }[];
+  return member ? { name: member.display_name?.trim() || fallback.name, username: member.username?.trim() || fallback.username, profileImageUrl: profileImageUrl(config.url, member.profile_image_path) } : fallback;
 }
 
 export async function GET() {
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
 
     const room = await getRoom(apiKey);
     if (!room) return Response.json({ message: "The Zoo Crew is offline right now.", isLive: false, canControlLive, role }, { status: 409 });
-    const { name, profileImageUrl: imageUrl } = await memberIdentity(user.id, user.email);
+    const { name, username, profileImageUrl: imageUrl } = await memberIdentity(user.id, user.email);
     const expires = Math.floor(Date.now() / 1000) + 60 * 60 * 4;
     const tokenResponse = await fetch(`${DAILY_API}/meeting-tokens`, {
       method: "POST",
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
     });
     if (!tokenResponse.ok) throw new Error("Daily meeting token creation failed.");
     const token = (await tokenResponse.json()) as { token: string };
-    return Response.json({ roomUrl: `${room.url}?t=${encodeURIComponent(token.token)}`, name, profileImageUrl: imageUrl, isOwner: role === "owner", canModerate, canControlLive, entryMode, role });
+    return Response.json({ roomUrl: `${room.url}?t=${encodeURIComponent(token.token)}`, name, username, profileImageUrl: imageUrl, isOwner: role === "owner", canModerate, canControlLive, entryMode, role });
   } catch (error) {
     console.error("Live House room error", error);
     return Response.json({ message: "The Live House could not open. Please try again." }, { status: 502 });
