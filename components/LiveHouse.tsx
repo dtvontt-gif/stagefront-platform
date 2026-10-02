@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ZooLiveRoom from "@/components/ZooLiveRoom";
 
 type RoomState = "idle" | "opening" | "ready" | "error";
 
@@ -42,16 +43,7 @@ export default function LiveHouse() {
         </header>
 
         {state === "ready" ? (
-          <div className="relative rounded-[2.5rem] border-[10px] border-[#20170c] bg-[#120d07] p-2 shadow-[0_0_0_2px_rgba(244,180,0,.35),0_35px_90px_rgba(0,0,0,.8)] sm:border-[18px] sm:p-3">
-            <div className="mb-3 flex flex-col gap-2 rounded-xl border border-[#d8a729]/35 bg-[#171006] px-4 py-3 text-center shadow-xl sm:flex-row sm:items-center sm:justify-between sm:text-left"><div><p className="text-[9px] font-black uppercase tracking-[.28em] text-[#d9b75f]">Zoo Crew Wildlife Pavilion</p><p className="font-display text-sm font-black uppercase text-white">Main Habitat Observation Glass</p></div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-white/45">Room controls stay inside the glass</p></div>
-            <div className="relative overflow-hidden rounded-2xl border border-cyan-100/20 bg-black">
-              <iframe title="Zoo Crew Live House" src={roomUrl} allow="camera; microphone; fullscreen; display-capture; autoplay" className="h-[78vh] min-h-[620px] w-full border-0" />
-              <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-10 opacity-35 [background-image:linear-gradient(112deg,transparent_0%,rgba(210,245,255,.08)_22%,transparent_36%,transparent_62%,rgba(255,255,255,.06)_73%,transparent_87%),radial-gradient(circle_at_18%_24%,rgba(255,255,255,.09),transparent_12%),radial-gradient(circle_at_86%_72%,rgba(163,230,255,.06),transparent_15%)]" />
-              <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-1/3 z-10 w-px bg-cyan-100/10 shadow-[0_0_15px_rgba(220,250,255,.18)]" />
-              <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-1/3 z-10 w-px bg-cyan-100/10 shadow-[0_0_15px_rgba(220,250,255,.18)]" />
-            </div>
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 px-2 text-[10px] font-bold uppercase tracking-[.18em] text-white/40"><span>Do not tap on the glass</span><span className="text-[#d9b75f]">Visitors inside: live count shown in room</span><span>Respect the habitat</span></div>
-          </div>
+          <ZooLiveRoom roomUrl={roomUrl} isOwner={owner} />
         ) : (
           <div className="relative grid min-h-[72vh] place-items-center overflow-hidden rounded-[2.5rem] border-[12px] border-[#20170c] bg-[#020706] p-8 text-center shadow-[0_0_0_2px_rgba(244,180,0,.28),0_35px_90px_rgba(0,0,0,.8)]">
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_76%_16%,rgba(233,242,210,.18),transparent_9%),linear-gradient(180deg,#071b1a_0%,#082219_39%,#06130c_70%,#020503_100%)]" />
