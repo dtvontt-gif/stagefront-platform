@@ -2,6 +2,7 @@
 
 import type { DailyCall, DailyParticipant } from "@daily-co/daily-js";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import ZooGiftAnimation, { type ActiveZooGift, type ZooGiftId, zooGiftCatalog } from "@/components/ZooGiftAnimation";
 
 type ChatReply = { id: string; name: string; body: string };
 type ChatMessage = { id: string; name: string; body: string; createdAt: number; senderId?: string; username?: string; profileImageUrl?: string; role?: string; replyTo?: ChatReply; likes: number };
@@ -16,6 +17,7 @@ type RoomMessage =
   | { kind: "self-stage"; sessionId: string }
   | { kind: "self-cage"; sessionId: string; nextSessionId: string }
   | { kind: "positions"; sessionIds: string[] }
+  | { kind: "gift"; giftId: ZooGiftId; eventId: string; senderName: string }
   | { kind: "end-live" };
 
 type Backdrop = "night" | "jungle" | "gold";
@@ -121,6 +123,17 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
   const [pinnedCommentId, setPinnedCommentId] = useState<string | null>(null);
   const [likedComments, setLikedComments] = useState<string[]>([]);
   const [commentMenuId, setCommentMenuId] = useState<string | null>(null);
+  const [activeGift, setActiveGift] = useState<ActiveZooGift | null>(null);
+  const giftTimerRef = useRef<number | null>(null);
+
+  function playGift(gift: ActiveZooGift) {
+    setActiveGift(gift);
+    if (giftTimerRef.current) window.clearTimeout(giftTimerRef.current);
+    giftTimerRef.current = window.setTimeout(() => {
+      setActiveGift((current) => current?.eventId === gift.eventId ? null : current);
+      giftTimerRef.current = null;
+    }, zooGiftCatalog[gift.id].duration);
+  }
 
   useEffect(() => {
     const panel = commentsRef.current;
@@ -186,6 +199,9 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
         if (data?.kind === "self-stage" && sender?.session_id === data.sessionId) setFeaturedId(data.sessionId);
         if (data?.kind === "self-cage" && sender?.session_id === data.sessionId && typeof data.nextSessionId === "string" && Object.values(call?.participants() || {}).some((person) => person.session_id === data.nextSessionId && person.session_id !== sender.session_id)) setFeaturedId(data.nextSessionId);
         if (data?.kind === "positions" && sender?.owner && Array.isArray(data.sessionIds)) setSlotOrder(data.sessionIds.filter((id) => typeof id === "string"));
+        if (data?.kind === "gift" && senderData.role === "owner" && data.giftId in zooGiftCatalog && typeof data.eventId === "string") {
+          playGift({ id: data.giftId, eventId: data.eventId, senderName: data.senderName || sender?.user_name || "Zoo Crew" });
+        }
         if (data?.kind === "end-live" && (senderData.role === "owner" || senderData.role === "manager")) {
           setStatus("The Zoo Crew live has ended");
           void call?.leave().catch(() => undefined).finally(() => window.location.assign("/live"));
@@ -207,6 +223,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
       }
       cameraTrackRef.current?.stop();
       microphoneTrackRef.current?.stop();
+      if (giftTimerRef.current) window.clearTimeout(giftTimerRef.current);
       callRef.current = null;
     };
   }, [roomUrl, staffRole, profileImageUrl, profileUsername, initialMode, canModerate]);
@@ -492,6 +509,18 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
     }
   }
 
+  function testGift(giftId: ZooGiftId) {
+    if (!isOwner) return;
+    const local = callRef.current?.participants().local;
+    const gift: ActiveZooGift = {
+      id: giftId,
+      eventId: crypto.randomUUID(),
+      senderName: local?.user_name || "Zoo Crew",
+    };
+    playGift(gift);
+    callRef.current?.sendAppMessage({ kind: "gift", giftId, eventId: gift.eventId, senderName: gift.senderName } satisfies RoomMessage, "*");
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-black shadow-[0_28px_90px_rgba(0,0,0,.75)]">
       <header className="flex items-center justify-between gap-3 border-b border-white/10 bg-[#090b0a] px-3 py-3 sm:px-5">
@@ -505,6 +534,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_88px] gap-1 bg-black p-1 sm:grid-cols-[minmax(0,1fr)_190px] sm:gap-2 sm:p-2 lg:grid-cols-[minmax(0,1fr)_230px]">
         <div className="relative min-w-0 overflow-hidden rounded-2xl bg-[#0c100e] sm:rounded-3xl">
           {featured ? <MediaTile participant={featured} featured outputDeviceId={outputDeviceId} onSelect={() => openParticipantControls(featured)} onSelfSettings={() => setControlsOpen(true)} /> : <div className="grid h-full place-items-center text-center text-white/45"><div><p className="text-5xl">🦁</p><p className="mt-4 font-black uppercase">Waiting for the crew</p></div></div>}
+          <ZooGiftAnimation gift={activeGift} />
           {pinnedComment ? <div className="absolute inset-x-3 top-20 z-30 max-w-xl rounded-xl border-l-2 border-[#f4b400] bg-black/20 px-3 py-2 text-xs font-semibold text-white [text-shadow:0_1px_4px_#000] sm:inset-x-5 sm:text-sm"><span className="mr-2 text-[#f4b400]">📌 {pinnedComment.name}</span>{pinnedComment.body}</div> : null}
           <div ref={commentsRef} onScroll={(event) => { const panel = event.currentTarget; autoScrollRef.current = panel.scrollHeight - panel.scrollTop - panel.clientHeight < 45; }} className="absolute inset-x-0 bottom-2 z-20 mx-2 max-h-[46%] max-w-[94%] overflow-y-auto overscroll-contain rounded-2xl px-1 py-2 [scrollbar-width:none] sm:bottom-4 sm:mx-4 sm:max-w-xl">
             <div className="grid gap-1.5">
@@ -527,6 +557,23 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
       </div>
 
       <div className="border-t border-white/10 bg-[#090b0a] p-2 sm:p-3">
+        {isOwner ? (
+          <div className="mb-2 rounded-2xl border border-[#f4b400]/25 bg-[#f4b400]/[.06] p-2 sm:mb-3 sm:p-3">
+            <div className="mb-2 flex items-center justify-between gap-3 px-1">
+              <p className="text-[10px] font-black uppercase tracking-[.2em] text-[#f4b400] sm:text-xs">Test gifts · No charge</p>
+              <p className="text-[9px] font-bold uppercase text-white/35 sm:text-[10px]">Everyone sees them</p>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
+              {(Object.keys(zooGiftCatalog) as ZooGiftId[]).map((giftId) => {
+                const gift = zooGiftCatalog[giftId];
+                return <button key={giftId} type="button" onClick={() => testGift(giftId)} className="group flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-black/45 px-2 py-2.5 text-left transition active:scale-95 hover:border-[#f4b400]/45 hover:bg-[#f4b400]/10 sm:gap-3 sm:px-4">
+                  <span className="text-2xl transition group-hover:scale-110 sm:text-3xl">{gift.icon}</span>
+                  <span className="min-w-0"><strong className="block truncate text-[10px] text-white sm:text-sm">{gift.name}</strong><small className="block text-[8px] font-bold uppercase text-[#f4b400]/75 sm:text-[10px]">Future {gift.futurePrice}</small></span>
+                </button>;
+              })}
+            </div>
+          </div>
+        ) : null}
         {replyTo ? <div className="mb-2 flex items-center justify-between rounded-xl bg-white/[.06] px-3 py-1.5 text-[11px] text-white/55"><span className="truncate">Replying to <strong className="text-[#f4b400]">{replyTo.name}</strong>: {replyTo.body}</span><button type="button" onClick={() => setReplyTo(null)} className="ml-2 text-base text-white">×</button></div> : null}
         <form onSubmit={sendComment} className="flex items-center gap-2">
           <input name="comment" maxLength={180} placeholder="Say something to the Zoo Crew…" className="min-w-0 flex-1 rounded-full border border-white/10 bg-white/[.06] px-4 py-3 text-base text-white outline-none placeholder:text-white/35 focus:border-[#f4b400]/55" />
