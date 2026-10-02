@@ -55,15 +55,17 @@ export async function POST() {
 
   try {
     const [room, name, access] = await Promise.all([getOrCreateRoom(apiKey), displayName(user.email), staffAccess()]);
+    const role = access?.role || null;
+    const canModerate = role === "owner" || role === "manager" || role === "moderator";
     const expires = Math.floor(Date.now() / 1000) + 60 * 60 * 4;
     const tokenResponse = await fetch(`${DAILY_API}/meeting-tokens`, {
       method: "POST",
       headers: dailyHeaders(apiKey),
-      body: JSON.stringify({ properties: { room_name: room.name, user_name: name.slice(0, 50), is_owner: access?.role === "owner", exp: expires } }),
+      body: JSON.stringify({ properties: { room_name: room.name, user_name: name.slice(0, 50), is_owner: canModerate, exp: expires } }),
     });
     if (!tokenResponse.ok) throw new Error("Daily meeting token creation failed.");
     const token = (await tokenResponse.json()) as { token: string };
-    return Response.json({ roomUrl: `${room.url}?t=${encodeURIComponent(token.token)}`, name, isOwner: access?.role === "owner" });
+    return Response.json({ roomUrl: `${room.url}?t=${encodeURIComponent(token.token)}`, name, isOwner: role === "owner", canModerate, role });
   } catch (error) {
     console.error("Live House room error", error);
     return Response.json({ message: "The Live House could not open. Please try again." }, { status: 502 });
