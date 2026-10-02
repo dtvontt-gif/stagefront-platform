@@ -3,16 +3,42 @@
 import { useEffect, useState } from "react";
 import ZooLiveRoom from "@/components/ZooLiveRoom";
 
-type RoomState = "idle" | "opening" | "ready" | "error";
+type RoomState = "checking" | "offline" | "live" | "opening" | "ready" | "error";
 
 export default function LiveHouse() {
-  const [state, setState] = useState<RoomState>("idle");
+  const [state, setState] = useState<RoomState>("checking");
   const [roomUrl, setRoomUrl] = useState("");
   const [message, setMessage] = useState("");
   const [owner, setOwner] = useState(false);
   const [canModerate, setCanModerate] = useState(false);
   const [staffRole, setStaffRole] = useState<string | null>(null);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [canControlLive, setCanControlLive] = useState(false);
+
+  useEffect(() => {
+    if (state === "ready" || state === "opening") return;
+    let active = true;
+    async function checkStatus() {
+      const response = await fetch("/api/live/room", { cache: "no-store" });
+      const result = (await response.json().catch(() => ({}))) as { isLive?: boolean; canControlLive?: boolean; role?: string | null; message?: string };
+      if (!active) return;
+      if (!response.ok) {
+        setState("error");
+        setMessage(result.message || "The Live House status could not be checked.");
+        return;
+      }
+      setCanControlLive(Boolean(result.canControlLive));
+      setStaffRole(result.role || null);
+      setMessage("");
+      setState(result.isLive ? "live" : "offline");
+    }
+    void checkStatus();
+    const timer = window.setInterval(() => void checkStatus(), 10000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [state]);
 
   useEffect(() => {
     if (state !== "ready") return;
@@ -43,8 +69,8 @@ export default function LiveHouse() {
       setMessage(permissionMessage);
       return;
     }
-    const response = await fetch("/api/live/room", { method: "POST" });
-    const result = (await response.json().catch(() => ({}))) as { roomUrl?: string; message?: string; isOwner?: boolean; canModerate?: boolean; role?: string | null; profileImageUrl?: string | null };
+    const response = await fetch("/api/live/room", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "enter" }) });
+    const result = (await response.json().catch(() => ({}))) as { roomUrl?: string; message?: string; isOwner?: boolean; canModerate?: boolean; canControlLive?: boolean; role?: string | null; profileImageUrl?: string | null };
     if (!response.ok || !result.roomUrl) {
       setState("error");
       setMessage(result.message || "The Live House could not open.");
@@ -53,15 +79,38 @@ export default function LiveHouse() {
     setRoomUrl(result.roomUrl);
     setOwner(Boolean(result.isOwner));
     setCanModerate(Boolean(result.canModerate));
+    setCanControlLive(Boolean(result.canControlLive));
     setStaffRole(result.role || null);
     setProfileImageUrl(result.profileImageUrl || null);
     setState("ready");
   }
 
+  async function startLive() {
+    setState("opening");
+    setMessage("");
+    const response = await fetch("/api/live/room", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "start" }) });
+    const result = (await response.json().catch(() => ({}))) as { message?: string };
+    if (!response.ok) {
+      setState("error");
+      setMessage(result.message || "The live could not be started.");
+      return;
+    }
+    setState("live");
+    await enterRoom();
+  }
+
+  async function endLive() {
+    const response = await fetch("/api/live/room", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "end" }) });
+    const result = (await response.json().catch(() => ({}))) as { message?: string };
+    if (!response.ok) throw new Error(result.message || "The live could not be ended.");
+    setRoomUrl("");
+    setState("offline");
+  }
+
   if (state === "ready") {
     return (
       <section className="fixed inset-0 z-[100] h-dvh overflow-hidden bg-black">
-        <ZooLiveRoom roomUrl={roomUrl} isOwner={owner} canModerate={canModerate} staffRole={staffRole} profileImageUrl={profileImageUrl} />
+        <ZooLiveRoom roomUrl={roomUrl} isOwner={owner} canModerate={canModerate} canControlLive={canControlLive} staffRole={staffRole} profileImageUrl={profileImageUrl} onEndLive={endLive} />
       </section>
     );
   }
@@ -79,7 +128,7 @@ export default function LiveHouse() {
             <h1 className="mt-4 font-display text-4xl font-black uppercase sm:text-6xl">Zoo Crew Live House</h1>
             <p className="mt-3 max-w-3xl text-white/60">Step up to the glass and enter the official nighttime habitat of the Zoo Crew family.</p>
           </div>
-          <button onClick={enterRoom} disabled={state === "opening"} className="primary-cta disabled:opacity-50">{state === "opening" ? "Opening the gate…" : "Enter viewing gallery"}</button>
+          {state === "live" ? <button onClick={enterRoom} className="primary-cta">Enter live</button> : canControlLive ? <button onClick={startLive} disabled={state === "opening" || state === "checking"} className="primary-cta disabled:opacity-50">{state === "opening" ? "Starting live…" : "Start Live"}</button> : null}
         </header>
 
         <div className="relative grid min-h-[72vh] place-items-center overflow-hidden rounded-[2.5rem] border-[12px] border-[#20170c] bg-[#020706] p-8 text-center shadow-[0_0_0_2px_rgba(244,180,0,.28),0_35px_90px_rgba(0,0,0,.8)]">
@@ -102,13 +151,13 @@ export default function LiveHouse() {
             <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-1/3 z-30 w-px bg-cyan-100/10" />
             <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-1/3 z-30 w-px bg-cyan-100/10" />
 
-            <div className="absolute left-5 top-5 z-40 rounded-lg border border-[#d8a729]/35 bg-[#171006]/90 px-4 py-2 text-left"><p className="text-[9px] font-black uppercase tracking-[.25em] text-[#d9b75f]">Exhibit status</p><p className="text-sm font-black uppercase text-white">Waiting for the crew</p></div>
+            <div className="absolute left-5 top-5 z-40 rounded-lg border border-[#d8a729]/35 bg-[#171006]/90 px-4 py-2 text-left"><p className="text-[9px] font-black uppercase tracking-[.25em] text-[#d9b75f]">Exhibit status</p><p className="text-sm font-black uppercase text-white">{state === "live" ? "Live now" : state === "checking" ? "Checking status" : "Live is offline"}</p></div>
             <div className="relative z-40 max-w-xl rounded-[2rem] border border-white/10 bg-black/55 px-8 py-9 shadow-[0_22px_70px_rgba(0,0,0,.75)] backdrop-blur-sm">
               <div className="mx-auto grid h-24 w-24 place-items-center rounded-full border border-[#f4b400]/40 bg-[#f4b400]/10 text-5xl shadow-[0_0_45px_rgba(244,180,0,.12)]">🦁</div>
-              <h2 className="mt-6 font-display text-3xl font-black uppercase">The habitat is ready</h2>
-              <p className="mt-3 leading-7 text-white/60">You are standing at the nighttime viewing glass. Sign in at the visitor gate, enter the habitat, then allow camera and microphone access. Your camera and mic begin off.</p>
+              <h2 className="mt-6 font-display text-3xl font-black uppercase">{state === "live" ? "The Zoo Crew is live" : state === "checking" ? "Checking the habitat" : "The live is offline"}</h2>
+              <p className="mt-3 leading-7 text-white/60">{state === "live" ? "The owners have opened the habitat. Enter when you are ready; your camera and mic begin off." : canControlLive ? "The habitat stays closed until an owner starts the live. Press Start Live when the crew is ready." : "Nobody can enter a box until a Zoo Crew owner starts the live. This page checks automatically, so you can stay right here."}</p>
               {state === "error" ? <div className="mt-5 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-200">{message}{message.toLowerCase().includes("sign in") ? <a className="ml-2 font-black underline" href="/sign-in?next=/live">Sign in</a> : null}</div> : null}
-              <button onClick={enterRoom} disabled={state === "opening"} className="mt-7 rounded-full bg-[#f4b400] px-7 py-3.5 font-black text-black disabled:opacity-50">{state === "opening" ? "Opening the gate…" : "Enter the Zoo Crew Habitat"}</button>
+              {state === "live" ? <button onClick={enterRoom} className="mt-7 rounded-full bg-[#f4b400] px-7 py-3.5 font-black text-black">Enter the Zoo Crew Live</button> : canControlLive ? <button onClick={startLive} disabled={state === "opening" || state === "checking"} className="mt-7 rounded-full bg-[#f4b400] px-7 py-3.5 font-black text-black disabled:opacity-50">{state === "opening" ? "Starting the live…" : "Start Zoo Crew Live"}</button> : null}
               <p className="mt-4 text-xs uppercase tracking-[.15em] text-white/35">Private exhibit · Up to 10 inside · Owners manage the habitat</p>
             </div>
         </div>

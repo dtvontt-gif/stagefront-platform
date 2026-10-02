@@ -9,7 +9,8 @@ type RoomMessage =
   | { kind: "feature"; sessionId: string }
   | { kind: "self-stage"; sessionId: string }
   | { kind: "self-cage"; sessionId: string; nextSessionId: string }
-  | { kind: "positions"; sessionIds: string[] };
+  | { kind: "positions"; sessionIds: string[] }
+  | { kind: "end-live" };
 
 type Backdrop = "night" | "jungle" | "gold";
 
@@ -82,7 +83,7 @@ function MediaTile({ participant, featured = false, caged = false, outputDeviceI
   );
 }
 
-export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole, profileImageUrl }: { roomUrl: string; isOwner: boolean; canModerate: boolean; staffRole: string | null; profileImageUrl: string | null }) {
+export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlLive, staffRole, profileImageUrl, onEndLive }: { roomUrl: string; isOwner: boolean; canModerate: boolean; canControlLive: boolean; staffRole: string | null; profileImageUrl: string | null; onEndLive: () => Promise<void> }) {
   const callRef = useRef<DailyCall | null>(null);
   const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
   const microphoneTrackRef = useRef<MediaStreamTrack | null>(null);
@@ -148,6 +149,11 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole, 
         if (data?.kind === "self-stage" && sender?.session_id === data.sessionId) setFeaturedId(data.sessionId);
         if (data?.kind === "self-cage" && sender?.session_id === data.sessionId && typeof data.nextSessionId === "string" && Object.values(call?.participants() || {}).some((person) => person.session_id === data.nextSessionId && person.session_id !== sender.session_id)) setFeaturedId(data.nextSessionId);
         if (data?.kind === "positions" && sender?.owner && Array.isArray(data.sessionIds)) setSlotOrder(data.sessionIds.filter((id) => typeof id === "string"));
+        const senderData = sender?.userData && typeof sender.userData === "object" ? sender.userData as Record<string, unknown> : {};
+        if (data?.kind === "end-live" && (senderData.role === "owner" || senderData.role === "manager")) {
+          setStatus("The Zoo Crew live has ended");
+          void call?.leave().catch(() => undefined).finally(() => window.location.assign("/live"));
+        }
       });
       call.on("error", () => setStatus("The habitat connection was interrupted."));
       await call.join({ url: parsed.toString(), token, startVideoOff: true, startAudioOff: true });
@@ -370,6 +376,20 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole, 
     window.location.assign("/");
   }
 
+  async function endBroadcast() {
+    if (!canControlLive) return;
+    const confirmed = window.confirm("End the Zoo Crew live for everyone?");
+    if (!confirmed) return;
+    setStatus("Ending the live…");
+    callRef.current?.sendAppMessage({ kind: "end-live" } satisfies RoomMessage, "*");
+    try {
+      await onEndLive();
+      await callRef.current?.leave();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "The live could not be ended.");
+    }
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-black shadow-[0_28px_90px_rgba(0,0,0,.75)]">
       <header className="flex items-center justify-between gap-3 border-b border-white/10 bg-[#090b0a] px-3 py-3 sm:px-5">
@@ -377,7 +397,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole, 
           <div className="flex items-center gap-2"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" /><p className="truncate text-xs font-black uppercase tracking-[.16em] text-[#f4b400]">Zoo Crew Vibe · Live</p></div>
           <p className="mt-1 truncate text-[11px] text-white/45">{status}</p>
         </div>
-        <div className="flex items-center gap-2"><button onClick={() => setMembersOpen(true)} aria-label="View members" className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-white/70">👥 {people.length}</button><button onClick={leave} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-lg font-bold text-white">×</button></div>
+        <div className="flex items-center gap-2">{canControlLive ? <button onClick={endBroadcast} className="rounded-full bg-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white sm:text-xs">End Live</button> : null}<button onClick={() => setMembersOpen(true)} aria-label="View members" className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-white/70">👥 {people.length}</button><button onClick={leave} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-lg font-bold text-white">×</button></div>
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_88px] gap-1 bg-black p-1 sm:grid-cols-[minmax(0,1fr)_190px] sm:gap-2 sm:p-2 lg:grid-cols-[minmax(0,1fr)_230px]">
