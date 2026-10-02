@@ -121,6 +121,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
   const [outputDeviceId, setOutputDeviceId] = useState("");
   const [viewerMode, setViewerMode] = useState(initialMode === "viewer");
   const [stageRequests, setStageRequests] = useState<string[]>([]);
+  const [approvingStageId, setApprovingStageId] = useState<string | null>(null);
   const [stageRequested, setStageRequested] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatReply | null>(null);
   const [pinnedCommentId, setPinnedCommentId] = useState<string | null>(null);
@@ -156,6 +157,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
       const available = Object.values(next).map((person) => person.session_id);
       return [...current.filter((id) => available.includes(id)), ...available.filter((id) => !current.includes(id))];
     });
+    setStageRequests((current) => current.filter((id) => Object.values(next).some((person) => person.session_id === id)));
   };
 
   useEffect(() => {
@@ -194,7 +196,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
         if (data?.kind === "stage-approve" && senderCanModerate && data.sessionId === call?.participants().local?.session_id) {
           setViewerMode(false);
           setStageRequested(false);
-          setStatus("You were invited onto the stage. Camera and microphone controls are now available.");
+          setStatus("Welcome to a Zoo Crew cage! Camera and microphone controls are now available.");
           const localData = call?.participants().local?.userData && typeof call.participants().local?.userData === "object" ? call.participants().local?.userData as Record<string, unknown> : {};
           void call?.setUserData({ ...localData, mode: "stage" });
         }
@@ -275,6 +277,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
     const data = person.userData && typeof person.userData === "object" ? person.userData as Record<string, unknown> : {};
     return data.mode === "viewer";
   }), [participants]);
+  const pendingStageRequests = stageRequests.map((id) => audience.find((person) => person.session_id === id)).filter((person): person is DailyParticipant => Boolean(person));
   const featured = people.find((person) => person.session_id === featuredId) || people[0];
   const rail = people.filter((person) => person.session_id !== featured?.session_id);
   const moderationTarget = people.find((person) => person.session_id === moderationTargetId);
@@ -505,15 +508,29 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
     if (!local || stageRequested) return;
     setStageRequested(true);
     callRef.current?.sendAppMessage({ kind: "stage-request", sessionId: local.session_id, name: local.user_name || "Viewer" } satisfies RoomMessage, "*");
-    setStatus("Your request to join the stage was sent");
+    setStatus("Your request for a Zoo Crew cage was sent");
   }
 
   async function approveStage(sessionId: string) {
-    if (!canModerate) return;
-    await callRef.current?.updateParticipant(sessionId, { updatePermissions: { canSend: new Set(["audio", "video"]) } });
-    callRef.current?.sendAppMessage({ kind: "stage-approve", sessionId } satisfies RoomMessage, "*");
-    setStageRequests((current) => current.filter((id) => id !== sessionId));
-    setStatus("Viewer approved for the stage");
+    const call = callRef.current;
+    if (!canModerate || !call || approvingStageId) return;
+    const mainStageId = featured?.session_id || people[0]?.session_id;
+    setApprovingStageId(sessionId);
+    try {
+      await call.updateParticipant(sessionId, { updatePermissions: { canSend: new Set(["audio", "video"]) } });
+      call.sendAppMessage({ kind: "stage-approve", sessionId } satisfies RoomMessage, "*");
+      if (mainStageId) {
+        setFeaturedId(mainStageId);
+        call.sendAppMessage({ kind: "feature", sessionId: mainStageId } satisfies RoomMessage, "*");
+      }
+      setStageRequests((current) => current.filter((id) => id !== sessionId));
+      setMembersOpen(false);
+      setStatus("Viewer accepted into a cage");
+    } catch {
+      setStatus("Could not accept that viewer. Check that they are still in the lobby and try again.");
+    } finally {
+      setApprovingStageId(null);
+    }
   }
 
   async function copyInvite() {
@@ -563,6 +580,14 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
         <div className="flex items-center gap-2">{canControlLive ? <button onClick={endBroadcast} className="rounded-full bg-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white sm:text-xs">End Live</button> : null}<button onClick={() => setMembersOpen(true)} aria-label="View stage and lobby" className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-white/70">🎥 {people.length} · 👀 {audience.length}</button><button onClick={leave} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-lg font-bold text-white">×</button></div>
       </header>
 
+      {canModerate && pendingStageRequests.length ? <div role="status" aria-live="polite" className="max-h-[28vh] shrink-0 overflow-y-auto border-b border-[#f4b400]/35 bg-[#2b1d08] px-3 py-2 sm:px-5">
+        <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-[#ffd05a]">🙋 {pendingStageRequests.length} request{pendingStageRequests.length === 1 ? "" : "s"} to join</p>
+        <div className="flex flex-wrap gap-2">{pendingStageRequests.map((person) => <div key={person.session_id} className="flex max-w-full items-center gap-2 rounded-xl border border-[#f4b400]/30 bg-black/40 px-2 py-1.5">
+          <span className="max-w-32 truncate text-xs font-bold text-white sm:max-w-48">{person.user_name || "Viewer"}</span>
+          <button type="button" onClick={() => void approveStage(person.session_id)} disabled={Boolean(approvingStageId)} className="shrink-0 rounded-lg bg-[#f4b400] px-3 py-2 text-[10px] font-black uppercase text-black disabled:opacity-50">{approvingStageId === person.session_id ? "Accepting…" : "Accept to Cage"}</button>
+        </div>)}</div>
+      </div> : null}
+
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_88px] gap-1 bg-black p-1 sm:grid-cols-[minmax(0,1fr)_190px] sm:gap-2 sm:p-2 lg:grid-cols-[minmax(0,1fr)_230px]">
         <div className="relative min-w-0 overflow-hidden rounded-2xl bg-[#0c100e] sm:rounded-3xl">
           {featured ? <MediaTile participant={featured} featured isSuperfan={superfanIds.has(featured.user_id)} outputDeviceId={outputDeviceId} onSelect={() => openParticipantControls(featured)} onSelfSettings={() => setControlsOpen(true)} /> : <div className="grid h-full place-items-center text-center text-white/45"><div><p className="text-5xl">🦁</p><p className="mt-4 font-black uppercase">Waiting for the crew</p></div></div>}
@@ -610,7 +635,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
         <form onSubmit={sendComment} className="flex items-center gap-2">
           <input name="comment" maxLength={180} placeholder="Say something to the Zoo Crew…" className="min-w-0 flex-1 rounded-full border border-white/10 bg-white/[.06] px-4 py-3 text-base text-white outline-none placeholder:text-white/35 focus:border-[#f4b400]/55" />
           <button className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#f4b400] font-black text-black">➤</button>
-          {viewerMode ? <button type="button" onClick={requestStage} disabled={stageRequested} aria-label="Request to join the stage" className={`shrink-0 rounded-full px-3 py-3 text-[10px] font-black uppercase ${stageRequested ? "bg-emerald-900 text-emerald-200" : "bg-white/10 text-white"}`}>{stageRequested ? "Requested" : "Join stage"}</button> : <><button type="button" onClick={toggleVideo} aria-label={videoOn ? "Turn camera off" : "Turn camera on"} className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-lg ${videoOn ? "bg-emerald-500 text-white" : "bg-white/10 text-white"}`}>📹</button><button type="button" onClick={toggleAudio} aria-label={audioOn ? "Mute microphone" : "Unmute microphone"} className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-lg ${audioOn ? "bg-emerald-500 text-white" : "bg-white/10 text-white"}`}>🎙️</button><button type="button" onClick={openAudioSettings} aria-label="Audio and Bluetooth settings" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-lg text-white">🎧</button></>}
+          {viewerMode ? <button type="button" onClick={requestStage} disabled={stageRequested} aria-label="Request to join a cage" className={`shrink-0 rounded-full px-3 py-3 text-[10px] font-black uppercase ${stageRequested ? "bg-emerald-900 text-emerald-200" : "bg-white/10 text-white"}`}>{stageRequested ? "Requested" : "Join cage"}</button> : <><button type="button" onClick={toggleVideo} aria-label={videoOn ? "Turn camera off" : "Turn camera on"} className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-lg ${videoOn ? "bg-emerald-500 text-white" : "bg-white/10 text-white"}`}>📹</button><button type="button" onClick={toggleAudio} aria-label={audioOn ? "Mute microphone" : "Unmute microphone"} className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-lg ${audioOn ? "bg-emerald-500 text-white" : "bg-white/10 text-white"}`}>🎙️</button><button type="button" onClick={openAudioSettings} aria-label="Audio and Bluetooth settings" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-lg text-white">🎧</button></>}
         </form>
       </div>
 
@@ -637,7 +662,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
           <div className="flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-[.18em] text-[#f4b400]">Inside the habitat</p><h2 className="mt-1 text-xl font-black text-white">Stage {people.length} · Lobby {audience.length}</h2></div><button onClick={() => setMembersOpen(false)} className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-xl">×</button></div>
           <div className="mt-4 grid gap-2">{people.map((person) => <div key={person.session_id} className="flex items-center justify-between rounded-2xl bg-white/[.06] px-4 py-3"><div><div className="flex flex-wrap items-center gap-2"><p className="font-black text-white">{person.user_name || "Zoo Crew guest"}{person.local ? " · You" : ""}</p>{superfanIds.has(person.user_id) ? <ZooCrewBadge compact /> : null}</div><p className="text-xs text-white/45">{person.tracks.audio.state === "playable" ? "Mic on" : "Muted"} · {person.tracks.video.state === "playable" ? "Camera on" : "Camera off"}</p></div><span>{person.tracks.audio.state === "playable" ? "🎙️" : "🔇"}</span></div>)}</div>
           <p className="mt-5 text-xs font-black uppercase tracking-[.16em] text-white/45">Viewer lobby</p>
-          <div className="mt-2 grid gap-2">{audience.length ? audience.map((person) => <div key={person.session_id} className="flex items-center justify-between gap-3 rounded-2xl bg-white/[.04] px-4 py-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="truncate font-black text-white">{person.user_name || "Viewer"}{person.local ? " · You" : ""}</p>{superfanIds.has(person.user_id) ? <ZooCrewBadge compact /> : null}</div><p className="text-xs text-white/40">Watching and commenting{stageRequests.includes(person.session_id) ? " · Requested stage" : ""}</p></div>{canModerate && !person.local ? <button onClick={() => void approveStage(person.session_id)} className={`shrink-0 rounded-full px-3 py-2 text-[10px] font-black uppercase ${stageRequests.includes(person.session_id) ? "bg-[#f4b400] text-black" : "bg-white/10 text-white"}`}>{stageRequests.includes(person.session_id) ? "Approve" : "Invite"}</button> : null}</div>) : <p className="rounded-2xl bg-white/[.04] p-4 text-sm text-white/40">No viewers in the lobby yet.</p>}</div>
+          <div className="mt-2 grid gap-2">{audience.length ? audience.map((person) => <div key={person.session_id} className="flex items-center justify-between gap-3 rounded-2xl bg-white/[.04] px-4 py-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="truncate font-black text-white">{person.user_name || "Viewer"}{person.local ? " · You" : ""}</p>{superfanIds.has(person.user_id) ? <ZooCrewBadge compact /> : null}</div><p className="text-xs text-white/40">Watching and commenting{stageRequests.includes(person.session_id) ? " · Requested cage" : ""}</p></div>{canModerate && !person.local ? <button onClick={() => void approveStage(person.session_id)} disabled={Boolean(approvingStageId)} className={`shrink-0 rounded-full px-3 py-2 text-[10px] font-black uppercase disabled:opacity-50 ${stageRequests.includes(person.session_id) ? "bg-[#f4b400] text-black" : "bg-white/10 text-white"}`}>{approvingStageId === person.session_id ? "Accepting…" : stageRequests.includes(person.session_id) ? "Accept to Cage" : "Invite to Cage"}</button> : null}</div>) : <p className="rounded-2xl bg-white/[.04] p-4 text-sm text-white/40">No viewers in the lobby yet.</p>}</div>
         </div>
       </div> : null}
 
