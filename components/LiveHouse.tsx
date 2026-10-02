@@ -12,6 +12,7 @@ export default function LiveHouse() {
   const [owner, setOwner] = useState(false);
   const [canModerate, setCanModerate] = useState(false);
   const [staffRole, setStaffRole] = useState<string | null>(null);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (state !== "ready") return;
@@ -43,7 +44,7 @@ export default function LiveHouse() {
       return;
     }
     const response = await fetch("/api/live/room", { method: "POST" });
-    const result = (await response.json().catch(() => ({}))) as { roomUrl?: string; message?: string; isOwner?: boolean; canModerate?: boolean; role?: string | null };
+    const result = (await response.json().catch(() => ({}))) as { roomUrl?: string; message?: string; isOwner?: boolean; canModerate?: boolean; role?: string | null; profileImageUrl?: string | null };
     if (!response.ok || !result.roomUrl) {
       setState("error");
       setMessage(result.message || "The Live House could not open.");
@@ -53,13 +54,14 @@ export default function LiveHouse() {
     setOwner(Boolean(result.isOwner));
     setCanModerate(Boolean(result.canModerate));
     setStaffRole(result.role || null);
+    setProfileImageUrl(result.profileImageUrl || null);
     setState("ready");
   }
 
   if (state === "ready") {
     return (
       <section className="fixed inset-0 z-[100] h-dvh overflow-hidden bg-black">
-        <ZooLiveRoom roomUrl={roomUrl} isOwner={owner} canModerate={canModerate} staffRole={staffRole} />
+        <ZooLiveRoom roomUrl={roomUrl} isOwner={owner} canModerate={canModerate} staffRole={staffRole} profileImageUrl={profileImageUrl} />
       </section>
     );
   }

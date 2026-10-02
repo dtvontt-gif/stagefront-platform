@@ -28,6 +28,7 @@ function MediaTile({ participant, featured = false, caged = false, outputDeviceI
   const audioOn = participant.tracks.audio.state === "playable";
   const userData = participant.userData && typeof participant.userData === "object" ? participant.userData as Record<string, unknown> : {};
   const backdrop = userData.backdrop === "jungle" || userData.backdrop === "gold" ? userData.backdrop : "night";
+  const profileImage = typeof userData.profileImageUrl === "string" && userData.profileImageUrl.startsWith("https://") ? userData.profileImageUrl : "";
   const roleLabel = userData.role === "owner" ? "Owner" : userData.role === "manager" ? "Manager" : userData.role === "moderator" ? "Moderator" : participant.owner ? "Moderator" : "";
 
   useEffect(() => {
@@ -52,9 +53,9 @@ function MediaTile({ participant, featured = false, caged = false, outputDeviceI
     <button type="button" onClick={participant.local ? onSelfSettings : onSelect} className={`group relative h-full w-full overflow-hidden bg-[#121313] text-left ${featured ? "rounded-2xl sm:rounded-3xl" : "rounded-xl sm:rounded-2xl"}`}>
       {videoOn ? <video ref={videoRef} playsInline muted={participant.local} autoPlay className={`h-full w-full object-cover ${participant.local ? "-scale-x-100" : ""}`} /> : (
         <div className={`grid h-full place-items-center ${backdropClasses[backdrop]}`}>
-          <div className={`${featured ? "h-24 w-24 text-4xl sm:h-36 sm:w-36 sm:text-6xl" : "h-12 w-12 text-xl sm:h-16 sm:w-16 sm:text-2xl"} grid place-items-center rounded-full border border-[#f4b400]/35 bg-black/55 font-black text-[#f4b400]`}>
+          {profileImage ? <img src={profileImage} alt={`${participant.user_name || "Member"} profile`} className={`${featured ? "h-32 w-32 sm:h-52 sm:w-52" : "h-16 w-16 sm:h-24 sm:w-24"} rounded-full border-2 border-[#f4b400]/55 object-cover shadow-[0_0_35px_rgba(244,180,0,.22)]`} /> : <div className={`${featured ? "h-24 w-24 text-4xl sm:h-36 sm:w-36 sm:text-6xl" : "h-12 w-12 text-xl sm:h-16 sm:w-16 sm:text-2xl"} grid place-items-center rounded-full border border-[#f4b400]/35 bg-black/55 font-black text-[#f4b400]`}>
             {(participant.user_name || "Z").slice(0, 1).toUpperCase()}
-          </div>
+          </div>}
         </div>
       )}
       {!participant.local ? <audio ref={audioRef} autoPlay playsInline /> : null}
@@ -81,7 +82,7 @@ function MediaTile({ participant, featured = false, caged = false, outputDeviceI
   );
 }
 
-export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole }: { roomUrl: string; isOwner: boolean; canModerate: boolean; staffRole: string | null }) {
+export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole, profileImageUrl }: { roomUrl: string; isOwner: boolean; canModerate: boolean; staffRole: string | null; profileImageUrl: string | null }) {
   const callRef = useRef<DailyCall | null>(null);
   const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
   const microphoneTrackRef = useRef<MediaStreamTrack | null>(null);
@@ -152,7 +153,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole }
       await call.join({ url: parsed.toString(), token, startVideoOff: true, startAudioOff: true });
       if (active) {
         refresh();
-        await call.setUserData({ role: staffRole, backdrop });
+        await call.setUserData({ role: staffRole, backdrop, profileImageUrl });
         setStatus("Live inside the Zoo Crew habitat");
       }
     }
@@ -166,7 +167,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, staffRole }
       microphoneTrackRef.current?.stop();
       callRef.current = null;
     };
-  }, [roomUrl, staffRole]);
+  }, [roomUrl, staffRole, profileImageUrl]);
 
   const people = useMemo(() => {
     const list = Object.values(participants);
