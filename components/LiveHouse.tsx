@@ -15,6 +15,7 @@ export default function LiveHouse() {
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
   const [canControlLive, setCanControlLive] = useState(false);
+  const [canEndLive, setCanEndLive] = useState(false);
   const [entryMode, setEntryMode] = useState<"viewer" | "stage">("viewer");
 
   useEffect(() => {
@@ -22,7 +23,7 @@ export default function LiveHouse() {
     let active = true;
     async function checkStatus() {
       const response = await fetch("/api/live/room", { cache: "no-store" });
-      const result = (await response.json().catch(() => ({}))) as { isLive?: boolean; canControlLive?: boolean; role?: string | null; message?: string };
+      const result = (await response.json().catch(() => ({}))) as { isLive?: boolean; canControlLive?: boolean; canEndLive?: boolean; role?: string | null; message?: string };
       if (!active) return;
       if (!response.ok) {
         setState("error");
@@ -30,6 +31,7 @@ export default function LiveHouse() {
         return;
       }
       setCanControlLive(Boolean(result.canControlLive));
+      setCanEndLive(Boolean(result.canEndLive));
       setStaffRole(result.role || null);
       setMessage("");
       setState(result.isLive ? "live" : "offline");
@@ -72,7 +74,7 @@ export default function LiveHouse() {
       return;
     }
     const response = await fetch("/api/live/room", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "enter", mode: requestedMode }) });
-    const result = (await response.json().catch(() => ({}))) as { roomUrl?: string; message?: string; isOwner?: boolean; canModerate?: boolean; canControlLive?: boolean; entryMode?: "viewer" | "stage"; role?: string | null; username?: string | null; profileImageUrl?: string | null };
+    const result = (await response.json().catch(() => ({}))) as { roomUrl?: string; message?: string; isOwner?: boolean; canModerate?: boolean; canControlLive?: boolean; canEndLive?: boolean; entryMode?: "viewer" | "stage"; role?: string | null; username?: string | null; profileImageUrl?: string | null };
     if (!response.ok || !result.roomUrl) {
       setState("error");
       setMessage(result.message || "The Live House could not open.");
@@ -82,6 +84,7 @@ export default function LiveHouse() {
     setOwner(Boolean(result.isOwner));
     setCanModerate(Boolean(result.canModerate));
     setCanControlLive(Boolean(result.canControlLive));
+    setCanEndLive(Boolean(result.canEndLive));
     setStaffRole(result.role || null);
     setProfileImageUrl(result.profileImageUrl || null);
     setProfileUsername(result.username || null);
@@ -114,7 +117,7 @@ export default function LiveHouse() {
   if (state === "ready") {
     return (
       <section className="fixed inset-0 z-[100] h-dvh overflow-hidden bg-black">
-        <ZooLiveRoom roomUrl={roomUrl} isOwner={owner} canModerate={canModerate} canControlLive={canControlLive} initialMode={entryMode} staffRole={staffRole} profileImageUrl={profileImageUrl} profileUsername={profileUsername} onEndLive={endLive} />
+        <ZooLiveRoom roomUrl={roomUrl} isOwner={owner} canModerate={canModerate} canEndLive={canEndLive} initialMode={entryMode} staffRole={staffRole} profileImageUrl={profileImageUrl} profileUsername={profileUsername} onEndLive={endLive} />
       </section>
     );
   }

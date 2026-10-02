@@ -14,6 +14,8 @@ type RoomMessage =
   | { kind: "comment-pin"; commentId: string | null }
   | { kind: "stage-request"; sessionId: string; name: string }
   | { kind: "stage-approve"; sessionId: string }
+  | { kind: "stage-reject"; sessionId: string }
+  | { kind: "stage-drop"; sessionId: string }
   | { kind: "feature"; sessionId: string }
   | { kind: "self-stage"; sessionId: string }
   | { kind: "self-cage"; sessionId: string; nextSessionId: string }
@@ -93,7 +95,7 @@ function MediaTile({ participant, featured = false, caged = false, isSuperfan = 
   );
 }
 
-export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlLive, initialMode, staffRole, profileImageUrl, profileUsername, onEndLive }: { roomUrl: string; isOwner: boolean; canModerate: boolean; canControlLive: boolean; initialMode: "viewer" | "stage"; staffRole: string | null; profileImageUrl: string | null; profileUsername: string | null; onEndLive: () => Promise<void> }) {
+export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive, initialMode, staffRole, profileImageUrl, profileUsername, onEndLive }: { roomUrl: string; isOwner: boolean; canModerate: boolean; canEndLive: boolean; initialMode: "viewer" | "stage"; staffRole: string | null; profileImageUrl: string | null; profileUsername: string | null; onEndLive: () => Promise<void> }) {
   const callRef = useRef<DailyCall | null>(null);
   const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
   const microphoneTrackRef = useRef<MediaStreamTrack | null>(null);
@@ -122,6 +124,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
   const [viewerMode, setViewerMode] = useState(initialMode === "viewer");
   const [stageRequests, setStageRequests] = useState<string[]>([]);
   const [approvingStageId, setApprovingStageId] = useState<string | null>(null);
+  const [droppingStageId, setDroppingStageId] = useState<string | null>(null);
   const [stageRequested, setStageRequested] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatReply | null>(null);
   const [pinnedCommentId, setPinnedCommentId] = useState<string | null>(null);
@@ -211,14 +214,36 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
           const localData = call?.participants().local?.userData && typeof call.participants().local?.userData === "object" ? call.participants().local?.userData as Record<string, unknown> : {};
           void call?.setUserData({ ...localData, mode: "stage", wantsCage: false });
         }
+        if (data?.kind === "stage-reject" && sender?.owner && data.sessionId === call?.participants().local?.session_id) {
+          setStageRequested(false);
+          setStatus("Your cage request was declined. You can keep watching from the lobby.");
+          const localData = call?.participants().local?.userData && typeof call.participants().local?.userData === "object" ? call.participants().local?.userData as Record<string, unknown> : {};
+          void call?.setUserData({ ...localData, wantsCage: false });
+        }
+        if (data?.kind === "stage-drop" && sender?.owner && data.sessionId === call?.participants().local?.session_id) {
+          call?.setLocalAudio(false);
+          call?.setLocalVideo(false);
+          cameraTrackRef.current?.stop();
+          microphoneTrackRef.current?.stop();
+          cameraTrackRef.current = null;
+          microphoneTrackRef.current = null;
+          setViewerMode(true);
+          setAudioOn(false);
+          setVideoOn(false);
+          setStageRequested(false);
+          setControlsOpen(false);
+          setStatus("You were moved to the viewer lobby. You can still watch and comment.");
+          const localData = call?.participants().local?.userData && typeof call.participants().local?.userData === "object" ? call.participants().local?.userData as Record<string, unknown> : {};
+          void call?.setUserData({ ...localData, mode: "viewer", wantsCage: false });
+        }
         if (data?.kind === "feature" && sender?.owner && typeof data.sessionId === "string") setFeaturedId(data.sessionId);
         if (data?.kind === "self-stage" && sender?.session_id === data.sessionId) setFeaturedId(data.sessionId);
         if (data?.kind === "self-cage" && sender?.session_id === data.sessionId && typeof data.nextSessionId === "string" && Object.values(call?.participants() || {}).some((person) => person.session_id === data.nextSessionId && person.session_id !== sender.session_id)) setFeaturedId(data.nextSessionId);
         if (data?.kind === "positions" && sender?.owner && Array.isArray(data.sessionIds)) setSlotOrder(data.sessionIds.filter((id) => typeof id === "string"));
-        if (data?.kind === "gift" && senderData.role === "owner" && data.giftId in zooGiftCatalog && typeof data.eventId === "string") {
+        if (data?.kind === "gift" && event.fromId === "API" && data.giftId in zooGiftCatalog && typeof data.eventId === "string") {
           playGift({ id: data.giftId, eventId: data.eventId, senderName: data.senderName || sender?.user_name || "Zoo Crew" });
         }
-        if (data?.kind === "end-live" && (senderData.role === "owner" || senderData.role === "manager")) {
+        if (data?.kind === "end-live" && event.fromId === "API" && !canEndLive) {
           setStatus("The Zoo Crew live has ended");
           void call?.leave().catch(() => undefined).finally(() => window.location.assign("/live"));
         }
@@ -242,7 +267,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
       if (giftTimerRef.current) window.clearTimeout(giftTimerRef.current);
       callRef.current = null;
     };
-  }, [roomUrl, staffRole, profileImageUrl, profileUsername, initialMode, canModerate]);
+  }, [roomUrl, staffRole, profileImageUrl, profileUsername, initialMode, canModerate, canEndLive]);
 
   const membershipUserIds = useMemo(() => {
     const currentMembers = Object.values(participants).map((person) => person.user_id).filter(Boolean);
@@ -552,6 +577,34 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
     }
   }
 
+  function rejectStage(sessionId: string) {
+    if (!canModerate || !stageRequests.includes(sessionId)) return;
+    callRef.current?.sendAppMessage({ kind: "stage-reject", sessionId } satisfies RoomMessage, "*");
+    setStageRequests((current) => current.filter((id) => id !== sessionId));
+    setStatus("Cage request declined; the viewer remains in the lobby.");
+  }
+
+  async function dropToLobby(sessionId: string) {
+    const call = callRef.current;
+    if (!canModerate || !call || droppingStageId || !people.some((person) => person.session_id === sessionId && !person.local)) return;
+    setDroppingStageId(sessionId);
+    try {
+      await call.updateParticipant(sessionId, { setAudio: false, setVideo: false, updatePermissions: { canSend: new Set() } });
+      call.sendAppMessage({ kind: "stage-drop", sessionId } satisfies RoomMessage, "*");
+      if (featuredId === sessionId) {
+        const next = people.find((person) => person.session_id !== sessionId)?.session_id || "";
+        setFeaturedId(next);
+        if (next) call.sendAppMessage({ kind: "feature", sessionId: next } satisfies RoomMessage, "*");
+      }
+      setModerationTargetId("");
+      setStatus("Participant returned to the viewer lobby.");
+    } catch {
+      setStatus("Could not move that participant. Check that they are still in the cage.");
+    } finally {
+      setDroppingStageId(null);
+    }
+  }
+
   async function copyInvite() {
     await navigator.clipboard.writeText(`${window.location.origin}/live`);
     setCopied(true);
@@ -564,11 +617,10 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
   }
 
   async function endBroadcast() {
-    if (!canControlLive) return;
+    if (!canEndLive) return;
     const confirmed = window.confirm("End the Zoo Crew live for everyone?");
     if (!confirmed) return;
     setStatus("Ending the live…");
-    callRef.current?.sendAppMessage({ kind: "end-live" } satisfies RoomMessage, "*");
     try {
       await onEndLive();
       await callRef.current?.leave();
@@ -577,16 +629,17 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
     }
   }
 
-  function testGift(giftId: ZooGiftId) {
+  async function testGift(giftId: ZooGiftId) {
     if (!isOwner) return;
-    const local = callRef.current?.participants().local;
-    const gift: ActiveZooGift = {
-      id: giftId,
-      eventId: crypto.randomUUID(),
-      senderName: local?.user_name || "Zoo Crew",
-    };
-    playGift(gift);
-    callRef.current?.sendAppMessage({ kind: "gift", giftId, eventId: gift.eventId, senderName: gift.senderName } satisfies RoomMessage, "*");
+    try {
+      const response = await fetch("/api/live/room", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "gift", giftId, eventId: crypto.randomUUID() }),
+      });
+      if (!response.ok) throw new Error("The gift animation could not be sent.");
+    } catch {
+      setStatus("The gift could not reach the room. Please try again.");
+    }
   }
 
   return (
@@ -596,7 +649,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
           <div className="flex items-center gap-2"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" /><p className="truncate text-xs font-black uppercase tracking-[.16em] text-[#f4b400]">Zoo Crew Vibe · Live</p></div>
           <p className="mt-1 truncate text-[11px] text-white/45">{status}</p>
         </div>
-        <div className="flex items-center gap-2">{canControlLive ? <button onClick={endBroadcast} className="rounded-full bg-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white sm:text-xs">End Live</button> : null}<button onClick={() => setMembersOpen(true)} aria-label="View stage and lobby" className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-white/70">🎥 {people.length} · 👀 {audience.length}</button><button onClick={leave} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-lg font-bold text-white">×</button></div>
+        <div className="flex items-center gap-2">{canEndLive ? <button onClick={endBroadcast} className="rounded-full bg-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white sm:text-xs">End Live</button> : null}<button onClick={() => setMembersOpen(true)} aria-label="View stage and lobby" className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-white/70">🎥 {people.length} · 👀 {audience.length}</button><button onClick={leave} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-lg font-bold text-white">×</button></div>
       </header>
 
       {canModerate && pendingStageRequests.length ? <div role="status" aria-live="polite" className="max-h-[28vh] shrink-0 overflow-y-auto border-b border-[#f4b400]/35 bg-[#2b1d08] px-3 py-2 sm:px-5">
@@ -604,6 +657,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
         <div className="flex flex-wrap gap-2">{pendingStageRequests.map((person) => <div key={person.session_id} className="flex max-w-full items-center gap-2 rounded-xl border border-[#f4b400]/30 bg-black/40 px-2 py-1.5">
           <span className="max-w-32 truncate text-xs font-bold text-white sm:max-w-48">{person.user_name || "Viewer"}</span>
           <button type="button" onClick={() => void approveStage(person.session_id)} disabled={Boolean(approvingStageId)} className="shrink-0 rounded-lg bg-[#f4b400] px-3 py-2 text-[10px] font-black uppercase text-black disabled:opacity-50">{approvingStageId === person.session_id ? "Accepting…" : "Accept to Cage"}</button>
+          <button type="button" onClick={() => rejectStage(person.session_id)} className="shrink-0 rounded-lg border border-red-400/35 bg-red-500/15 px-3 py-2 text-[10px] font-black uppercase text-red-200">Reject</button>
         </div>)}</div>
       </div> : null}
 
@@ -727,6 +781,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canControlL
             <button onClick={() => moderateParticipant("audio")} className="rounded-2xl border border-red-400/25 bg-red-500/10 px-3 py-4 text-sm font-black text-red-200">🔇 Mute Their Mic</button>
             <button onClick={() => moderateParticipant("video")} className="rounded-2xl border border-red-400/25 bg-red-500/10 px-3 py-4 text-sm font-black text-red-200">🚫 Turn Camera Off</button>
           </div>
+          <button onClick={() => void dropToLobby(moderationTarget.session_id)} disabled={Boolean(droppingStageId)} className="mt-3 w-full rounded-2xl border border-red-400/40 bg-red-500/20 px-4 py-4 text-sm font-black text-red-100 disabled:opacity-50">{droppingStageId ? "Moving to Lobby…" : "⬇ Drop from Box to Lobby"}</button>
           <p className="mt-3 text-[11px] leading-4 text-white/45">Only approved Zoo Crew owners, managers, and moderators receive these controls. Participants can turn their own devices back on afterward.</p>
         </div>
       </div> : null}

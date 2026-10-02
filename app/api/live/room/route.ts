@@ -2,10 +2,10 @@ import { authenticatedUser, serviceConfiguration, staffAccess } from "@/lib/stag
 import { profileImageUrl } from "@/lib/profile-images";
 
 const DAILY_API = "https://api.daily.co/v1";
-const ROOM_NAME = "zoo-crew-vibe-controlled-live";
+const ROOM_PREFIX = "zoo-crew-vibe-live-";
 
 type DailyRoom = { name: string; url: string };
-type LiveAction = "start" | "enter" | "end";
+type LiveAction = "start" | "enter" | "end" | "gift";
 type EntryMode = "viewer" | "stage";
 
 function dailyHeaders(apiKey: string) {
@@ -16,20 +16,25 @@ function canControl(role: string | null) {
   return role === "owner" || role === "manager";
 }
 
-async function getRoom(apiKey: string): Promise<DailyRoom | null> {
-  const response = await fetch(`${DAILY_API}/rooms/${ROOM_NAME}`, { headers: dailyHeaders(apiKey), cache: "no-store" });
-  if (response.status === 404) return null;
-  if (!response.ok) throw new Error("Daily room lookup failed.");
-  return (await response.json()) as DailyRoom;
+function starterId(room: DailyRoom | null) {
+  const id = room?.name.startsWith(ROOM_PREFIX) ? room.name.slice(ROOM_PREFIX.length) : "";
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id) ? id : null;
 }
 
-async function getOrCreateRoom(apiKey: string): Promise<DailyRoom> {
+async function getRoom(apiKey: string): Promise<DailyRoom | null> {
+  const response = await fetch(`${DAILY_API}/rooms?limit=100`, { headers: dailyHeaders(apiKey), cache: "no-store" });
+  if (!response.ok) throw new Error("Daily room lookup failed.");
+  const { data } = (await response.json()) as { data: DailyRoom[] };
+  return data.find((room) => starterId(room)) || null;
+}
+
+async function getOrCreateRoom(apiKey: string, userId: string): Promise<DailyRoom> {
   const existing = await getRoom(apiKey);
   if (existing) return existing;
   const created = await fetch(`${DAILY_API}/rooms`, {
     method: "POST",
     headers: dailyHeaders(apiKey),
-    body: JSON.stringify({ name: ROOM_NAME, privacy: "private", properties: { max_participants: 100, enable_knocking: false, enable_chat: true, start_video_off: true, start_audio_off: true } }),
+    body: JSON.stringify({ name: `${ROOM_PREFIX}${userId}`, privacy: "private", properties: { max_participants: 100, enable_knocking: false, enable_chat: true, start_video_off: true, start_audio_off: true } }),
   });
   if (!created.ok) throw new Error("Daily room creation failed.");
   return (await created.json()) as DailyRoom;
@@ -61,7 +66,7 @@ export async function GET() {
   try {
     const [room, access] = await Promise.all([getRoom(apiKey), staffAccess()]);
     const role = access?.role || null;
-    return Response.json({ isLive: Boolean(room), canControlLive: canControl(role), role });
+    return Response.json({ isLive: Boolean(room), canControlLive: canControl(role), canEndLive: canControl(role) && starterId(room) === user.id, role });
   } catch (error) {
     console.error("Live House status error", error);
     return Response.json({ message: "The Live House status could not be checked." }, { status: 502 });
@@ -74,7 +79,7 @@ export async function POST(request: Request) {
   const apiKey = process.env.DAILY_API_KEY?.trim();
   if (!apiKey) return Response.json({ message: "The Live House connection is not configured." }, { status: 503 });
   try {
-    const body = (await request.json().catch(() => ({}))) as { action?: LiveAction; mode?: EntryMode };
+    const body = (await request.json().catch(() => ({}))) as { action?: LiveAction; mode?: EntryMode; giftId?: string; eventId?: string };
     const action = body.action || "enter";
     const access = await staffAccess();
     const role = access?.role || null;
@@ -84,14 +89,33 @@ export async function POST(request: Request) {
 
     if (action === "start") {
       if (!canControlLive) return Response.json({ message: "Only a Zoo Crew owner or manager can start the live." }, { status: 403 });
-      await getOrCreateRoom(apiKey);
-      return Response.json({ isLive: true, canControlLive, role });
+      const room = await getOrCreateRoom(apiKey, user.id);
+      return Response.json({ isLive: true, canControlLive, canEndLive: starterId(room) === user.id, role });
     }
     if (action === "end") {
-      if (!canControlLive) return Response.json({ message: "Only a Zoo Crew owner or manager can end the live." }, { status: 403 });
-      const response = await fetch(`${DAILY_API}/rooms/${ROOM_NAME}`, { method: "DELETE", headers: dailyHeaders(apiKey) });
+      const room = await getRoom(apiKey);
+      if (!room || !canControlLive || starterId(room) !== user.id) return Response.json({ message: "Only the person who started this live can end it." }, { status: 403 });
+      await fetch(`${DAILY_API}/rooms/${room.name}/send-app-message`, {
+        method: "POST", headers: dailyHeaders(apiKey),
+        body: JSON.stringify({ data: { kind: "end-live" }, recipient: "*" }),
+      });
+      const response = await fetch(`${DAILY_API}/rooms/${room.name}`, { method: "DELETE", headers: dailyHeaders(apiKey) });
       if (!response.ok && response.status !== 404) throw new Error("Daily room deletion failed.");
       return Response.json({ isLive: false, canControlLive, role });
+    }
+
+    if (action === "gift") {
+      if (role !== "owner") return Response.json({ message: "Only an owner can try the test gifts." }, { status: 403 });
+      if (!body.giftId || !["paw", "anaconda", "lion"].includes(body.giftId) || !body.eventId || !/^[0-9a-f-]{36}$/i.test(body.eventId)) return Response.json({ message: "Invalid test gift." }, { status: 400 });
+      const room = await getRoom(apiKey);
+      if (!room) return Response.json({ message: "The live is offline." }, { status: 409 });
+      const { name } = await memberIdentity(user.id, user.email);
+      const response = await fetch(`${DAILY_API}/rooms/${room.name}/send-app-message`, {
+        method: "POST", headers: dailyHeaders(apiKey),
+        body: JSON.stringify({ data: { kind: "gift", giftId: body.giftId, eventId: body.eventId, senderName: name.slice(0, 50) }, recipient: "*" }),
+      });
+      if (!response.ok) throw new Error("Daily gift broadcast failed.");
+      return Response.json({ sent: true });
     }
 
     const room = await getRoom(apiKey);
@@ -105,7 +129,7 @@ export async function POST(request: Request) {
     });
     if (!tokenResponse.ok) throw new Error("Daily meeting token creation failed.");
     const token = (await tokenResponse.json()) as { token: string };
-    return Response.json({ roomUrl: `${room.url}?t=${encodeURIComponent(token.token)}`, name, username, profileImageUrl: imageUrl, isOwner: role === "owner", canModerate, canControlLive, entryMode, role });
+    return Response.json({ roomUrl: `${room.url}?t=${encodeURIComponent(token.token)}`, name, username, profileImageUrl: imageUrl, isOwner: role === "owner", canModerate, canControlLive, canEndLive: canControlLive && starterId(room) === user.id, entryMode, role });
   } catch (error) {
     console.error("Live House room error", error);
     return Response.json({ message: "The Live House could not open. Please try again." }, { status: 502 });
