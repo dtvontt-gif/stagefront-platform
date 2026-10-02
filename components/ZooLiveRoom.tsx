@@ -8,7 +8,7 @@ type RoomMessage =
   | { kind: "comment"; id: string; name: string; body: string; createdAt: number }
   | { kind: "feature"; sessionId: string };
 
-function MediaTile({ participant, featured = false, onSelect }: { participant: DailyParticipant; featured?: boolean; onSelect?: () => void }) {
+function MediaTile({ participant, featured = false, caged = false, onSelect }: { participant: DailyParticipant; featured?: boolean; caged?: boolean; onSelect?: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoTrack = participant.tracks.video.persistentTrack;
@@ -41,6 +41,16 @@ function MediaTile({ participant, featured = false, onSelect }: { participant: D
         </div>
       )}
       {!participant.local ? <audio ref={audioRef} autoPlay /> : null}
+      {caged ? (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-10">
+          <div className="absolute inset-y-0 left-[20%] w-[5px] bg-gradient-to-r from-[#3a2917] via-[#c89c52] to-[#392716] shadow-[2px_0_7px_rgba(0,0,0,.8)] sm:w-2" />
+          <div className="absolute inset-y-0 left-1/2 w-[5px] -translate-x-1/2 bg-gradient-to-r from-[#3a2917] via-[#d3aa61] to-[#392716] shadow-[2px_0_7px_rgba(0,0,0,.8)] sm:w-2" />
+          <div className="absolute inset-y-0 right-[20%] w-[5px] bg-gradient-to-r from-[#3a2917] via-[#c89c52] to-[#392716] shadow-[2px_0_7px_rgba(0,0,0,.8)] sm:w-2" />
+          <div className="absolute inset-x-0 top-0 h-2 bg-gradient-to-b from-[#d5ac63] via-[#59401f] to-[#21170c] shadow-[0_3px_8px_rgba(0,0,0,.85)] sm:h-3" />
+          <div className="absolute inset-x-0 bottom-0 h-2 bg-gradient-to-b from-[#d5ac63] via-[#59401f] to-[#21170c] shadow-[0_-3px_8px_rgba(0,0,0,.85)] sm:h-3" />
+          <div className="absolute right-1.5 top-2.5 rounded bg-black/75 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider text-[#e9c477] sm:right-2 sm:top-3.5 sm:text-[9px]">Caged</div>
+        </div>
+      ) : null}
       <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/55 to-transparent ${featured ? "px-4 pb-4 pt-12 sm:px-6 sm:pb-6 sm:pt-20" : "px-2 pb-2 pt-7 sm:px-3 sm:pb-3"}`}>
         <div className="flex items-end justify-between gap-2">
           <div className="min-w-0">
@@ -167,7 +177,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
   }
 
   return (
-    <div className="overflow-hidden rounded-[1.5rem] border border-[#f4b400]/30 bg-black shadow-[0_28px_90px_rgba(0,0,0,.75)] sm:rounded-[2.2rem]">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-black shadow-[0_28px_90px_rgba(0,0,0,.75)]">
       <header className="flex items-center justify-between gap-3 border-b border-white/10 bg-[#090b0a] px-3 py-3 sm:px-5">
         <div className="min-w-0">
           <div className="flex items-center gap-2"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" /><p className="truncate text-xs font-black uppercase tracking-[.16em] text-[#f4b400]">Zoo Crew Vibe · Live</p></div>
@@ -176,7 +186,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
         <div className="flex items-center gap-2"><span className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-white/70">👥 {people.length}</span><button onClick={leave} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-lg font-bold text-white">×</button></div>
       </header>
 
-      <div className="grid h-[68dvh] min-h-[520px] grid-cols-[minmax(0,1fr)_88px] gap-1 bg-black p-1 sm:h-[76vh] sm:min-h-[650px] sm:grid-cols-[minmax(0,1fr)_190px] sm:gap-2 sm:p-2 lg:grid-cols-[minmax(0,1fr)_230px]">
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_88px] gap-1 bg-black p-1 sm:grid-cols-[minmax(0,1fr)_190px] sm:gap-2 sm:p-2 lg:grid-cols-[minmax(0,1fr)_230px]">
         <div className="relative min-w-0 overflow-hidden rounded-2xl bg-[#0c100e] sm:rounded-3xl">
           {featured ? <MediaTile participant={featured} featured onSelect={() => feature(featured)} /> : <div className="grid h-full place-items-center text-center text-white/45"><div><p className="text-5xl">🦁</p><p className="mt-4 font-black uppercase">Waiting for the crew</p></div></div>}
           <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 mx-3 max-w-[90%] sm:bottom-5 sm:mx-5 sm:max-w-xl">
@@ -188,8 +198,8 @@ export default function ZooLiveRoom({ roomUrl, isOwner }: { roomUrl: string; isO
 
         <aside className="grid min-h-0 grid-rows-[1fr_auto] gap-1 sm:gap-2">
           <div className="grid min-h-0 auto-rows-[106px] gap-1 overflow-y-auto sm:auto-rows-[150px] sm:gap-2">
-            {rail.map((person) => <MediaTile key={person.session_id} participant={person} onSelect={() => feature(person)} />)}
-            {Array.from({ length: Math.max(0, 4 - rail.length) }).map((_, index) => <div key={index} className="grid place-items-center rounded-xl border border-dashed border-white/10 bg-white/[.035] text-center text-[10px] font-bold uppercase text-white/25 sm:rounded-2xl sm:text-xs">Open<br />box</div>)}
+            {rail.map((person) => <MediaTile key={person.session_id} participant={person} caged onSelect={() => feature(person)} />)}
+            {Array.from({ length: Math.max(0, 4 - rail.length) }).map((_, index) => <div key={index} className="relative grid place-items-center overflow-hidden rounded-xl border border-[#8b6835]/35 bg-[linear-gradient(145deg,#11130f,#080908)] text-center text-[10px] font-bold uppercase text-white/25 sm:rounded-2xl sm:text-xs"><span className="relative z-10">Open<br />cage</span><div aria-hidden="true" className="pointer-events-none absolute inset-0"><div className="absolute inset-y-0 left-1/4 w-1.5 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" /><div className="absolute inset-y-0 left-1/2 w-1.5 -translate-x-1/2 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" /><div className="absolute inset-y-0 right-1/4 w-1.5 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" /></div></div>)}
           </div>
           <button onClick={copyInvite} className="grid min-h-20 place-items-center rounded-xl border border-[#f4b400]/25 bg-[#f4b400]/10 px-1 text-center text-[10px] font-black uppercase text-[#f4b400] sm:min-h-24 sm:rounded-2xl sm:text-xs"><span><span className="block text-2xl">＋</span>{copied ? "Link copied" : "Invite"}</span></button>
         </aside>

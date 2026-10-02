@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ZooLiveRoom from "@/components/ZooLiveRoom";
 
 type RoomState = "idle" | "opening" | "ready" | "error";
@@ -10,6 +10,15 @@ export default function LiveHouse() {
   const [roomUrl, setRoomUrl] = useState("");
   const [message, setMessage] = useState("");
   const [owner, setOwner] = useState(false);
+
+  useEffect(() => {
+    if (state !== "ready") return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [state]);
 
   async function enterRoom() {
     setState("opening");
@@ -26,6 +35,14 @@ export default function LiveHouse() {
     setState("ready");
   }
 
+  if (state === "ready") {
+    return (
+      <section className="fixed inset-0 z-[100] h-dvh overflow-hidden bg-black">
+        <ZooLiveRoom roomUrl={roomUrl} isOwner={owner} />
+      </section>
+    );
+  }
+
   return (
     <section className="relative min-h-[calc(100vh-5rem)] overflow-hidden px-3 py-8 sm:px-6">
       <div className="absolute inset-0 bg-[#050705]" />
@@ -35,17 +52,14 @@ export default function LiveHouse() {
       <div className="relative mx-auto max-w-[1700px]">
         <header className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div>
-            <div className="flex flex-wrap gap-3"><span className={"rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-[.18em] " + (state === "ready" ? "border-red-400/40 bg-red-500/15 text-red-200" : "border-[#f4b400]/30 bg-[#f4b400]/10 text-[#f4b400]")}>{state === "ready" ? "Exhibit open · Live" : "After-hours private beta"}</span><span className="rounded-full border border-emerald-500/25 bg-emerald-950/60 px-3 py-1.5 text-xs font-bold uppercase tracking-[.15em] text-emerald-200">Visitor viewing gallery</span></div>
+            <div className="flex flex-wrap gap-3"><span className="rounded-full border border-[#f4b400]/30 bg-[#f4b400]/10 px-3 py-1.5 text-xs font-black uppercase tracking-[.18em] text-[#f4b400]">After-hours private beta</span><span className="rounded-full border border-emerald-500/25 bg-emerald-950/60 px-3 py-1.5 text-xs font-bold uppercase tracking-[.15em] text-emerald-200">Visitor viewing gallery</span></div>
             <h1 className="mt-4 font-display text-4xl font-black uppercase sm:text-6xl">Zoo Crew Live House</h1>
             <p className="mt-3 max-w-3xl text-white/60">Step up to the glass and enter the official nighttime habitat of the Zoo Crew family.</p>
           </div>
-          {state !== "ready" ? <button onClick={enterRoom} disabled={state === "opening"} className="primary-cta disabled:opacity-50">{state === "opening" ? "Opening the gate…" : "Enter viewing gallery"}</button> : owner ? <a href="/admin" className="rounded-full border border-[#f4b400]/35 bg-[#f4b400]/10 px-4 py-2 text-sm font-black text-[#f4b400] transition hover:bg-[#f4b400]/20">Open zookeeper control center</a> : <span className="rounded-full border border-white/15 bg-black/55 px-4 py-2 text-sm font-bold text-white/60">Visitor access</span>}
+          <button onClick={enterRoom} disabled={state === "opening"} className="primary-cta disabled:opacity-50">{state === "opening" ? "Opening the gate…" : "Enter viewing gallery"}</button>
         </header>
 
-        {state === "ready" ? (
-          <ZooLiveRoom roomUrl={roomUrl} isOwner={owner} />
-        ) : (
-          <div className="relative grid min-h-[72vh] place-items-center overflow-hidden rounded-[2.5rem] border-[12px] border-[#20170c] bg-[#020706] p-8 text-center shadow-[0_0_0_2px_rgba(244,180,0,.28),0_35px_90px_rgba(0,0,0,.8)]">
+        <div className="relative grid min-h-[72vh] place-items-center overflow-hidden rounded-[2.5rem] border-[12px] border-[#20170c] bg-[#020706] p-8 text-center shadow-[0_0_0_2px_rgba(244,180,0,.28),0_35px_90px_rgba(0,0,0,.8)]">
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_76%_16%,rgba(233,242,210,.18),transparent_9%),linear-gradient(180deg,#071b1a_0%,#082219_39%,#06130c_70%,#020503_100%)]" />
             <div aria-hidden="true" className="pointer-events-none absolute right-[12%] top-[8%] h-20 w-20 rounded-full bg-[#e8e5c8] opacity-80 shadow-[0_0_45px_rgba(226,236,199,.35)] sm:h-28 sm:w-28" />
 
@@ -74,8 +88,7 @@ export default function LiveHouse() {
               <button onClick={enterRoom} disabled={state === "opening"} className="mt-7 rounded-full bg-[#f4b400] px-7 py-3.5 font-black text-black disabled:opacity-50">{state === "opening" ? "Opening the gate…" : "Enter the Zoo Crew Habitat"}</button>
               <p className="mt-4 text-xs uppercase tracking-[.15em] text-white/35">Private exhibit · Up to 10 inside · Owners manage the habitat</p>
             </div>
-          </div>
-        )}
+        </div>
       </div>
     </section>
   );
