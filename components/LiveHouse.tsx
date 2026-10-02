@@ -23,6 +23,23 @@ export default function LiveHouse() {
   async function enterRoom() {
     setState("opening");
     setMessage("");
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Camera and microphone access are not supported in this browser. Open StageFront directly in Safari or Chrome.");
+      }
+      const permissionStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: true,
+      });
+      permissionStream.getTracks().forEach((track) => track.stop());
+    } catch (error) {
+      const permissionMessage = error instanceof Error && error.message.includes("not supported")
+        ? error.message
+        : "Camera or microphone access was blocked. On iPhone, open Settings → Safari → Camera and Microphone, choose Ask or Allow, then return and try again.";
+      setState("error");
+      setMessage(permissionMessage);
+      return;
+    }
     const response = await fetch("/api/live/room", { method: "POST" });
     const result = (await response.json().catch(() => ({}))) as { roomUrl?: string; message?: string; isOwner?: boolean };
     if (!response.ok || !result.roomUrl) {
