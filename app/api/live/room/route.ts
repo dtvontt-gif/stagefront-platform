@@ -6,6 +6,7 @@ const ROOM_NAME = "zoo-crew-vibe-controlled-live";
 
 type DailyRoom = { name: string; url: string };
 type LiveAction = "start" | "enter" | "end";
+type EntryMode = "viewer" | "stage";
 
 function dailyHeaders(apiKey: string) {
   return { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
@@ -28,7 +29,7 @@ async function getOrCreateRoom(apiKey: string): Promise<DailyRoom> {
   const created = await fetch(`${DAILY_API}/rooms`, {
     method: "POST",
     headers: dailyHeaders(apiKey),
-    body: JSON.stringify({ name: ROOM_NAME, privacy: "private", properties: { max_participants: 10, enable_knocking: false, enable_chat: true, start_video_off: true, start_audio_off: true } }),
+    body: JSON.stringify({ name: ROOM_NAME, privacy: "private", properties: { max_participants: 100, enable_knocking: false, enable_chat: true, start_video_off: true, start_audio_off: true } }),
   });
   if (!created.ok) throw new Error("Daily room creation failed.");
   return (await created.json()) as DailyRoom;
@@ -73,12 +74,13 @@ export async function POST(request: Request) {
   const apiKey = process.env.DAILY_API_KEY?.trim();
   if (!apiKey) return Response.json({ message: "The Live House connection is not configured." }, { status: 503 });
   try {
-    const body = (await request.json().catch(() => ({}))) as { action?: LiveAction };
+    const body = (await request.json().catch(() => ({}))) as { action?: LiveAction; mode?: EntryMode };
     const action = body.action || "enter";
     const access = await staffAccess();
     const role = access?.role || null;
     const canControlLive = canControl(role);
     const canModerate = canControlLive || role === "moderator";
+    const entryMode: EntryMode = body.mode === "stage" && canModerate ? "stage" : "viewer";
 
     if (action === "start") {
       if (!canControlLive) return Response.json({ message: "Only a Zoo Crew owner or manager can start the live." }, { status: 403 });
@@ -99,11 +101,11 @@ export async function POST(request: Request) {
     const tokenResponse = await fetch(`${DAILY_API}/meeting-tokens`, {
       method: "POST",
       headers: dailyHeaders(apiKey),
-      body: JSON.stringify({ properties: { room_name: room.name, user_name: name.slice(0, 50), is_owner: canModerate, exp: expires } }),
+      body: JSON.stringify({ properties: { room_name: room.name, user_id: user.id, user_name: name.slice(0, 50), is_owner: canModerate, permissions: { canSend: entryMode === "viewer" ? [] : ["audio", "video"] }, exp: expires } }),
     });
     if (!tokenResponse.ok) throw new Error("Daily meeting token creation failed.");
     const token = (await tokenResponse.json()) as { token: string };
-    return Response.json({ roomUrl: `${room.url}?t=${encodeURIComponent(token.token)}`, name, profileImageUrl: imageUrl, isOwner: role === "owner", canModerate, canControlLive, role });
+    return Response.json({ roomUrl: `${room.url}?t=${encodeURIComponent(token.token)}`, name, profileImageUrl: imageUrl, isOwner: role === "owner", canModerate, canControlLive, entryMode, role });
   } catch (error) {
     console.error("Live House room error", error);
     return Response.json({ message: "The Live House could not open. Please try again." }, { status: 502 });
