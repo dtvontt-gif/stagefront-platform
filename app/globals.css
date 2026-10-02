@@ -90,16 +90,18 @@ body {
 }
 
 .zoo-anaconda-wrap, .zoo-lion-wrap { position: absolute; inset: 0; display: grid; place-items: center; }
-.zoo-anaconda-glow { position: absolute; width: min(82vw, 32rem); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(132,204,22,.24), transparent 64%); animation: zoo-breathe 1.1s ease-in-out infinite alternate; }
-.zoo-anaconda-svg { width: min(78%, 31rem); max-height: 72%; overflow: visible; filter: drop-shadow(0 16px 22px rgba(0,0,0,.85)); }
-.zoo-anaconda-shadow, .zoo-anaconda-body { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1020; stroke-dashoffset: 1020; }
-.zoo-anaconda-shadow { stroke: rgba(0,0,0,.75); stroke-width: 39; animation: zoo-snake-draw 2.45s .08s ease-in-out forwards; }
-.zoo-anaconda-body { stroke: url(#anaconda-scales); stroke-width: 29; animation: zoo-snake-draw 2.45s ease-in-out forwards; }
-.zoo-anaconda-head { opacity: 0; transform-origin: 199px 291px; animation: zoo-snake-head 800ms 2.15s cubic-bezier(.2,1.5,.4,1) forwards; }
-.zoo-anaconda-heart { position: absolute; color: #ef4444; font-size: clamp(3rem, 10vw, 6rem); opacity: 0; text-shadow: 0 0 28px rgba(239,68,68,.85); animation: zoo-heart-beat 1.2s 2.35s ease both; }
+.zoo-anaconda-glow { position: absolute; width: min(92vw, 39rem); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(244,180,0,.25) 0 18%, rgba(16,185,129,.18) 34%, transparent 68%); animation: zoo-breathe 1.05s ease-in-out infinite alternate; }
+.zoo-anaconda-art { position: relative; z-index: 3; width: min(93%, 39rem); height: min(88%, 39rem); object-fit: contain; opacity: 0; transform-origin: 50% 68%; filter: drop-shadow(0 18px 25px rgba(0,0,0,.9)) drop-shadow(0 0 20px rgba(16,185,129,.38)); animation: zoo-anaconda-arrive 4.45s cubic-bezier(.18,.8,.24,1) both; }
+.zoo-anaconda-orbit { position: absolute; z-index: 2; width: min(64vw, 24rem); aspect-ratio: 1; border: 2px solid rgba(255,216,107,.62); border-radius: 50%; opacity: 0; box-shadow: 0 0 22px rgba(244,180,0,.3), inset 0 0 22px rgba(16,185,129,.2); }
+.zoo-anaconda-orbit-one { animation: zoo-anaconda-orbit 2.3s .85s ease-out both; }
+.zoo-anaconda-orbit-two { animation: zoo-anaconda-orbit 2.3s 1.2s ease-out both reverse; }
+.zoo-anaconda-sheen { position: absolute; z-index: 4; width: 16%; height: 72%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent); opacity: 0; filter: blur(8px); rotate: 24deg; animation: zoo-anaconda-sheen 1.1s 1.75s ease-in-out both; }
+.zoo-anaconda-heart { position: absolute; z-index: 5; top: 37%; color: #ef4444; font-size: clamp(2.6rem, 9vw, 5.3rem); opacity: 0; text-shadow: 0 0 18px rgba(239,68,68,.9), 0 0 42px rgba(244,180,0,.58); animation: zoo-heart-beat 1.55s 2.35s ease both; }
 
-.zoo-lion-rays { position: absolute; width: min(78vw, 32rem); aspect-ratio: 1; border-radius: 50%; background: repeating-conic-gradient(from 0deg, rgba(244,180,0,.36) 0 4deg, transparent 4deg 18deg); opacity: 0; animation: zoo-rays 3.1s .35s ease-out both; mask-image: radial-gradient(circle, transparent 0 28%, #000 29% 72%, transparent 73%); }
-.zoo-lion-face { position: relative; z-index: 4; font-size: clamp(7rem, 30vw, 16rem); line-height: 1; filter: drop-shadow(0 20px 25px rgba(0,0,0,.85)) drop-shadow(0 0 28px rgba(244,180,0,.42)); animation: zoo-lion-roar 3.25s cubic-bezier(.2,.8,.3,1) both; }
+.zoo-lion-wrap { animation: zoo-room-shake .58s 1.25s ease-in-out both; }
+.zoo-lion-smoke { position: absolute; z-index: 1; bottom: 5%; width: 92%; height: 58%; background: radial-gradient(ellipse at 24% 75%,rgba(255,255,255,.22),transparent 30%),radial-gradient(ellipse at 70% 72%,rgba(244,180,0,.2),transparent 34%),radial-gradient(ellipse at 50% 88%,rgba(255,255,255,.16),transparent 42%); opacity: 0; filter: blur(18px); animation: zoo-smoke-rise 4.5s ease-out both; }
+.zoo-lion-rays { position: absolute; z-index: 2; width: min(92vw, 39rem); aspect-ratio: 1; border-radius: 50%; background: repeating-conic-gradient(from 0deg, rgba(244,180,0,.45) 0 4deg, transparent 4deg 16deg); opacity: 0; animation: zoo-rays 4.1s .28s ease-out both; mask-image: radial-gradient(circle, transparent 0 28%, #000 29% 72%, transparent 73%); }
+.zoo-lion-art { position: relative; z-index: 4; width: min(96%, 42rem); height: min(94%, 42rem); object-fit: contain; opacity: 0; transform-origin: 50% 62%; filter: drop-shadow(0 24px 28px rgba(0,0,0,.9)) drop-shadow(0 0 32px rgba(244,180,0,.52)); animation: zoo-lion-cinematic 4.75s cubic-bezier(.18,.78,.24,1) both; }
 .zoo-roar-word { position: absolute; z-index: 5; top: 62%; color: #fff3b0; font-family: "Arial Black", sans-serif; font-size: clamp(2rem, 9vw, 5.5rem); font-style: italic; font-weight: 950; letter-spacing: -.08em; opacity: 0; text-shadow: 0 5px 0 #7c2d12, 0 0 22px #f59e0b; -webkit-text-stroke: 1px #7c2d12; animation: zoo-roar-word 1.5s 1.05s ease-out both; }
 .zoo-roar-ring { position: absolute; width: 8rem; height: 8rem; border: 4px solid rgba(255,211,75,.72); border-radius: 50%; opacity: 0; }
 .zoo-roar-ring-one { animation: zoo-roar-ring 1.6s .85s ease-out both; }
@@ -112,11 +114,14 @@ body {
 @keyframes zoo-caption { 0% { opacity: 0; transform: translate(-50%, 24px) scale(.88); } 12%, 82% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -12px) scale(.96); } }
 @keyframes zoo-paw-stamp { 0% { opacity: 0; scale: 2.2; } 25% { opacity: 1; scale: .86; } 38%, 72% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: .75; translate: 0 -32px; } }
 @keyframes zoo-paw-ring { 0% { opacity: 1; box-shadow: 0 0 0 0 rgba(244,180,0,.65); } 100% { opacity: 0; box-shadow: 0 0 0 180px rgba(244,180,0,0); } }
-@keyframes zoo-snake-draw { to { stroke-dashoffset: 0; } }
-@keyframes zoo-snake-head { 0% { opacity: 0; scale: .25; rotate: -50deg; } 100% { opacity: 1; scale: 1; rotate: 0deg; } }
+@keyframes zoo-anaconda-arrive { 0% { opacity: 0; scale: .12; translate: 0 58%; rotate: -18deg; } 18% { opacity: 1; scale: .58; translate: 0 24%; rotate: 8deg; } 42% { opacity: 1; scale: 1.08; translate: 0 -1%; rotate: -2deg; } 56% { scale: .96; rotate: 1deg; } 72%, 88% { opacity: 1; scale: 1; translate: 0 0; rotate: 0deg; } 100% { opacity: 0; scale: 1.1; translate: 0 -5%; } }
+@keyframes zoo-anaconda-orbit { 0% { opacity: 0; scale: .2; rotate: -60deg; } 28% { opacity: .9; } 100% { opacity: 0; scale: 1.7; rotate: 80deg; } }
+@keyframes zoo-anaconda-sheen { 0% { opacity: 0; translate: -230% 0; } 30% { opacity: .8; } 100% { opacity: 0; translate: 250% 0; } }
 @keyframes zoo-heart-beat { 0% { opacity: 0; scale: .3; } 30% { opacity: 1; scale: 1.18; } 48% { scale: .92; } 68% { scale: 1.08; } 100% { opacity: 1; scale: 1; } }
 @keyframes zoo-breathe { from { scale: .88; opacity: .4; } to { scale: 1.08; opacity: 1; } }
-@keyframes zoo-lion-roar { 0% { opacity: 0; scale: .3; rotate: -8deg; } 24% { opacity: 1; scale: 1.05; rotate: 3deg; } 42% { scale: .94; rotate: -2deg; } 55% { scale: 1.18; rotate: 2deg; } 64% { scale: 1.04; rotate: 0deg; } 88% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 1.22; } }
+@keyframes zoo-lion-cinematic { 0% { opacity: 0; scale: .34; translate: 0 42%; } 19% { opacity: .68; scale: .67; translate: 0 16%; } 34% { opacity: 1; scale: 1.03; translate: 0 0; } 48% { scale: .94; } 59% { scale: 1.16; } 68% { scale: 1.02; } 88% { opacity: 1; scale: 1.05; } 100% { opacity: 0; scale: 1.28; } }
+@keyframes zoo-room-shake { 0%,100% { translate: 0 0; } 15% { translate: -5px 2px; } 30% { translate: 6px -2px; } 45% { translate: -4px -1px; } 60% { translate: 4px 2px; } 75% { translate: -2px 0; } }
+@keyframes zoo-smoke-rise { 0% { opacity: 0; scale: .6; translate: 0 24%; } 25%,70% { opacity: .72; } 100% { opacity: 0; scale: 1.35; translate: 0 -18%; } }
 @keyframes zoo-rays { 0% { opacity: 0; scale: .45; rotate: 0deg; } 28%, 78% { opacity: .7; } 100% { opacity: 0; scale: 1.18; rotate: 35deg; } }
 @keyframes zoo-roar-word { 0% { opacity: 0; scale: .2; translate: 0 24px; } 32% { opacity: 1; scale: 1.18; } 55% { scale: .95; } 80% { opacity: 1; } 100% { opacity: 0; scale: 1.08; translate: 0 -20px; } }
 @keyframes zoo-roar-ring { 0% { opacity: .8; scale: .55; } 100% { opacity: 0; scale: 3.7; } }

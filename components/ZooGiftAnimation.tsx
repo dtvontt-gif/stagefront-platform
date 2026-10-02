@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 export type ZooGiftId = "paw" | "anaconda" | "lion";
 
 export type ActiveZooGift = {
@@ -10,8 +12,8 @@ export type ActiveZooGift = {
 
 export const zooGiftCatalog: Record<ZooGiftId, { name: string; icon: string; futurePrice: string; duration: number }> = {
   paw: { name: "Zoo Paw", icon: "🐾", futurePrice: "$0.10", duration: 2200 },
-  anaconda: { name: "Anaconda Heart", icon: "🐍", futurePrice: "$3.00", duration: 4300 },
-  lion: { name: "King’s Roar", icon: "🦁", futurePrice: "$10.00", duration: 4300 },
+  anaconda: { name: "Anaconda Heart", icon: "🐍", futurePrice: "$3.00", duration: 4800 },
+  lion: { name: "King’s Roar", icon: "🦁", futurePrice: "$10.00", duration: 5200 },
 };
 
 function GiftCaption({ gift }: { gift: ActiveZooGift }) {
@@ -56,27 +58,10 @@ function AnacondaAnimation() {
   return (
     <div className="zoo-anaconda-wrap">
       <div className="zoo-anaconda-glow" />
-      <svg className="zoo-anaconda-svg" viewBox="0 0 400 340" role="img" aria-label="Anaconda curling into a heart">
-        <defs>
-          <linearGradient id="anaconda-scales" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#d9f99d" />
-            <stop offset="0.38" stopColor="#65a30d" />
-            <stop offset="0.72" stopColor="#14532d" />
-            <stop offset="1" stopColor="#f4b400" />
-          </linearGradient>
-          <filter id="anaconda-shadow">
-            <feDropShadow dx="0" dy="8" stdDeviation="8" floodColor="#000" floodOpacity=".7" />
-          </filter>
-        </defs>
-        <path className="zoo-anaconda-shadow" d="M200 292 C174 267 63 193 63 112 C63 40 157 28 200 100 C243 28 337 40 337 112 C337 193 226 267 200 292" />
-        <path className="zoo-anaconda-body" d="M200 292 C174 267 63 193 63 112 C63 40 157 28 200 100 C243 28 337 40 337 112 C337 193 226 267 200 292" />
-        <g className="zoo-anaconda-head" filter="url(#anaconda-shadow)">
-          <ellipse cx="199" cy="291" rx="27" ry="20" fill="#84cc16" stroke="#f4b400" strokeWidth="3" />
-          <circle cx="190" cy="287" r="3.5" fill="#050705" />
-          <circle cx="208" cy="287" r="3.5" fill="#050705" />
-          <path d="M199 298 l-7 8 M199 298 l7 8" fill="none" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" />
-        </g>
-      </svg>
+      <div className="zoo-anaconda-orbit zoo-anaconda-orbit-one" />
+      <div className="zoo-anaconda-orbit zoo-anaconda-orbit-two" />
+      <Image className="zoo-anaconda-art" src="/images/zoo-crew/gifts/anaconda-heart-v2.webp" width={1024} height={1024} priority alt="Albino anaconda curling into a heart" />
+      <div className="zoo-anaconda-sheen" />
       <div className="zoo-anaconda-heart">♥</div>
     </div>
   );
@@ -85,11 +70,12 @@ function AnacondaAnimation() {
 function LionAnimation() {
   return (
     <div className="zoo-lion-wrap">
+      <div className="zoo-lion-smoke" />
       <div className="zoo-roar-ring zoo-roar-ring-one" />
       <div className="zoo-roar-ring zoo-roar-ring-two" />
       <div className="zoo-roar-ring zoo-roar-ring-three" />
       <div className="zoo-lion-rays" />
-      <div className="zoo-lion-face" aria-label="Roaring lion" role="img">🦁</div>
+      <Image className="zoo-lion-art" src="/images/zoo-crew/gifts/kings-roar-v2.webp" width={1024} height={1024} priority alt="Cinematic roaring lion" />
       <div className="zoo-roar-word">ROAR!</div>
       {Array.from({ length: 12 }).map((_, index) => <i key={index} className={`zoo-gold-spark zoo-gold-spark-${index + 1}`} />)}
     </div>
