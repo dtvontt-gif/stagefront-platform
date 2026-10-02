@@ -14,6 +14,7 @@ export default function LiveHouse() {
   const [staffRole, setStaffRole] = useState<string | null>(null);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [canControlLive, setCanControlLive] = useState(false);
+  const [entryMode, setEntryMode] = useState<"viewer" | "stage">("viewer");
 
   useEffect(() => {
     if (state === "ready" || state === "opening") return;
@@ -49,10 +50,10 @@ export default function LiveHouse() {
     };
   }, [state]);
 
-  async function enterRoom() {
+  async function enterRoom(requestedMode: "viewer" | "stage" = "viewer") {
     setState("opening");
     setMessage("");
-    try {
+    if (requestedMode === "stage") try {
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error("Camera and microphone access are not supported in this browser. Open StageFront directly in Safari or Chrome.");
       }
@@ -69,8 +70,8 @@ export default function LiveHouse() {
       setMessage(permissionMessage);
       return;
     }
-    const response = await fetch("/api/live/room", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "enter" }) });
-    const result = (await response.json().catch(() => ({}))) as { roomUrl?: string; message?: string; isOwner?: boolean; canModerate?: boolean; canControlLive?: boolean; role?: string | null; profileImageUrl?: string | null };
+    const response = await fetch("/api/live/room", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "enter", mode: requestedMode }) });
+    const result = (await response.json().catch(() => ({}))) as { roomUrl?: string; message?: string; isOwner?: boolean; canModerate?: boolean; canControlLive?: boolean; entryMode?: "viewer" | "stage"; role?: string | null; profileImageUrl?: string | null };
     if (!response.ok || !result.roomUrl) {
       setState("error");
       setMessage(result.message || "The Live House could not open.");
@@ -82,6 +83,7 @@ export default function LiveHouse() {
     setCanControlLive(Boolean(result.canControlLive));
     setStaffRole(result.role || null);
     setProfileImageUrl(result.profileImageUrl || null);
+    setEntryMode(result.entryMode || "viewer");
     setState("ready");
   }
 
@@ -96,7 +98,7 @@ export default function LiveHouse() {
       return;
     }
     setState("live");
-    await enterRoom();
+    await enterRoom("stage");
   }
 
   async function endLive() {
@@ -110,7 +112,7 @@ export default function LiveHouse() {
   if (state === "ready") {
     return (
       <section className="fixed inset-0 z-[100] h-dvh overflow-hidden bg-black">
-        <ZooLiveRoom roomUrl={roomUrl} isOwner={owner} canModerate={canModerate} canControlLive={canControlLive} staffRole={staffRole} profileImageUrl={profileImageUrl} onEndLive={endLive} />
+        <ZooLiveRoom roomUrl={roomUrl} isOwner={owner} canModerate={canModerate} canControlLive={canControlLive} initialMode={entryMode} staffRole={staffRole} profileImageUrl={profileImageUrl} onEndLive={endLive} />
       </section>
     );
   }
@@ -128,7 +130,7 @@ export default function LiveHouse() {
             <h1 className="mt-4 font-display text-4xl font-black uppercase sm:text-6xl">Zoo Crew Live House</h1>
             <p className="mt-3 max-w-3xl text-white/60">Step up to the glass and enter the official nighttime habitat of the Zoo Crew family.</p>
           </div>
-          {state === "live" ? <button onClick={enterRoom} className="primary-cta">Enter live</button> : canControlLive ? <button onClick={startLive} disabled={state === "opening" || state === "checking"} className="primary-cta disabled:opacity-50">{state === "opening" ? "Starting live…" : "Start Live"}</button> : null}
+          {state === "live" ? <button onClick={() => enterRoom(canModerate ? "stage" : "viewer")} className="primary-cta">{canModerate ? "Enter host stage" : "Watch live"}</button> : canControlLive ? <button onClick={startLive} disabled={state === "opening" || state === "checking"} className="primary-cta disabled:opacity-50">{state === "opening" ? "Starting live…" : "Start Live"}</button> : null}
         </header>
 
         <div className="relative grid min-h-[72vh] place-items-center overflow-hidden rounded-[2.5rem] border-[12px] border-[#20170c] bg-[#020706] p-8 text-center shadow-[0_0_0_2px_rgba(244,180,0,.28),0_35px_90px_rgba(0,0,0,.8)]">
@@ -157,8 +159,8 @@ export default function LiveHouse() {
               <h2 className="mt-6 font-display text-3xl font-black uppercase">{state === "live" ? "The Zoo Crew is live" : state === "checking" ? "Checking the habitat" : "The live is offline"}</h2>
               <p className="mt-3 leading-7 text-white/60">{state === "live" ? "The owners have opened the habitat. Enter when you are ready; your camera and mic begin off." : canControlLive ? "The habitat stays closed until an owner starts the live. Press Start Live when the crew is ready." : "Nobody can enter a box until a Zoo Crew owner starts the live. This page checks automatically, so you can stay right here."}</p>
               {state === "error" ? <div className="mt-5 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-200">{message}{message.toLowerCase().includes("sign in") ? <a className="ml-2 font-black underline" href="/sign-in?next=/live">Sign in</a> : null}</div> : null}
-              {state === "live" ? <button onClick={enterRoom} className="mt-7 rounded-full bg-[#f4b400] px-7 py-3.5 font-black text-black">Enter the Zoo Crew Live</button> : canControlLive ? <button onClick={startLive} disabled={state === "opening" || state === "checking"} className="mt-7 rounded-full bg-[#f4b400] px-7 py-3.5 font-black text-black disabled:opacity-50">{state === "opening" ? "Starting the live…" : "Start Zoo Crew Live"}</button> : null}
-              <p className="mt-4 text-xs uppercase tracking-[.15em] text-white/35">Private exhibit · Up to 10 inside · Owners manage the habitat</p>
+              {state === "live" ? <div className="mt-7 flex flex-col justify-center gap-2 sm:flex-row"><button onClick={() => enterRoom("viewer")} className="rounded-full bg-[#f4b400] px-7 py-3.5 font-black text-black">Watch & Comment</button>{canModerate ? <button onClick={() => enterRoom("stage")} className="rounded-full border border-[#f4b400]/45 bg-black/50 px-7 py-3.5 font-black text-[#f4b400]">Enter Host Stage</button> : null}</div> : canControlLive ? <button onClick={startLive} disabled={state === "opening" || state === "checking"} className="mt-7 rounded-full bg-[#f4b400] px-7 py-3.5 font-black text-black disabled:opacity-50">{state === "opening" ? "Starting the live…" : "Start Zoo Crew Live"}</button> : null}
+              <p className="mt-4 text-xs uppercase tracking-[.15em] text-white/35">Viewer lobby · Up to 100 inside · Hosts manage the stage</p>
             </div>
         </div>
       </div>
