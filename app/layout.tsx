@@ -6,6 +6,13 @@ export const metadata: Metadata = {
   title: "StageFront | Home of Zoo Crew Vibe",
   description:
     "StageFront is the independent home of Zoo Crew Vibe across TikTok, GoLive Streamers, and Echo Live—plus music, creators, and community.",
+  manifest: "/manifest.webmanifest",
+  applicationName: "Zoo Crew Vibe",
+  appleWebApp: {
+    capable: true,
+    title: "Zoo Crew Vibe",
+    statusBarStyle: "black-translucent",
+  },
   icons: {
     icon: [
       { url: "/images/favicons/favicon.ico" },
@@ -20,7 +27,7 @@ export const metadata: Metadata = {
         sizes: "16x16",
       },
     ],
-    apple: "/images/favicons/apple-touch-icon.png",
+    apple: "/images/zoo-crew/zoo-crew-vibe-house-gate.png",
   },
 };
 

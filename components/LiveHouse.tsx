@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ZooLiveRoom from "@/components/ZooLiveRoom";
+import InstallZooCrewApp from "@/components/InstallZooCrewApp";
 
 type RoomState = "checking" | "offline" | "live" | "opening" | "ready" | "error";
 
@@ -135,7 +136,7 @@ export default function LiveHouse() {
             <h1 className="mt-4 font-display text-4xl font-black uppercase sm:text-6xl">Zoo Crew Live House</h1>
             <p className="mt-3 max-w-3xl text-white/60">Step up to the glass and enter the official nighttime habitat of the Zoo Crew family.</p>
           </div>
-          {state === "live" ? <button onClick={() => enterRoom(canModerate ? "stage" : "viewer")} className="primary-cta">{canModerate ? "Enter host stage" : "Watch live"}</button> : canControlLive ? <button onClick={startLive} disabled={state === "opening" || state === "checking"} className="primary-cta disabled:opacity-50">{state === "opening" ? "Starting live…" : "Start Live"}</button> : null}
+          <div className="flex flex-wrap items-center gap-2"><InstallZooCrewApp />{state === "live" ? <button onClick={() => enterRoom(canModerate ? "stage" : "viewer")} className="primary-cta">{canModerate ? "Enter host stage" : "Watch live"}</button> : canControlLive ? <button onClick={startLive} disabled={state === "opening" || state === "checking"} className="primary-cta disabled:opacity-50">{state === "opening" ? "Starting live…" : "Start Live"}</button> : null}</div>
         </header>
 
         <div className="relative grid min-h-[72vh] place-items-center overflow-hidden rounded-[2.5rem] border-[12px] border-[#20170c] bg-[#020706] p-8 text-center shadow-[0_0_0_2px_rgba(244,180,0,.28),0_35px_90px_rgba(0,0,0,.8)]">
