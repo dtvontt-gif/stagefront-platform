@@ -84,7 +84,7 @@ export async function POST(request: Request) {
     const access = await staffAccess();
     const role = access?.role || null;
     const canControlLive = canControl(role);
-    const canModerate = canControlLive || role === "moderator";
+    const canModerate = role === "owner" || role === "moderator";
     const entryMode: EntryMode = body.mode === "stage" && canModerate ? "stage" : "viewer";
 
     if (action === "start") {
