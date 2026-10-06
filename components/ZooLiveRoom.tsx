@@ -147,6 +147,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
   const [liveSafety, setLiveSafety] = useState<LiveSafety>({ canModerate: false, isOwner: false, moderators: [], restrictions: [] });
   const liveSafetyRef = useRef<LiveSafety>({ canModerate: false, isOwner: false, moderators: [], restrictions: [] });
   const [reportReason, setReportReason] = useState("");
+  const [reportTarget, setReportTarget] = useState<ChatMessage | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportInboxOpen, setReportInboxOpen] = useState(false);
   const [reports, setReports] = useState<LiveReport[]>([]);
@@ -574,13 +575,13 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
   function deleteComment(commentId: string) {
     const localId = participants.local?.session_id;
     const target = messages.find((item) => item.id === commentId);
-    if (!canModerate && target?.senderId !== localId) return;
+    if (!canModerateNow && target?.senderId !== localId) return;
     setMessages((current) => current.filter((item) => item.id !== commentId));
     callRef.current?.sendAppMessage({ kind: "comment-delete", commentId } satisfies RoomMessage, "*");
   }
 
   function pinComment(commentId: string) {
-    if (!canModerate) return;
+    if (!canModerateNow) return;
     const next = pinnedCommentId === commentId ? null : commentId;
     setPinnedCommentId(next);
     callRef.current?.sendAppMessage({ kind: "comment-pin", commentId: next } satisfies RoomMessage, "*");
@@ -602,6 +603,76 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
   function replyFromMenu(comment: ChatMessage) {
     setReplyTo({ id: comment.id, name: comment.name, body: comment.body });
     setCommentMenuId(null);
+  }
+
+  async function postSafetyAction(action: string, targetUserId: string, extra: Record<string, unknown> = {}) {
+    const response = await fetch("/api/live/safety", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, targetUserId, ...extra }),
+    });
+    const data = await response.json().catch(() => ({})) as { message?: string };
+    if (!response.ok) throw new Error(data.message || "Live safety change failed.");
+    const refresh = await fetch("/api/live/safety", { cache: "no-store" });
+    if (refresh.ok) {
+      const safety = await refresh.json() as LiveSafety;
+      safety.restrictions = (safety.restrictions || []).filter((item) => !item.expires_at || new Date(item.expires_at).getTime() > Date.now());
+      liveSafetyRef.current = safety;
+      moderatorIdsRef.current = new Set(safety.moderators || []);
+      commentMutedIdsRef.current = new Set(safety.restrictions.filter((item) => item.restriction === "comment_mute").map((item) => item.user_id));
+      setLiveSafety(safety);
+    }
+    if (action === "block") {
+      callRef.current?.sendAppMessage({ kind: "live-block", userId: targetUserId } as RoomMessage, "*");
+    }
+    setStatus(action === "assign_moderator" ? "Live moderator added." : action === "revoke_moderator" ? "Live moderator removed." : action === "comment_mute" ? "Comments muted for this live." : action === "unmute" ? "Comments restored for this live." : action === "block" ? "Access blocked for this live." : "Live block removed.");
+  }
+
+  async function submitLiveReport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!reportTarget) return;
+    try {
+      const response = await fetch("/api/live/safety", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "report", targetUserId: reportTarget.userId, targetName: reportTarget.name, commentId: reportTarget.id, commentBody: reportTarget.body, reason: reportReason }),
+      });
+      const data = await response.json().catch(() => ({})) as { message?: string };
+      if (!response.ok) throw new Error(data.message || "Your report could not be sent.");
+      setReportOpen(false);
+      setReportTarget(null);
+      setReportReason("");
+      setStatus("Your report was sent privately to the Zoo Crew owners.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Your report could not be sent.");
+    }
+  }
+
+  async function loadReportInbox() {
+    try {
+      const response = await fetch("/api/live/safety?view=reports", { cache: "no-store" });
+      const data = await response.json().catch(() => ({})) as { reports?: LiveReport[]; message?: string };
+      if (!response.ok) throw new Error(data.message || "The report inbox could not be loaded.");
+      setReports(data.reports || []);
+      setReportInboxOpen(true);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "The report inbox could not be loaded.");
+    }
+  }
+
+  async function setReportStatus(reportId: string, status: "reviewed" | "actioned" | "dismissed") {
+    try {
+      const response = await fetch("/api/live/safety", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "report_status", reportId, status }),
+      });
+      const data = await response.json().catch(() => ({})) as { message?: string };
+      if (!response.ok) throw new Error(data.message || "Report status could not be updated.");
+      await loadReportInbox();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Report status could not be updated.");
+    }
   }
 
   async function requestStage() {
