@@ -156,3 +156,5 @@ $$;
 
 revoke all on function public.zoo_live_fulfill_coin_order(text, text, integer) from public, anon, authenticated;
 revoke all on function public.zoo_live_spend_gift_coins(uuid, text, text, text) from public, anon, authenticated;
+grant execute on function public.zoo_live_fulfill_coin_order(text, text, integer) to service_role;
+grant execute on function public.zoo_live_spend_gift_coins(uuid, text, text, text) to service_role;
