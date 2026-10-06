@@ -162,7 +162,7 @@ create or replace function public.zoo_live_refund_gift_coins(
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
   v_delta bigint;
   v_balance bigint;
@@ -193,7 +193,7 @@ begin
 
   return coalesce(v_balance, 0);
 end;
-$;
+$$;
 
 revoke all on function public.zoo_live_fulfill_coin_order(text, text, integer) from public, anon, authenticated;
 revoke all on function public.zoo_live_spend_gift_coins(uuid, text, text, text) from public, anon, authenticated;
