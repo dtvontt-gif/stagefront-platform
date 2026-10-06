@@ -12,6 +12,7 @@ type RoomMessage =
   | { kind: "comment-like"; commentId: string }
   | { kind: "comment-delete"; commentId: string }
   | { kind: "comment-pin"; commentId: string | null }
+  | { kind: "live-block"; userId: string }
   | { kind: "stage-request"; sessionId: string; name: string }
   | { kind: "stage-approve"; sessionId: string }
   | { kind: "stage-invite"; sessionId: string; inviterSessionId: string }
@@ -245,6 +246,10 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
         const sender = Object.values(call?.participants() || {}).find((person) => person.session_id === event.fromId);
         const senderData = sender?.userData && typeof sender.userData === "object" ? sender.userData as Record<string, unknown> : {};
         const senderCanModerate = Boolean(sender?.owner) || moderatorIdsRef.current.has(sender?.user_id || "");
+        if (data?.kind === "live-block" && senderCanModerate && data.userId === call?.participants().local?.user_id) {
+          setStatus("You are blocked from this live.");
+          void call?.leave().catch(() => undefined).finally(() => window.location.assign("/live?blocked=1"));
+        }
         if (data?.kind === "comment" && typeof data.body === "string" && !commentMutedIdsRef.current.has(sender?.user_id || "")) {
           setMessages((current) => [...current.slice(-99), { id: data.id, name: sender?.user_name || "Guest", body: data.body.slice(0, 180), createdAt: data.createdAt, senderId: sender?.session_id, userId: sender?.user_id, username: typeof senderData.username === "string" ? senderData.username : undefined, profileImageUrl: typeof senderData.profileImageUrl === "string" ? senderData.profileImageUrl : undefined, role: typeof senderData.role === "string" ? senderData.role : undefined, replyTo: data.replyTo, likes: 0 }]);
         }
@@ -894,8 +899,12 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
             <button type="button" onClick={() => replyFromMenu(menuComment)} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">↩ Reply</button>
             <button type="button" onClick={() => { likeComment(menuComment.id); setCommentMenuId(null); }} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">♥ Like{menuComment.likes ? ` · ${menuComment.likes}` : ""}</button>
             {menuComment.username ? <a href={`/singers/${encodeURIComponent(menuComment.username)}`} className="rounded-2xl bg-white/10 px-4 py-4 text-center text-sm font-black text-white">👤 View Profile</a> : <button type="button" disabled className="rounded-2xl bg-white/5 px-4 py-4 text-sm font-black text-white/30">👤 Profile unavailable</button>}
-            {canModerate ? <button type="button" onClick={() => { pinComment(menuComment.id); setCommentMenuId(null); }} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">📌 {pinnedCommentId === menuComment.id ? "Unpin" : "Pin"}</button> : null}
-            {canModerate || menuComment.senderId === participants.local?.session_id ? <button type="button" onClick={() => { deleteComment(menuComment.id); setCommentMenuId(null); }} className="col-span-2 rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-4 text-sm font-black text-red-200">Delete Comment</button> : null}
+            {isOwnerNow && menuComment.userId && menuComment.role !== "owner" ? <button type="button" onClick={() => { void postSafetyAction(liveSafety.moderators.includes(menuComment.userId!) ? "revoke_moderator" : "assign_moderator", menuComment.userId!).catch((error) => setStatus(error.message)); setCommentMenuId(null); }} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">{liveSafety.moderators.includes(menuComment.userId) ? "Remove Live Moderator" : "Make Live Moderator"}</button> : null}
+            {canModerateNow && menuComment.userId && menuComment.role !== "owner" ? <button type="button" onClick={() => { const muted = liveSafety.restrictions.some((item) => item.user_id === menuComment.userId && item.restriction === "comment_mute"); void postSafetyAction(muted ? "unmute" : "comment_mute", menuComment.userId!).catch((error) => setStatus(error.message)); setCommentMenuId(null); }} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">{liveSafety.restrictions.some((item) => item.user_id === menuComment.userId && item.restriction === "comment_mute") ? "Unmute Comments" : "Mute Comments"}</button> : null}
+            {canModerateNow && menuComment.userId && menuComment.role !== "owner" ? <button type="button" onClick={() => { const blocked = liveSafety.restrictions.some((item) => item.user_id === menuComment.userId && item.restriction === "blocked"); void postSafetyAction(blocked ? "unblock" : "block", menuComment.userId!).catch((error) => setStatus(error.message)); setCommentMenuId(null); }} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">{liveSafety.restrictions.some((item) => item.user_id === menuComment.userId && item.restriction === "blocked") ? "Unblock From Live" : "Block From Live"}</button> : null}
+            {canModerateNow ? <button type="button" onClick={() => { pinComment(menuComment.id); setCommentMenuId(null); }} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">📌 {pinnedCommentId === menuComment.id ? "Unpin" : "Pin"}</button> : null}
+            <button type="button" onClick={() => { setReportTarget(menuComment); setReportOpen(true); setReportReason(""); setCommentMenuId(null); }} className="rounded-2xl border border-amber-400/25 bg-amber-500/10 px-4 py-4 text-sm font-black text-amber-100">⚑ Report to Owners</button>
+            {canModerateNow || menuComment.senderId === participants.local?.session_id ? <button type="button" onClick={() => { deleteComment(menuComment.id); setCommentMenuId(null); }} className="col-span-2 rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-4 text-sm font-black text-red-200">Delete Comment</button> : null}
           </div>
           <button type="button" onClick={() => setCommentMenuId(null)} className="mx-auto mt-3 block w-full max-w-lg rounded-2xl bg-white/[.06] px-4 py-3 text-sm font-bold text-white/60">Cancel</button>
         </div>
