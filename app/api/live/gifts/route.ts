@@ -6,10 +6,32 @@ const ROOM_PREFIX = "zoo-crew-vibe-live-";
 const COSTS = { paw: 10, anaconda: 300, lion: 1000 } as const;
 type GiftId = keyof typeof COSTS;
 
+function serviceHeaders(key: string) {
+  return { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
+}
+
+async function refundGift(db: NonNullable<ReturnType<typeof serviceConfiguration>>, userId: string, eventId: string) {
+  return fetch(db.url + "/rest/v1/rpc/zoo_live_refund_gift_coins", {
+    method: "POST",
+    headers: serviceHeaders(db.serviceKey),
+    body: JSON.stringify({ p_user_id: userId, p_event_id: eventId }),
+  });
+}
+
+async function verifiedSenderName(db: NonNullable<ReturnType<typeof serviceConfiguration>>, userId: string) {
+  const query = new URLSearchParams({ select: "display_name,username", user_id: "eq." + userId, limit: "1" });
+  const response = await fetch(db.url + "/rest/v1/stagefront_profiles?" + query, {
+    headers: serviceHeaders(db.serviceKey), cache: "no-store",
+  });
+  if (!response.ok) return "Zoo Crew fan";
+  const [profile] = await response.json() as { display_name?: string; username?: string }[];
+  return (profile?.display_name || profile?.username || "Zoo Crew fan").trim().slice(0, 50) || "Zoo Crew fan";
+}
+
 export async function POST(request: Request) {
   const user = await authenticatedUser();
   if (!user) return Response.json({ message: "Sign in before sending gifts." }, { status: 401 });
-  const body = await request.json().catch(() => ({})) as { giftId?: string; eventId?: string; senderName?: string };
+  const body = await request.json().catch(() => ({})) as { giftId?: string; eventId?: string };
   if (!(body.giftId && body.giftId in COSTS) || !body.eventId || !/^[0-9a-f-]{36}$/i.test(body.eventId)) {
     return Response.json({ message: "Invalid gift request." }, { status: 400 });
   }
@@ -37,15 +59,25 @@ export async function POST(request: Request) {
       return Response.json({ message: errorText.includes("Insufficient coins") ? "Not enough coins for that gift." : "Gift could not be charged." }, { status: errorText.includes("Insufficient coins") ? 409 : 502 });
     }
     const balance = Number(await spend.json());
-    const senderName = String(body.senderName || user.email?.split("@")[0] || "Zoo Crew fan").trim().slice(0, 50) || "Zoo Crew fan";
-    const broadcast = await fetch(DAILY_API + "/rooms/" + encodeURIComponent(room.name) + "/send-app-message", {
-      method: "POST",
-      headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ data: { kind: "gift", giftId, eventId: body.eventId, senderName }, recipient: "*" }),
-    });
-    if (!broadcast.ok) {
-      console.error("Paid Zoo gift was charged but its animation broadcast failed", { eventId: body.eventId, status: broadcast.status });
-      return Response.json({ message: "Coins were charged, but the animation did not reach the live. Contact a Zoo Crew owner with event ID " + body.eventId + ".", eventId: body.eventId, balance }, { status: 502 });
+    const senderName = await verifiedSenderName(db, user.id);
+    let broadcast: Response | null = null;
+    try {
+      broadcast = await fetch(DAILY_API + "/rooms/" + encodeURIComponent(room.name) + "/send-app-message", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ data: { kind: "gift", giftId, eventId: body.eventId, senderName }, recipient: "*" }),
+      });
+    } catch (error) {
+      console.error("Zoo gift animation request failed", error);
+    }
+    if (!broadcast?.ok) {
+      const refund = await refundGift(db, user.id, body.eventId);
+      if (refund.ok) {
+        const newBalance = Number(await refund.json());
+        return Response.json({ message: "The gift did not reach the live, so the coins were returned.", eventId: body.eventId, balance: newBalance }, { status: 502 });
+      }
+      console.error("Zoo gift failed and automatic refund could not be confirmed", { eventId: body.eventId, status: broadcast?.status });
+      return Response.json({ message: "Gift delivery failed and the automatic refund could not be confirmed. Contact a Zoo Crew owner with event ID " + body.eventId + ".", eventId: body.eventId, balance }, { status: 502 });
     }
     return Response.json({ sent: true, balance, coinsSpent: COSTS[giftId] });
   } catch (error) {
