@@ -22,7 +22,7 @@ create table if not exists public.zoo_live_coin_ledger (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   delta_coins bigint not null check (delta_coins <> 0),
-  event_type text not null check (event_type in ('purchase','gift')),
+  event_type text not null check (event_type in ('purchase','gift','refund')),
   provider_event_id text not null unique,
   details jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
@@ -154,7 +154,50 @@ begin
 end;
 $$;
 
+
+create or replace function public.zoo_live_refund_gift_coins(
+  p_user_id uuid,
+  p_event_id text
+) returns bigint
+language plpgsql
+security definer
+set search_path = ''
+as $
+declare
+  v_delta bigint;
+  v_balance bigint;
+  v_refund_id uuid;
+begin
+  select delta_coins into v_delta
+  from public.zoo_live_coin_ledger
+  where provider_event_id = 'gift:' || p_event_id and user_id = p_user_id
+  for update;
+
+  if not found or v_delta >= 0 then raise exception 'Unknown gift debit'; end if;
+
+  insert into public.zoo_live_coin_ledger(user_id, delta_coins, event_type, provider_event_id, details)
+  values (p_user_id, -v_delta, 'refund', 'gift-refund:' || p_event_id,
+    jsonb_build_object('original_event_id', 'gift:' || p_event_id))
+  on conflict (provider_event_id) do nothing
+  returning id into v_refund_id;
+
+  if v_refund_id is not null then
+    update public.zoo_live_coin_wallets
+    set balance_coins = balance_coins - v_delta, updated_at = now()
+    where user_id = p_user_id
+    returning balance_coins into v_balance;
+  else
+    select balance_coins into v_balance
+    from public.zoo_live_coin_wallets where user_id = p_user_id;
+  end if;
+
+  return coalesce(v_balance, 0);
+end;
+$;
+
 revoke all on function public.zoo_live_fulfill_coin_order(text, text, integer) from public, anon, authenticated;
 revoke all on function public.zoo_live_spend_gift_coins(uuid, text, text, text) from public, anon, authenticated;
+revoke all on function public.zoo_live_refund_gift_coins(uuid, text) from public, anon, authenticated;
 grant execute on function public.zoo_live_fulfill_coin_order(text, text, integer) to service_role;
 grant execute on function public.zoo_live_spend_gift_coins(uuid, text, text, text) to service_role;
+grant execute on function public.zoo_live_refund_gift_coins(uuid, text) to service_role;
