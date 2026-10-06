@@ -24,6 +24,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const user = await authenticatedUser();
   if (!user) return Response.json({ message: "Sign in before buying coins." }, { status: 401 });
+  if (process.env.ZOO_LIVE_PAID_GIFTS_ENABLED !== "true") return Response.json({ message: "Paid Zoo Crew gifts are not enabled yet." }, { status: 503 });
   const body = await request.json().catch(() => ({})) as { package?: string };
   const pack = PACKAGES[String(body.package || "")];
   if (!pack) return Response.json({ message: "Choose a listed coin package." }, { status: 400 });
