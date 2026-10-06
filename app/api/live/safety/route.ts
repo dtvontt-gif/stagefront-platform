@@ -1,4 +1,4 @@
-import { authenticatedUser, serviceConfiguration, staffAccess } from "@/lib/stagefront-auth";
+import { authenticatedUser, isAdministrator, serviceConfiguration, staffAccess } from "@/lib/stagefront-auth";
 
 export const runtime = "nodejs";
 
@@ -28,6 +28,22 @@ async function dbRequest(config: NonNullable<ReturnType<typeof serviceConfigurat
     cache: "no-store",
   });
 }
+async function isSiteOwner(config: NonNullable<ReturnType<typeof serviceConfiguration>>, userId: string) {
+  const response = await fetch(`${config.url}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+    headers: { apikey: config.serviceKey, Authorization: `Bearer ${config.serviceKey}` }, cache: "no-store",
+  });
+  if (!response.ok) throw new Error("Live safety could not verify the target account.");
+  const account = await response.json() as { email?: string };
+  const email = account.email?.toLowerCase();
+  if (!email) return false;
+  if (isAdministrator(email)) return true;
+  const query = new URLSearchParams({ select: "role,active", email: `eq.${email}`, limit: "1" });
+  const staffResponse = await dbRequest(config, "stagefront_staff", query);
+  if (!staffResponse.ok) throw new Error("Live safety could not verify the target role.");
+  const [record] = await staffResponse.json() as { role: string; active: boolean }[];
+  return Boolean(record?.active && record.role === "owner");
+}
+
 async function isRoomModerator(config: NonNullable<ReturnType<typeof serviceConfiguration>>, roomId: string, userId: string) {
   const query = new URLSearchParams({ select: "user_id", room_id: `eq.${roomId}`, user_id: `eq.${userId}`, revoked_at: "is.null", limit: "1" });
   const response = await dbRequest(config, "zoo_live_room_moderators", query);
@@ -126,6 +142,7 @@ export async function POST(request: Request) {
     if (body.action === "assign_moderator" || body.action === "revoke_moderator") {
       if (!isOwner) return Response.json({ message: "Only an owner can assign live moderators." }, { status: 403 });
       if (!isUuid(body.targetUserId) || body.targetUserId === user.id) return Response.json({ message: "Choose another signed-in participant." }, { status: 400 });
+      if (await isSiteOwner(config, body.targetUserId)) return Response.json({ message: "Live owner permissions cannot be changed here." }, { status: 403 });
       if (body.action === "assign_moderator") {
         const response = await dbRequest(config, "zoo_live_room_moderators", new URLSearchParams(), {
           method: "POST",
@@ -143,6 +160,7 @@ export async function POST(request: Request) {
 
     if (body.action === "comment_mute" || body.action === "block" || body.action === "unmute" || body.action === "unblock") {
       if (!isUuid(body.targetUserId) || body.targetUserId === user.id) return Response.json({ message: "Choose another participant." }, { status: 400 });
+      if (await isSiteOwner(config, body.targetUserId)) return Response.json({ message: "Live owners cannot be muted or blocked." }, { status: 403 });
       const restriction = body.action === "comment_mute" || body.action === "unmute" ? "comment_mute" : "blocked";
       const remove = body.action === "unmute" || body.action === "unblock";
       const query = new URLSearchParams({ room_id: `eq.${room.name}`, user_id: `eq.${body.targetUserId}`, restriction: `eq.${restriction}` });
