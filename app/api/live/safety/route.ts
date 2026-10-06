@@ -44,11 +44,9 @@ export async function GET(request: Request) {
 
   try {
     const room = await activeRoom(apiKey);
-    if (!room) return Response.json({ isLive: false, moderators: [], restrictions: [] });
     const staff = await staffAccess();
     const isOwner = staff?.role === "owner";
     const isStaffMod = staff?.role === "moderator";
-    const isLiveMod = isOwner || isStaffMod || await isRoomModerator(config, room.name, user.id);
     const { searchParams } = new URL(request.url);
 
     if (searchParams.get("view") === "reports") {
@@ -58,6 +56,9 @@ export async function GET(request: Request) {
       if (!response.ok) return Response.json({ message: "The report inbox could not be loaded." }, { status: 502 });
       return Response.json({ reports: await response.json() });
     }
+
+    if (!room) return Response.json({ isLive: false, canModerate: false, moderators: [], restrictions: [] });
+    const isLiveMod = isOwner || isStaffMod || await isRoomModerator(config, room.name, user.id);
 
     const [moderatorResponse, restrictionResponse] = await Promise.all([
       dbRequest(config, "zoo_live_room_moderators", new URLSearchParams({ select: "user_id", room_id: `eq.${room.name}`, revoked_at: "is.null" })),
@@ -89,10 +90,21 @@ export async function POST(request: Request) {
   };
   try {
     const room = await activeRoom(apiKey);
-    if (!room) return Response.json({ message: "The live is offline." }, { status: 409 });
     const staff = await staffAccess();
     const isOwner = staff?.role === "owner";
     const isStaffMod = staff?.role === "moderator";
+
+    if (body.action === "report_status") {
+      if (!isOwner || typeof body.reportId !== "string" || !isUuid(body.reportId) || !["reviewed", "actioned", "dismissed"].includes(body.status || "")) {
+        return Response.json({ message: "Only an owner can update a report." }, { status: 403 });
+      }
+      const query = new URLSearchParams({ id: `eq.${body.reportId}` });
+      const response = await dbRequest(config, "zoo_live_reports", query, { method: "PATCH", body: JSON.stringify({ status: body.status }) });
+      if (!response.ok) return Response.json({ message: "The report status could not be updated." }, { status: 502 });
+      return Response.json({ updated: true });
+    }
+
+    if (!room) return Response.json({ message: "The live is offline." }, { status: 409 });
     const isLiveMod = isOwner || isStaffMod || await isRoomModerator(config, room.name, user.id);
 
     if (body.action === "report") {
@@ -140,16 +152,6 @@ export async function POST(request: Request) {
         body: JSON.stringify({ room_id: room.name, user_id: body.targetUserId, restriction, actor_user_id: user.id, reason: String(body.reason || "").trim().slice(0, 300) || null }),
       });
       if (!response.ok) return Response.json({ message: "That live restriction could not be saved." }, { status: 502 });
-      return Response.json({ updated: true });
-    }
-
-    if (body.action === "report_status") {
-      if (!isOwner || typeof body.reportId !== "string" || !isUuid(body.reportId) || !["reviewed", "actioned", "dismissed"].includes(body.status || "")) {
-        return Response.json({ message: "Only an owner can update a report." }, { status: 403 });
-      }
-      const query = new URLSearchParams({ id: `eq.${body.reportId}`, room_id: `eq.${room.name}` });
-      const response = await dbRequest(config, "zoo_live_reports", query, { method: "PATCH", body: JSON.stringify({ status: body.status }) });
-      if (!response.ok) return Response.json({ message: "The report status could not be updated." }, { status: 502 });
       return Response.json({ updated: true });
     }
 
