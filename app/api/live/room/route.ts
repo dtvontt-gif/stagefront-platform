@@ -120,6 +120,24 @@ export async function POST(request: Request) {
 
     const room = await getRoom(apiKey);
     if (!room) return Response.json({ message: "The Zoo Crew is offline right now.", isLive: false, canControlLive, role }, { status: 409 });
+
+    const db = serviceConfiguration();
+    if (!db) return Response.json({ message: "Live access checks are not configured." }, { status: 503 });
+    const restrictionQuery = new URLSearchParams({
+      select: "expires_at",
+      room_id: `eq.${room.name}`,
+      user_id: `eq.${user.id}`,
+      restriction: "eq.blocked",
+    });
+    const restrictionResponse = await fetch(`${db.url}/rest/v1/zoo_live_room_restrictions?${restrictionQuery}`, {
+      headers: { apikey: db.serviceKey, Authorization: `Bearer ${db.serviceKey}` }, cache: "no-store",
+    });
+    if (!restrictionResponse.ok) throw new Error("Live access restriction check failed.");
+    const restrictions = await restrictionResponse.json() as { expires_at: string | null }[];
+    if (restrictions.some((restriction) => !restriction.expires_at || new Date(restriction.expires_at).getTime() > Date.now())) {
+      return Response.json({ message: "You are blocked from this live room." }, { status: 403 });
+    }
+
     const { name, username, profileImageUrl: imageUrl } = await memberIdentity(user.id, user.email);
     const expires = Math.floor(Date.now() / 1000) + 60 * 60 * 4;
     const tokenResponse = await fetch(`${DAILY_API}/meeting-tokens`, {
