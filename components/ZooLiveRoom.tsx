@@ -145,6 +145,11 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
   const [likedComments, setLikedComments] = useState<string[]>([]);
   const [commentMenuId, setCommentMenuId] = useState<string | null>(null);
   const [activeGift, setActiveGift] = useState<ActiveZooGift | null>(null);
+  const [coinBalance, setCoinBalance] = useState(0);
+  const [coinsEnabled, setCoinsEnabled] = useState(false);
+  const [giftMenuOpen, setGiftMenuOpen] = useState(false);
+  const [coinStoreOpen, setCoinStoreOpen] = useState(false);
+  const [giftBusy, setGiftBusy] = useState(false);
   const [liveSafety, setLiveSafety] = useState<LiveSafety>({ canModerate: false, isOwner: false, moderators: [], restrictions: [] });
   const liveSafetyRef = useRef<LiveSafety>({ canModerate: false, isOwner: false, moderators: [], restrictions: [] });
   const [reportReason, setReportReason] = useState("");
@@ -178,6 +183,26 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
     }
     void refreshSafety();
     const timer = window.setInterval(() => void refreshSafety(), 15_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    async function refreshWallet() {
+      try {
+        const response = await fetch("/api/live/coins", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json() as { balance?: number; enabled?: boolean };
+        if (active) {
+          setCoinBalance(Number(data.balance || 0));
+          setCoinsEnabled(Boolean(data.enabled));
+        }
+      } catch {
+        // Keep the last loaded coin balance if the network briefly fails.
+      }
+    }
+    void refreshWallet();
+    const timer = window.setInterval(() => void refreshWallet(), 30_000);
     return () => { active = false; window.clearInterval(timer); };
   }, []);
 
@@ -556,6 +581,52 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
     await callRef.current?.setUserData({ ...current, backdrop: next });
   }
 
+  async function buyCoinPackage(packageAmount: "5" | "10" | "20") {
+    if (!coinsEnabled || giftBusy) return;
+    setGiftBusy(true);
+    try {
+      const response = await fetch("/api/live/coins", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ package: packageAmount }),
+      });
+      const data = await response.json() as { approvalUrl?: string; message?: string };
+      if (!response.ok || !data.approvalUrl) throw new Error(data.message || "PayPal checkout could not start.");
+      window.location.assign(data.approvalUrl);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Coin purchase could not start.");
+      setGiftBusy(false);
+    }
+  }
+
+  async function sendPaidGift(giftId: ZooGiftId) {
+    if (!coinsEnabled || giftBusy) {
+      setStatus("Paid Zoo Crew gifts are not enabled yet.");
+      return;
+    }
+    const coinCosts: Record<ZooGiftId, number> = { paw: 10, anaconda: 300, lion: 1000 };
+    if (coinBalance < coinCosts[giftId]) {
+      setCoinStoreOpen(true);
+      setStatus("You need more coins for that gift.");
+      return;
+    }
+    setGiftBusy(true);
+    try {
+      const response = await fetch("/api/live/gifts", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ giftId, eventId: crypto.randomUUID() }),
+      });
+      const data = await response.json() as { balance?: number; message?: string };
+      if (!response.ok) throw new Error(data.message || "Gift could not be sent.");
+      setCoinBalance(Number(data.balance ?? Math.max(0, coinBalance - coinCosts[giftId])));
+      setStatus(`You sent ${zooGiftCatalog[giftId].name} to the Zoo Crew.`);
+      setGiftMenuOpen(false);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Gift could not be sent.");
+    } finally {
+      setGiftBusy(false);
+    }
+  }
+
   function sendComment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -881,6 +952,19 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
           </div>
         ) : null}
         {replyTo ? <div className="mb-2 flex items-center justify-between rounded-xl bg-white/[.06] px-3 py-1.5 text-[11px] text-white/55"><span className="truncate">Replying to <strong className="text-[#f4b400]">{replyTo.name}</strong>: {replyTo.body}</span><button type="button" onClick={() => setReplyTo(null)} className="ml-2 text-base text-white">×</button></div> : null}
+        {giftMenuOpen ? <div className="mb-2 rounded-2xl border border-[#f4b400]/25 bg-[#f4b400]/[.05] p-3">
+          <div className="mb-2 flex items-center justify-between"><p className="text-xs font-black uppercase tracking-wider text-[#f4b400]">Gift the Zoo Crew · {coinBalance.toLocaleString()} coins</p><button type="button" onClick={() => setGiftMenuOpen(false)} className="text-xl text-white/50">×</button></div>
+          {!coinsEnabled ? <p className="mb-2 text-xs text-white/55">Paid gifts are not enabled yet. The owner test buttons above are free.</p> : null}
+          <div className="grid grid-cols-3 gap-2">{(Object.keys(zooGiftCatalog) as ZooGiftId[]).map((giftId) => {
+            const gift = zooGiftCatalog[giftId];
+            const cost = giftId === "paw" ? 10 : giftId === "anaconda" ? 300 : 1000;
+            return <button key={giftId} type="button" disabled={!coinsEnabled || giftBusy} onClick={() => void sendPaidGift(giftId)} className="rounded-xl border border-white/10 bg-black/40 px-2 py-3 text-center text-white disabled:opacity-40">
+              <span className="block text-2xl">{gift.icon}</span><strong className="block truncate text-[10px]">{gift.name}</strong><small className="block text-[9px] text-[#f4b400]">{cost.toLocaleString()} coins · {gift.futurePrice}</small>
+            </button>;
+          })}</div>
+          <button type="button" onClick={() => setCoinStoreOpen(true)} disabled={!coinsEnabled} className="mt-2 w-full rounded-xl bg-[#f4b400] px-3 py-2.5 text-xs font-black uppercase text-black disabled:opacity-40">Buy Coins</button>
+        </div> : null}
+        <div className="mb-2 flex justify-end"><button type="button" onClick={() => setGiftMenuOpen((open) => !open)} className="rounded-full border border-[#f4b400]/30 bg-[#f4b400]/10 px-4 py-2 text-xs font-black text-[#f4b400]">🎁 Send a Gift · {coinBalance.toLocaleString()} coins</button></div>
         <form onSubmit={sendComment} className="flex items-center gap-2">
           <input name="comment" maxLength={180} placeholder="Say something to the Zoo Crew…" className="min-w-0 flex-1 rounded-full border border-white/10 bg-white/[.06] px-4 py-3 text-base text-white outline-none placeholder:text-white/35 focus:border-[#f4b400]/55" />
           <button className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#f4b400] font-black text-black">➤</button>
@@ -918,6 +1002,15 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
           <textarea value={reportReason} onChange={(event) => setReportReason(event.target.value)} minLength={3} maxLength={500} required placeholder="Briefly tell the owners what happened…" className="mt-4 min-h-28 w-full rounded-2xl border border-white/10 bg-white/[.06] p-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-amber-300/50" />
           <div className="mt-3 flex gap-2"><button type="button" onClick={() => setReportOpen(false)} className="flex-1 rounded-xl bg-white/10 px-4 py-3 text-sm font-bold text-white">Cancel</button><button type="submit" className="flex-1 rounded-xl bg-amber-300 px-4 py-3 text-sm font-black text-black">Send Report</button></div>
         </form>
+      </div> : null}
+
+      {coinStoreOpen ? <div className="absolute inset-0 z-[85] grid items-end bg-black/65 backdrop-blur-sm sm:place-items-center" onClick={() => setCoinStoreOpen(false)}>
+        <div className="w-full rounded-t-[2rem] border-t border-[#f4b400]/30 bg-[#0c100e] p-5 sm:max-w-lg sm:rounded-[2rem] sm:border" onClick={(event) => event.stopPropagation()}>
+          <div className="flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-[.18em] text-[#f4b400]">Zoo Crew coin wallet</p><h2 className="mt-1 text-xl font-black text-white">{coinBalance.toLocaleString()} coins</h2></div><button onClick={() => setCoinStoreOpen(false)} className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-xl text-white">×</button></div>
+          <p className="mt-3 text-xs leading-5 text-white/55">Coins are for Zoo Crew live gifts only. There are no creator cash-outs; gift proceeds go to the crew. PayPal checkout must be enabled by the owners after the payment and database flow is verified.</p>
+          <div className="mt-4 grid gap-2">{([{ amount: "5", coins: 500 }, { amount: "10", coins: 1000 }, { amount: "20", coins: 2000 }] as const).map((pack) => <button key={pack.amount} type="button" disabled={!coinsEnabled || giftBusy} onClick={() => void buyCoinPackage(pack.amount)} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[.05] px-4 py-4 text-left text-white disabled:opacity-40"><span><strong className="block text-sm">{pack.coins.toLocaleString()} coins</strong><small className="text-xs text-white/45">Zoo Crew Live wallet</small></span><strong className="text-[#f4b400]">${pack.amount}</strong></button>)}</div>
+          {!coinsEnabled ? <p className="mt-3 text-xs text-amber-100/70">Purchases are safely disabled until the owners finish setup and turn them on.</p> : null}
+        </div>
       </div> : null}
 
       {reportInboxOpen ? <div className="absolute inset-0 z-[80] grid items-end bg-black/65 backdrop-blur-sm sm:place-items-center" onClick={() => setReportInboxOpen(false)}>
