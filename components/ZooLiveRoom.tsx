@@ -27,6 +27,9 @@ type RoomMessage =
   | { kind: "end-live" };
 
 type Backdrop = "night" | "jungle" | "gold";
+type LiveRestriction = { user_id: string; restriction: "comment_mute" | "blocked"; expires_at: string | null };
+type LiveSafety = { canModerate: boolean; isOwner: boolean; moderators: string[]; restrictions: LiveRestriction[] };
+type LiveReport = { id: string; reported_name: string; comment_body: string | null; reason: string; status: string; created_at: string };
 
 const backdropClasses: Record<Backdrop, string> = {
   night: "bg-[radial-gradient(circle_at_72%_20%,rgba(235,238,207,.35),transparent_13%),linear-gradient(160deg,#071b1a,#030706_72%)]",
@@ -141,7 +144,40 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
   const [likedComments, setLikedComments] = useState<string[]>([]);
   const [commentMenuId, setCommentMenuId] = useState<string | null>(null);
   const [activeGift, setActiveGift] = useState<ActiveZooGift | null>(null);
+  const [liveSafety, setLiveSafety] = useState<LiveSafety>({ canModerate: false, isOwner: false, moderators: [], restrictions: [] });
+  const liveSafetyRef = useRef<LiveSafety>({ canModerate: false, isOwner: false, moderators: [], restrictions: [] });
+  const [reportReason, setReportReason] = useState("");
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportInboxOpen, setReportInboxOpen] = useState(false);
+  const [reports, setReports] = useState<LiveReport[]>([]);
   const giftTimerRef = useRef<number | null>(null);
+  const canModerateNow = canModerate || liveSafety.canModerate;
+  const isOwnerNow = isOwner || liveSafety.isOwner;
+  const moderatorIdsRef = useRef<Set<string>>(new Set());
+  const commentMutedIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    let active = true;
+    async function refreshSafety() {
+      try {
+        const response = await fetch("/api/live/safety", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json() as LiveSafety & { isLive?: boolean };
+        if (!active) return;
+        const now = Date.now();
+        data.restrictions = (data.restrictions || []).filter((item) => !item.expires_at || new Date(item.expires_at).getTime() > now);
+        liveSafetyRef.current = data;
+        moderatorIdsRef.current = new Set(data.moderators || []);
+        commentMutedIdsRef.current = new Set(data.restrictions.filter((item) => item.restriction === "comment_mute").map((item) => item.user_id));
+        setLiveSafety(data);
+      } catch {
+        // Preserve the last successful room safety state during brief network interruptions.
+      }
+    }
+    void refreshSafety();
+    const timer = window.setInterval(() => void refreshSafety(), 15_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, []);
 
   function playGift(gift: ActiveZooGift) {
     setActiveGift(gift);
@@ -207,8 +243,8 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
         const data = event.data as RoomMessage;
         const sender = Object.values(call?.participants() || {}).find((person) => person.session_id === event.fromId);
         const senderData = sender?.userData && typeof sender.userData === "object" ? sender.userData as Record<string, unknown> : {};
-        const senderCanModerate = Boolean(sender?.owner);
-        if (data?.kind === "comment" && typeof data.body === "string") {
+        const senderCanModerate = Boolean(sender?.owner) || moderatorIdsRef.current.has(sender?.user_id || "");
+        if (data?.kind === "comment" && typeof data.body === "string" && !commentMutedIdsRef.current.has(sender?.user_id || "")) {
           setMessages((current) => [...current.slice(-99), { id: data.id, name: sender?.user_name || "Guest", body: data.body.slice(0, 180), createdAt: data.createdAt, senderId: sender?.session_id, userId: sender?.user_id, username: typeof senderData.username === "string" ? senderData.username : undefined, profileImageUrl: typeof senderData.profileImageUrl === "string" ? senderData.profileImageUrl : undefined, role: typeof senderData.role === "string" ? senderData.role : undefined, replyTo: data.replyTo, likes: 0 }]);
         }
         if (data?.kind === "comment-like" && typeof data.commentId === "string") setMessages((current) => current.map((item) => item.id === data.commentId ? { ...item, likes: item.likes + 1 } : item));
@@ -520,6 +556,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
     const body = String(new FormData(form).get("comment") || "").trim().slice(0, 180);
     const local = participants.local;
     if (!body || !local) return;
+    if (local.user_id && commentMutedIdsRef.current.has(local.user_id)) { setStatus("Your comments are muted for this live."); return; }
     const comment: ChatMessage = { id: crypto.randomUUID(), name: local.user_name || "Guest", body, createdAt: Date.now(), senderId: local.session_id, userId: local.user_id, username: profileUsername || undefined, profileImageUrl: profileImageUrl || undefined, role: staffRole || undefined, replyTo: replyTo || undefined, likes: 0 };
     setMessages((current) => [...current.slice(-99), comment]);
     callRef.current?.sendAppMessage({ kind: "comment", id: comment.id, name: comment.name, body: comment.body, createdAt: comment.createdAt, replyTo: comment.replyTo } satisfies RoomMessage, "*");
