@@ -31,6 +31,7 @@ async function verifiedSenderName(db: NonNullable<ReturnType<typeof serviceConfi
 export async function POST(request: Request) {
   const user = await authenticatedUser();
   if (!user) return Response.json({ message: "Sign in before sending gifts." }, { status: 401 });
+  if (process.env.ZOO_LIVE_PAID_GIFTS_ENABLED !== "true") return Response.json({ message: "Paid Zoo Crew gifts are not enabled yet." }, { status: 503 });
   const body = await request.json().catch(() => ({})) as { giftId?: string; eventId?: string };
   if (!(body.giftId && body.giftId in COSTS) || !body.eventId || !/^[0-9a-f-]{36}$/i.test(body.eventId)) {
     return Response.json({ message: "Invalid gift request." }, { status: 400 });
