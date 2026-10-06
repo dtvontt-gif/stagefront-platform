@@ -820,7 +820,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
           <div className="flex items-center gap-2"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" /><p className="truncate text-xs font-black uppercase tracking-[.16em] text-[#f4b400]">Zoo Crew Vibe · Live</p></div>
           <p className="mt-1 truncate text-[11px] text-white/45">{status}</p>
         </div>
-        <div className="flex items-center gap-2">{canEndLive ? <button onClick={endBroadcast} className="rounded-full bg-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white sm:text-xs">End Live</button> : null}<button onClick={() => setMembersOpen(true)} aria-label="View stage and lobby" className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-white/70">🎥 {people.length} · 👀 {audience.length}</button><button onClick={leave} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-lg font-bold text-white">×</button></div>
+        <div className="flex items-center gap-2">{isOwnerNow ? <button onClick={() => void loadReportInbox()} className="rounded-full border border-[#f4b400]/30 bg-[#f4b400]/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-[#f4b400] sm:text-xs">Reports</button> : null}{canEndLive ? <button onClick={endBroadcast} className="rounded-full bg-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white sm:text-xs">End Live</button> : null}<button onClick={() => setMembersOpen(true)} aria-label="View stage and lobby" className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-white/70">🎥 {people.length} · 👀 {audience.length}</button><button onClick={leave} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-lg font-bold text-white">×</button></div>
       </header>
 
       {canModerate && pendingStageRequests.length ? <div role="status" aria-live="polite" className="max-h-[28vh] shrink-0 overflow-y-auto border-b border-[#f4b400]/35 bg-[#2b1d08] px-3 py-2 sm:px-5">
@@ -907,6 +907,28 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
             {canModerateNow || menuComment.senderId === participants.local?.session_id ? <button type="button" onClick={() => { deleteComment(menuComment.id); setCommentMenuId(null); }} className="col-span-2 rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-4 text-sm font-black text-red-200">Delete Comment</button> : null}
           </div>
           <button type="button" onClick={() => setCommentMenuId(null)} className="mx-auto mt-3 block w-full max-w-lg rounded-2xl bg-white/[.06] px-4 py-3 text-sm font-bold text-white/60">Cancel</button>
+        </div>
+      </div> : null}
+
+      {reportOpen && reportTarget ? <div className="absolute inset-0 z-[80] grid items-end bg-black/65 backdrop-blur-sm sm:place-items-center" onClick={() => setReportOpen(false)}>
+        <form onSubmit={submitLiveReport} className="w-full rounded-t-[2rem] border-t border-amber-400/30 bg-[#0c100e] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:max-w-lg sm:rounded-[2rem] sm:border" onClick={(event) => event.stopPropagation()}>
+          <p className="text-xs font-black uppercase tracking-[.18em] text-amber-200">Private report to owners</p>
+          <h2 className="mt-2 text-xl font-black text-white">Report {reportTarget.name}</h2>
+          <p className="mt-2 line-clamp-2 text-sm text-white/55">{reportTarget.body}</p>
+          <textarea value={reportReason} onChange={(event) => setReportReason(event.target.value)} minLength={3} maxLength={500} required placeholder="Briefly tell the owners what happened…" className="mt-4 min-h-28 w-full rounded-2xl border border-white/10 bg-white/[.06] p-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-amber-300/50" />
+          <div className="mt-3 flex gap-2"><button type="button" onClick={() => setReportOpen(false)} className="flex-1 rounded-xl bg-white/10 px-4 py-3 text-sm font-bold text-white">Cancel</button><button type="submit" className="flex-1 rounded-xl bg-amber-300 px-4 py-3 text-sm font-black text-black">Send Report</button></div>
+        </form>
+      </div> : null}
+
+      {reportInboxOpen ? <div className="absolute inset-0 z-[80] grid items-end bg-black/65 backdrop-blur-sm sm:place-items-center" onClick={() => setReportInboxOpen(false)}>
+        <div className="max-h-[80vh] w-full overflow-y-auto rounded-t-[2rem] border-t border-[#f4b400]/30 bg-[#0c100e] p-5 sm:max-w-2xl sm:rounded-[2rem] sm:border" onClick={(event) => event.stopPropagation()}>
+          <div className="flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-[.18em] text-[#f4b400]">Owner only · Private</p><h2 className="mt-1 text-xl font-black text-white">Live Reports</h2></div><button onClick={() => setReportInboxOpen(false)} className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-xl text-white">×</button></div>
+          <div className="mt-4 grid gap-3">{reports.length ? reports.map((report) => <article key={report.id} className="rounded-2xl border border-white/10 bg-white/[.04] p-4">
+            <div className="flex items-start justify-between gap-3"><div><p className="font-black text-white">{report.reported_name}</p><p className="mt-1 text-xs text-white/45">{new Date(report.created_at).toLocaleString()} · {report.status}</p></div></div>
+            {report.comment_body ? <p className="mt-3 rounded-xl bg-black/30 p-3 text-sm text-white/75">“{report.comment_body}”</p> : null}
+            <p className="mt-2 text-sm text-white/80">{report.reason}</p>
+            {report.status === "new" ? <div className="mt-3 flex flex-wrap gap-2"><button onClick={() => void setReportStatus(report.id, "reviewed")} className="rounded-lg bg-white/10 px-3 py-2 text-xs font-bold text-white">Mark Reviewed</button><button onClick={() => void setReportStatus(report.id, "actioned")} className="rounded-lg bg-amber-300/15 px-3 py-2 text-xs font-bold text-amber-100">Actioned</button><button onClick={() => void setReportStatus(report.id, "dismissed")} className="rounded-lg bg-white/5 px-3 py-2 text-xs font-bold text-white/60">Dismiss</button></div> : null}
+          </article>) : <p className="rounded-xl bg-white/[.04] p-4 text-sm text-white/45">No reports have been submitted.</p>}</div>
         </div>
       </div> : null}
 
