@@ -18,7 +18,7 @@ export async function GET() {
   const response = await fetch(db.url + "/rest/v1/zoo_live_coin_wallets?" + query, { headers: headers(db.serviceKey), cache: "no-store" });
   if (!response.ok) return Response.json({ message: "Coin balance could not be loaded." }, { status: 502 });
   const [wallet] = await response.json() as { balance_coins: number }[];
-  return Response.json({ balance: Number(wallet?.balance_coins || 0), coinsPerDollar: 100 });
+  return Response.json({ balance: Number(wallet?.balance_coins || 0), coinsPerDollar: 100, enabled: process.env.ZOO_LIVE_PAID_GIFTS_ENABLED === "true" });
 }
 
 export async function POST(request: Request) {
