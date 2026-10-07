@@ -1490,11 +1490,30 @@ export default function ZooLiveRoom({
           : {};
       return data.mode === "stage";
     })?.session_id;
+    const isLocalTarget =
+      target.local || sessionId === call.participants().local?.session_id;
     setApprovingStageId(sessionId);
     try {
-      await call.updateParticipant(sessionId, {
-        updatePermissions: { canSend: new Set(["audio", "video"]) },
-      });
+      // Daily does not reliably echo app messages or participant permission
+      // changes back to the sender. Staff already join with owner-level media
+      // permissions, so a self-approval must promote the local UI directly.
+      if (!isLocalTarget) {
+        await call.updateParticipant(sessionId, {
+          updatePermissions: { canSend: new Set(["audio", "video"]) },
+        });
+      } else {
+        await call.setUserData({
+          ...targetData,
+          mode: "stage",
+          wantsCage: false,
+        });
+        setCageInvite(null);
+        setViewerMode(false);
+        setStageRequested(false);
+        setStatus(
+          "Welcome back to the cage. Camera and microphone controls are ready.",
+        );
+      }
       call.sendAppMessage(
         { kind: "stage-approve", sessionId } satisfies RoomMessage,
         "*",
@@ -1508,7 +1527,7 @@ export default function ZooLiveRoom({
       }
       setStageRequests((current) => current.filter((id) => id !== sessionId));
       setMembersOpen(false);
-      setStatus("Viewer accepted into a cage");
+      if (!isLocalTarget) setStatus("Viewer accepted into a cage");
     } catch {
       setStatus(
         "Could not accept that viewer. Check that they are still in the lobby and try again.",
