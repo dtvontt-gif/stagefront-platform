@@ -2,7 +2,7 @@ import { authenticatedUser, serviceConfiguration, staffAccess } from "@/lib/stag
 import { profileImageUrl } from "@/lib/profile-images";
 
 const DAILY_API = "https://api.daily.co/v1";
-const ROOM_PREFIX = "zoo-crew-vibe-live-";
+const ROOM_PREFIX = process.env.VERCEL_ENV === "production" ? "zoo-crew-vibe-live-" : "zoo-crew-vibe-preview-";
 
 type DailyRoom = { name: string; url: string };
 type LiveAction = "start" | "enter" | "end" | "gift";
