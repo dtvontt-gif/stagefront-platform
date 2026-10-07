@@ -2,7 +2,7 @@ import { authenticatedUser, serviceConfiguration, staffAccess } from "@/lib/stag
 import { profileImageUrl } from "@/lib/profile-images";
 
 const DAILY_API = "https://api.daily.co/v1";
-const ROOM_PREFIX = "zoo-crew-vibe-live-";
+const ROOM_PREFIX = process.env.VERCEL_ENV === "production" ? "zoo-crew-vibe-live-" : "zoo-crew-vibe-preview-";
 
 type DailyRoom = { name: string; url: string };
 type LiveAction = "start" | "enter" | "end" | "gift";
@@ -120,12 +120,30 @@ export async function POST(request: Request) {
 
     const room = await getRoom(apiKey);
     if (!room) return Response.json({ message: "The Zoo Crew is offline right now.", isLive: false, canControlLive, role }, { status: 409 });
+
+    const db = serviceConfiguration();
+    if (!db) return Response.json({ message: "Live access checks are not configured." }, { status: 503 });
+    const restrictionQuery = new URLSearchParams({
+      select: "expires_at",
+      room_id: `eq.${room.name}`,
+      user_id: `eq.${user.id}`,
+      restriction: "eq.blocked",
+    });
+    const restrictionResponse = await fetch(`${db.url}/rest/v1/zoo_live_room_restrictions?${restrictionQuery}`, {
+      headers: { apikey: db.serviceKey, Authorization: `Bearer ${db.serviceKey}` }, cache: "no-store",
+    });
+    if (!restrictionResponse.ok) throw new Error("Live access restriction check failed.");
+    const restrictions = await restrictionResponse.json() as { expires_at: string | null }[];
+    if (restrictions.some((restriction) => !restriction.expires_at || new Date(restriction.expires_at).getTime() > Date.now())) {
+      return Response.json({ message: "You are blocked from this live room." }, { status: 403 });
+    }
+
     const { name, username, profileImageUrl: imageUrl } = await memberIdentity(user.id, user.email);
     const expires = Math.floor(Date.now() / 1000) + 60 * 60 * 4;
     const tokenResponse = await fetch(`${DAILY_API}/meeting-tokens`, {
       method: "POST",
       headers: dailyHeaders(apiKey),
-      body: JSON.stringify({ properties: { room_name: room.name, user_id: user.id, user_name: name.slice(0, 50), is_owner: canModerate, permissions: { canSend: entryMode === "viewer" ? [] : ["audio", "video"] }, exp: expires } }),
+      body: JSON.stringify({ properties: { room_name: room.name, user_id: user.id, user_name: name.slice(0, 50), is_owner: role === "owner", permissions: { canSend: entryMode === "viewer" ? [] : ["audio", "video"] }, exp: expires } }),
     });
     if (!tokenResponse.ok) throw new Error("Daily meeting token creation failed.");
     const token = (await tokenResponse.json()) as { token: string };

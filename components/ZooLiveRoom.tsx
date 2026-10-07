@@ -12,6 +12,7 @@ type RoomMessage =
   | { kind: "comment-like"; commentId: string }
   | { kind: "comment-delete"; commentId: string }
   | { kind: "comment-pin"; commentId: string | null }
+  | { kind: "live-block"; userId: string }
   | { kind: "stage-request"; sessionId: string; name: string }
   | { kind: "stage-approve"; sessionId: string }
   | { kind: "stage-invite"; sessionId: string; inviterSessionId: string }
@@ -27,6 +28,9 @@ type RoomMessage =
   | { kind: "end-live" };
 
 type Backdrop = "night" | "jungle" | "gold";
+type LiveRestriction = { user_id: string; restriction: "comment_mute" | "blocked"; expires_at: string | null };
+type LiveSafety = { canModerate: boolean; isOwner: boolean; moderators: string[]; restrictions: LiveRestriction[] };
+type LiveReport = { id: string; reported_name: string; comment_body: string | null; reason: string; status: string; created_at: string };
 
 const backdropClasses: Record<Backdrop, string> = {
   night: "bg-[radial-gradient(circle_at_72%_20%,rgba(235,238,207,.35),transparent_13%),linear-gradient(160deg,#071b1a,#030706_72%)]",
@@ -141,7 +145,66 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
   const [likedComments, setLikedComments] = useState<string[]>([]);
   const [commentMenuId, setCommentMenuId] = useState<string | null>(null);
   const [activeGift, setActiveGift] = useState<ActiveZooGift | null>(null);
+  const [coinBalance, setCoinBalance] = useState(0);
+  const [coinsEnabled, setCoinsEnabled] = useState(false);
+  const [giftMenuOpen, setGiftMenuOpen] = useState(false);
+  const [coinStoreOpen, setCoinStoreOpen] = useState(false);
+  const [giftBusy, setGiftBusy] = useState(false);
+  const [liveSafety, setLiveSafety] = useState<LiveSafety>({ canModerate: false, isOwner: false, moderators: [], restrictions: [] });
+  const liveSafetyRef = useRef<LiveSafety>({ canModerate: false, isOwner: false, moderators: [], restrictions: [] });
+  const [reportReason, setReportReason] = useState("");
+  const [reportTarget, setReportTarget] = useState<ChatMessage | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportInboxOpen, setReportInboxOpen] = useState(false);
+  const [reports, setReports] = useState<LiveReport[]>([]);
   const giftTimerRef = useRef<number | null>(null);
+  const canModerateNow = canModerate || liveSafety.canModerate;
+  const isOwnerNow = isOwner || liveSafety.isOwner;
+  const moderatorIdsRef = useRef<Set<string>>(new Set());
+  const commentMutedIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    let active = true;
+    async function refreshSafety() {
+      try {
+        const response = await fetch("/api/live/safety", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json() as LiveSafety & { isLive?: boolean };
+        if (!active) return;
+        const now = Date.now();
+        data.restrictions = (data.restrictions || []).filter((item) => !item.expires_at || new Date(item.expires_at).getTime() > now);
+        liveSafetyRef.current = data;
+        moderatorIdsRef.current = new Set(data.moderators || []);
+        commentMutedIdsRef.current = new Set(data.restrictions.filter((item) => item.restriction === "comment_mute").map((item) => item.user_id));
+        setLiveSafety(data);
+      } catch {
+        // Preserve the last successful room safety state during brief network interruptions.
+      }
+    }
+    void refreshSafety();
+    const timer = window.setInterval(() => void refreshSafety(), 15_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    async function refreshWallet() {
+      try {
+        const response = await fetch("/api/live/coins", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json() as { balance?: number; enabled?: boolean };
+        if (active) {
+          setCoinBalance(Number(data.balance || 0));
+          setCoinsEnabled(Boolean(data.enabled));
+        }
+      } catch {
+        // Keep the last loaded coin balance if the network briefly fails.
+      }
+    }
+    void refreshWallet();
+    const timer = window.setInterval(() => void refreshWallet(), 30_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, []);
 
   function playGift(gift: ActiveZooGift) {
     setActiveGift(gift);
@@ -207,8 +270,12 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
         const data = event.data as RoomMessage;
         const sender = Object.values(call?.participants() || {}).find((person) => person.session_id === event.fromId);
         const senderData = sender?.userData && typeof sender.userData === "object" ? sender.userData as Record<string, unknown> : {};
-        const senderCanModerate = Boolean(sender?.owner);
-        if (data?.kind === "comment" && typeof data.body === "string") {
+        const senderCanModerate = Boolean(sender?.owner) || moderatorIdsRef.current.has(sender?.user_id || "");
+        if (data?.kind === "live-block" && senderCanModerate && data.userId === call?.participants().local?.user_id) {
+          setStatus("You are blocked from this live.");
+          void call?.leave().catch(() => undefined).finally(() => window.location.assign("/live?blocked=1"));
+        }
+        if (data?.kind === "comment" && typeof data.body === "string" && !commentMutedIdsRef.current.has(sender?.user_id || "")) {
           setMessages((current) => [...current.slice(-99), { id: data.id, name: sender?.user_name || "Guest", body: data.body.slice(0, 180), createdAt: data.createdAt, senderId: sender?.session_id, userId: sender?.user_id, username: typeof senderData.username === "string" ? senderData.username : undefined, profileImageUrl: typeof senderData.profileImageUrl === "string" ? senderData.profileImageUrl : undefined, role: typeof senderData.role === "string" ? senderData.role : undefined, replyTo: data.replyTo, likes: 0 }]);
         }
         if (data?.kind === "comment-like" && typeof data.commentId === "string") setMessages((current) => current.map((item) => item.id === data.commentId ? { ...item, likes: item.likes + 1 } : item));
@@ -514,12 +581,59 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
     await callRef.current?.setUserData({ ...current, backdrop: next });
   }
 
+  async function buyCoinPackage(packageAmount: "5" | "10" | "20") {
+    if (!coinsEnabled || giftBusy) return;
+    setGiftBusy(true);
+    try {
+      const response = await fetch("/api/live/coins", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ package: packageAmount }),
+      });
+      const data = await response.json() as { approvalUrl?: string; message?: string };
+      if (!response.ok || !data.approvalUrl) throw new Error(data.message || "PayPal checkout could not start.");
+      window.location.assign(data.approvalUrl);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Coin purchase could not start.");
+      setGiftBusy(false);
+    }
+  }
+
+  async function sendPaidGift(giftId: ZooGiftId) {
+    if (!coinsEnabled || giftBusy) {
+      setStatus("Paid Zoo Crew gifts are not enabled yet.");
+      return;
+    }
+    const coinCosts: Record<ZooGiftId, number> = { paw: 10, anaconda: 300, lion: 1000 };
+    if (coinBalance < coinCosts[giftId]) {
+      setCoinStoreOpen(true);
+      setStatus("You need more coins for that gift.");
+      return;
+    }
+    setGiftBusy(true);
+    try {
+      const response = await fetch("/api/live/gifts", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ giftId, eventId: crypto.randomUUID() }),
+      });
+      const data = await response.json() as { balance?: number; message?: string };
+      if (!response.ok) throw new Error(data.message || "Gift could not be sent.");
+      setCoinBalance(Number(data.balance ?? Math.max(0, coinBalance - coinCosts[giftId])));
+      setStatus(`You sent ${zooGiftCatalog[giftId].name} to the Zoo Crew.`);
+      setGiftMenuOpen(false);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Gift could not be sent.");
+    } finally {
+      setGiftBusy(false);
+    }
+  }
+
   function sendComment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const body = String(new FormData(form).get("comment") || "").trim().slice(0, 180);
     const local = participants.local;
     if (!body || !local) return;
+    if (local.user_id && commentMutedIdsRef.current.has(local.user_id)) { setStatus("Your comments are muted for this live."); return; }
     const comment: ChatMessage = { id: crypto.randomUUID(), name: local.user_name || "Guest", body, createdAt: Date.now(), senderId: local.session_id, userId: local.user_id, username: profileUsername || undefined, profileImageUrl: profileImageUrl || undefined, role: staffRole || undefined, replyTo: replyTo || undefined, likes: 0 };
     setMessages((current) => [...current.slice(-99), comment]);
     callRef.current?.sendAppMessage({ kind: "comment", id: comment.id, name: comment.name, body: comment.body, createdAt: comment.createdAt, replyTo: comment.replyTo } satisfies RoomMessage, "*");
@@ -537,13 +651,13 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
   function deleteComment(commentId: string) {
     const localId = participants.local?.session_id;
     const target = messages.find((item) => item.id === commentId);
-    if (!canModerate && target?.senderId !== localId) return;
+    if (!canModerateNow && target?.senderId !== localId) return;
     setMessages((current) => current.filter((item) => item.id !== commentId));
     callRef.current?.sendAppMessage({ kind: "comment-delete", commentId } satisfies RoomMessage, "*");
   }
 
   function pinComment(commentId: string) {
-    if (!canModerate) return;
+    if (!canModerateNow) return;
     const next = pinnedCommentId === commentId ? null : commentId;
     setPinnedCommentId(next);
     callRef.current?.sendAppMessage({ kind: "comment-pin", commentId: next } satisfies RoomMessage, "*");
@@ -565,6 +679,76 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
   function replyFromMenu(comment: ChatMessage) {
     setReplyTo({ id: comment.id, name: comment.name, body: comment.body });
     setCommentMenuId(null);
+  }
+
+  async function postSafetyAction(action: string, targetUserId: string, extra: Record<string, unknown> = {}) {
+    const response = await fetch("/api/live/safety", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, targetUserId, ...extra }),
+    });
+    const data = await response.json().catch(() => ({})) as { message?: string };
+    if (!response.ok) throw new Error(data.message || "Live safety change failed.");
+    const refresh = await fetch("/api/live/safety", { cache: "no-store" });
+    if (refresh.ok) {
+      const safety = await refresh.json() as LiveSafety;
+      safety.restrictions = (safety.restrictions || []).filter((item) => !item.expires_at || new Date(item.expires_at).getTime() > Date.now());
+      liveSafetyRef.current = safety;
+      moderatorIdsRef.current = new Set(safety.moderators || []);
+      commentMutedIdsRef.current = new Set(safety.restrictions.filter((item) => item.restriction === "comment_mute").map((item) => item.user_id));
+      setLiveSafety(safety);
+    }
+    if (action === "block") {
+      callRef.current?.sendAppMessage({ kind: "live-block", userId: targetUserId } as RoomMessage, "*");
+    }
+    setStatus(action === "assign_moderator" ? "Live moderator added." : action === "revoke_moderator" ? "Live moderator removed." : action === "comment_mute" ? "Comments muted for this live." : action === "unmute" ? "Comments restored for this live." : action === "block" ? "Access blocked for this live." : "Live block removed.");
+  }
+
+  async function submitLiveReport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!reportTarget) return;
+    try {
+      const response = await fetch("/api/live/safety", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "report", targetUserId: reportTarget.userId, targetName: reportTarget.name, commentId: reportTarget.id, commentBody: reportTarget.body, reason: reportReason }),
+      });
+      const data = await response.json().catch(() => ({})) as { message?: string };
+      if (!response.ok) throw new Error(data.message || "Your report could not be sent.");
+      setReportOpen(false);
+      setReportTarget(null);
+      setReportReason("");
+      setStatus("Your report was sent privately to the Zoo Crew owners.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Your report could not be sent.");
+    }
+  }
+
+  async function loadReportInbox() {
+    try {
+      const response = await fetch("/api/live/safety?view=reports", { cache: "no-store" });
+      const data = await response.json().catch(() => ({})) as { reports?: LiveReport[]; message?: string };
+      if (!response.ok) throw new Error(data.message || "The report inbox could not be loaded.");
+      setReports(data.reports || []);
+      setReportInboxOpen(true);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "The report inbox could not be loaded.");
+    }
+  }
+
+  async function setReportStatus(reportId: string, status: "reviewed" | "actioned" | "dismissed") {
+    try {
+      const response = await fetch("/api/live/safety", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "report_status", reportId, status }),
+      });
+      const data = await response.json().catch(() => ({})) as { message?: string };
+      if (!response.ok) throw new Error(data.message || "Report status could not be updated.");
+      await loadReportInbox();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Report status could not be updated.");
+    }
   }
 
   async function requestStage() {
@@ -707,7 +891,7 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
           <div className="flex items-center gap-2"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" /><p className="truncate text-xs font-black uppercase tracking-[.16em] text-[#f4b400]">Zoo Crew Vibe · Live</p></div>
           <p className="mt-1 truncate text-[11px] text-white/45">{status}</p>
         </div>
-        <div className="flex items-center gap-2">{canEndLive ? <button onClick={endBroadcast} className="rounded-full bg-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white sm:text-xs">End Live</button> : null}<button onClick={() => setMembersOpen(true)} aria-label="View stage and lobby" className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-white/70">🎥 {people.length} · 👀 {audience.length}</button><button onClick={leave} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-lg font-bold text-white">×</button></div>
+        <div className="flex items-center gap-2">{isOwnerNow ? <button onClick={() => void loadReportInbox()} className="rounded-full border border-[#f4b400]/30 bg-[#f4b400]/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-[#f4b400] sm:text-xs">Reports</button> : null}{canEndLive ? <button onClick={endBroadcast} className="rounded-full bg-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white sm:text-xs">End Live</button> : null}<button onClick={() => setMembersOpen(true)} aria-label="View stage and lobby" className="rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-white/70">🎥 {people.length} · 👀 {audience.length}</button><button onClick={leave} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-lg font-bold text-white">×</button></div>
       </header>
 
       {canModerate && pendingStageRequests.length ? <div role="status" aria-live="polite" className="max-h-[28vh] shrink-0 overflow-y-auto border-b border-[#f4b400]/35 bg-[#2b1d08] px-3 py-2 sm:px-5">
@@ -768,6 +952,19 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
           </div>
         ) : null}
         {replyTo ? <div className="mb-2 flex items-center justify-between rounded-xl bg-white/[.06] px-3 py-1.5 text-[11px] text-white/55"><span className="truncate">Replying to <strong className="text-[#f4b400]">{replyTo.name}</strong>: {replyTo.body}</span><button type="button" onClick={() => setReplyTo(null)} className="ml-2 text-base text-white">×</button></div> : null}
+        {giftMenuOpen ? <div className="mb-2 rounded-2xl border border-[#f4b400]/25 bg-[#f4b400]/[.05] p-3">
+          <div className="mb-2 flex items-center justify-between"><p className="text-xs font-black uppercase tracking-wider text-[#f4b400]">Gift the Zoo Crew · {coinBalance.toLocaleString()} coins</p><button type="button" onClick={() => setGiftMenuOpen(false)} className="text-xl text-white/50">×</button></div>
+          {!coinsEnabled ? <p className="mb-2 text-xs text-white/55">Paid gifts are not enabled yet. The owner test buttons above are free.</p> : null}
+          <div className="grid grid-cols-3 gap-2">{(Object.keys(zooGiftCatalog) as ZooGiftId[]).map((giftId) => {
+            const gift = zooGiftCatalog[giftId];
+            const cost = giftId === "paw" ? 10 : giftId === "anaconda" ? 300 : 1000;
+            return <button key={giftId} type="button" disabled={!coinsEnabled || giftBusy} onClick={() => void sendPaidGift(giftId)} className="rounded-xl border border-white/10 bg-black/40 px-2 py-3 text-center text-white disabled:opacity-40">
+              <span className="block text-2xl">{gift.icon}</span><strong className="block truncate text-[10px]">{gift.name}</strong><small className="block text-[9px] text-[#f4b400]">{cost.toLocaleString()} coins · {gift.futurePrice}</small>
+            </button>;
+          })}</div>
+          <button type="button" onClick={() => setCoinStoreOpen(true)} disabled={!coinsEnabled} className="mt-2 w-full rounded-xl bg-[#f4b400] px-3 py-2.5 text-xs font-black uppercase text-black disabled:opacity-40">Buy Coins</button>
+        </div> : null}
+        <div className="mb-2 flex justify-end"><button type="button" onClick={() => setGiftMenuOpen((open) => !open)} className="rounded-full border border-[#f4b400]/30 bg-[#f4b400]/10 px-4 py-2 text-xs font-black text-[#f4b400]">🎁 Send a Gift · {coinBalance.toLocaleString()} coins</button></div>
         <form onSubmit={sendComment} className="flex items-center gap-2">
           <input name="comment" maxLength={180} placeholder="Say something to the Zoo Crew…" className="min-w-0 flex-1 rounded-full border border-white/10 bg-white/[.06] px-4 py-3 text-base text-white outline-none placeholder:text-white/35 focus:border-[#f4b400]/55" />
           <button className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#f4b400] font-black text-black">➤</button>
@@ -786,10 +983,45 @@ export default function ZooLiveRoom({ roomUrl, isOwner, canModerate, canEndLive,
             <button type="button" onClick={() => replyFromMenu(menuComment)} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">↩ Reply</button>
             <button type="button" onClick={() => { likeComment(menuComment.id); setCommentMenuId(null); }} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">♥ Like{menuComment.likes ? ` · ${menuComment.likes}` : ""}</button>
             {menuComment.username ? <a href={`/singers/${encodeURIComponent(menuComment.username)}`} className="rounded-2xl bg-white/10 px-4 py-4 text-center text-sm font-black text-white">👤 View Profile</a> : <button type="button" disabled className="rounded-2xl bg-white/5 px-4 py-4 text-sm font-black text-white/30">👤 Profile unavailable</button>}
-            {canModerate ? <button type="button" onClick={() => { pinComment(menuComment.id); setCommentMenuId(null); }} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">📌 {pinnedCommentId === menuComment.id ? "Unpin" : "Pin"}</button> : null}
-            {canModerate || menuComment.senderId === participants.local?.session_id ? <button type="button" onClick={() => { deleteComment(menuComment.id); setCommentMenuId(null); }} className="col-span-2 rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-4 text-sm font-black text-red-200">Delete Comment</button> : null}
+            {isOwnerNow && menuComment.userId && menuComment.role !== "owner" ? <button type="button" onClick={() => { void postSafetyAction(liveSafety.moderators.includes(menuComment.userId!) ? "revoke_moderator" : "assign_moderator", menuComment.userId!).catch((error) => setStatus(error.message)); setCommentMenuId(null); }} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">{liveSafety.moderators.includes(menuComment.userId) ? "Remove Live Moderator" : "Make Live Moderator"}</button> : null}
+            {canModerateNow && menuComment.userId && menuComment.role !== "owner" ? <button type="button" onClick={() => { const muted = liveSafety.restrictions.some((item) => item.user_id === menuComment.userId && item.restriction === "comment_mute"); void postSafetyAction(muted ? "unmute" : "comment_mute", menuComment.userId!).catch((error) => setStatus(error.message)); setCommentMenuId(null); }} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">{liveSafety.restrictions.some((item) => item.user_id === menuComment.userId && item.restriction === "comment_mute") ? "Unmute Comments" : "Mute Comments"}</button> : null}
+            {canModerateNow && menuComment.userId && menuComment.role !== "owner" ? <button type="button" onClick={() => { const blocked = liveSafety.restrictions.some((item) => item.user_id === menuComment.userId && item.restriction === "blocked"); void postSafetyAction(blocked ? "unblock" : "block", menuComment.userId!).catch((error) => setStatus(error.message)); setCommentMenuId(null); }} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">{liveSafety.restrictions.some((item) => item.user_id === menuComment.userId && item.restriction === "blocked") ? "Unblock From Live" : "Block From Live"}</button> : null}
+            {canModerateNow ? <button type="button" onClick={() => { pinComment(menuComment.id); setCommentMenuId(null); }} className="rounded-2xl bg-white/10 px-4 py-4 text-sm font-black text-white">📌 {pinnedCommentId === menuComment.id ? "Unpin" : "Pin"}</button> : null}
+            <button type="button" onClick={() => { setReportTarget(menuComment); setReportOpen(true); setReportReason(""); setCommentMenuId(null); }} className="rounded-2xl border border-amber-400/25 bg-amber-500/10 px-4 py-4 text-sm font-black text-amber-100">⚑ Report to Owners</button>
+            {canModerateNow || menuComment.senderId === participants.local?.session_id ? <button type="button" onClick={() => { deleteComment(menuComment.id); setCommentMenuId(null); }} className="col-span-2 rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-4 text-sm font-black text-red-200">Delete Comment</button> : null}
           </div>
           <button type="button" onClick={() => setCommentMenuId(null)} className="mx-auto mt-3 block w-full max-w-lg rounded-2xl bg-white/[.06] px-4 py-3 text-sm font-bold text-white/60">Cancel</button>
+        </div>
+      </div> : null}
+
+      {reportOpen && reportTarget ? <div className="absolute inset-0 z-[80] grid items-end bg-black/65 backdrop-blur-sm sm:place-items-center" onClick={() => setReportOpen(false)}>
+        <form onSubmit={submitLiveReport} className="w-full rounded-t-[2rem] border-t border-amber-400/30 bg-[#0c100e] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:max-w-lg sm:rounded-[2rem] sm:border" onClick={(event) => event.stopPropagation()}>
+          <p className="text-xs font-black uppercase tracking-[.18em] text-amber-200">Private report to owners</p>
+          <h2 className="mt-2 text-xl font-black text-white">Report {reportTarget.name}</h2>
+          <p className="mt-2 line-clamp-2 text-sm text-white/55">{reportTarget.body}</p>
+          <textarea value={reportReason} onChange={(event) => setReportReason(event.target.value)} minLength={3} maxLength={500} required placeholder="Briefly tell the owners what happened…" className="mt-4 min-h-28 w-full rounded-2xl border border-white/10 bg-white/[.06] p-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-amber-300/50" />
+          <div className="mt-3 flex gap-2"><button type="button" onClick={() => setReportOpen(false)} className="flex-1 rounded-xl bg-white/10 px-4 py-3 text-sm font-bold text-white">Cancel</button><button type="submit" className="flex-1 rounded-xl bg-amber-300 px-4 py-3 text-sm font-black text-black">Send Report</button></div>
+        </form>
+      </div> : null}
+
+      {coinStoreOpen ? <div className="absolute inset-0 z-[85] grid items-end bg-black/65 backdrop-blur-sm sm:place-items-center" onClick={() => setCoinStoreOpen(false)}>
+        <div className="w-full rounded-t-[2rem] border-t border-[#f4b400]/30 bg-[#0c100e] p-5 sm:max-w-lg sm:rounded-[2rem] sm:border" onClick={(event) => event.stopPropagation()}>
+          <div className="flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-[.18em] text-[#f4b400]">Zoo Crew coin wallet</p><h2 className="mt-1 text-xl font-black text-white">{coinBalance.toLocaleString()} coins</h2></div><button onClick={() => setCoinStoreOpen(false)} className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-xl text-white">×</button></div>
+          <p className="mt-3 text-xs leading-5 text-white/55">Coins are for Zoo Crew live gifts only. There are no creator cash-outs; gift proceeds go to the crew. PayPal checkout must be enabled by the owners after the payment and database flow is verified.</p>
+          <div className="mt-4 grid gap-2">{([{ amount: "5", coins: 500 }, { amount: "10", coins: 1000 }, { amount: "20", coins: 2000 }] as const).map((pack) => <button key={pack.amount} type="button" disabled={!coinsEnabled || giftBusy} onClick={() => void buyCoinPackage(pack.amount)} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[.05] px-4 py-4 text-left text-white disabled:opacity-40"><span><strong className="block text-sm">{pack.coins.toLocaleString()} coins</strong><small className="text-xs text-white/45">Zoo Crew Live wallet</small></span><strong className="text-[#f4b400]">${pack.amount}</strong></button>)}</div>
+          {!coinsEnabled ? <p className="mt-3 text-xs text-amber-100/70">Purchases are safely disabled until the owners finish setup and turn them on.</p> : null}
+        </div>
+      </div> : null}
+
+      {reportInboxOpen ? <div className="absolute inset-0 z-[80] grid items-end bg-black/65 backdrop-blur-sm sm:place-items-center" onClick={() => setReportInboxOpen(false)}>
+        <div className="max-h-[80vh] w-full overflow-y-auto rounded-t-[2rem] border-t border-[#f4b400]/30 bg-[#0c100e] p-5 sm:max-w-2xl sm:rounded-[2rem] sm:border" onClick={(event) => event.stopPropagation()}>
+          <div className="flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-[.18em] text-[#f4b400]">Owner only · Private</p><h2 className="mt-1 text-xl font-black text-white">Live Reports</h2></div><button onClick={() => setReportInboxOpen(false)} className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-xl text-white">×</button></div>
+          <div className="mt-4 grid gap-3">{reports.length ? reports.map((report) => <article key={report.id} className="rounded-2xl border border-white/10 bg-white/[.04] p-4">
+            <div className="flex items-start justify-between gap-3"><div><p className="font-black text-white">{report.reported_name}</p><p className="mt-1 text-xs text-white/45">{new Date(report.created_at).toLocaleString()} · {report.status}</p></div></div>
+            {report.comment_body ? <p className="mt-3 rounded-xl bg-black/30 p-3 text-sm text-white/75">“{report.comment_body}”</p> : null}
+            <p className="mt-2 text-sm text-white/80">{report.reason}</p>
+            {report.status === "new" ? <div className="mt-3 flex flex-wrap gap-2"><button onClick={() => void setReportStatus(report.id, "reviewed")} className="rounded-lg bg-white/10 px-3 py-2 text-xs font-bold text-white">Mark Reviewed</button><button onClick={() => void setReportStatus(report.id, "actioned")} className="rounded-lg bg-amber-300/15 px-3 py-2 text-xs font-bold text-amber-100">Actioned</button><button onClick={() => void setReportStatus(report.id, "dismissed")} className="rounded-lg bg-white/5 px-3 py-2 text-xs font-bold text-white/60">Dismiss</button></div> : null}
+          </article>) : <p className="rounded-xl bg-white/[.04] p-4 text-sm text-white/45">No reports have been submitted.</p>}</div>
         </div>
       </div> : null}
 
