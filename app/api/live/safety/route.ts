@@ -3,7 +3,7 @@ import { authenticatedUser, isAdministrator, serviceConfiguration, staffAccess }
 export const runtime = "nodejs";
 
 const DAILY_API = "https://api.daily.co/v1";
-const ROOM_PREFIX = "zoo-crew-vibe-live-";
+const ROOM_PREFIX = process.env.VERCEL_ENV === "production" ? "zoo-crew-vibe-live-" : "zoo-crew-vibe-preview-";
 type Room = { name: string; url: string };
 
 function dailyHeaders(key: string) {
