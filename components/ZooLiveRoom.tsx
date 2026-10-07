@@ -314,6 +314,10 @@ export default function ZooLiveRoom({
   const [pinnedCommentId, setPinnedCommentId] = useState<string | null>(null);
   const [likedComments, setLikedComments] = useState<string[]>([]);
   const [commentMenuId, setCommentMenuId] = useState<string | null>(null);
+  const [profilePreview, setProfilePreview] = useState<{
+    name: string;
+    username: string;
+  } | null>(null);
   const [activeGift, setActiveGift] = useState<ActiveZooGift | null>(null);
   const [coinBalance, setCoinBalance] = useState(0);
   const [coinsEnabled, setCoinsEnabled] = useState(false);
@@ -341,9 +345,38 @@ export default function ZooLiveRoom({
   const canModerateNow = canModerate || liveSafety.canModerate;
   const isOwnerNow = isOwner || liveSafety.isOwner;
   const canModerateRef = useRef(canModerateNow);
+  const videoOnRef = useRef(videoOn);
   useEffect(() => {
     canModerateRef.current = canModerateNow;
   }, [canModerateNow]);
+  useEffect(() => {
+    videoOnRef.current = videoOn;
+  }, [videoOn]);
+
+  useEffect(() => {
+    const restoreCamera = () => {
+      if (document.visibilityState !== "visible" || !videoOnRef.current) return;
+      const call = callRef.current;
+      const dailyTrack =
+        call?.participants().local?.tracks.video.persistentTrack;
+      const customTrack = cameraTrackRef.current;
+      if (
+        (!dailyTrack || dailyTrack.readyState === "ended") &&
+        (!customTrack || customTrack.readyState === "ended")
+      ) {
+        void acquireCamera().catch(() => {
+          setVideoOn(false);
+          setStatus("Camera paused. Tap the camera button to turn it back on.");
+        });
+      }
+    };
+    document.addEventListener("visibilitychange", restoreCamera);
+    window.addEventListener("pageshow", restoreCamera);
+    return () => {
+      document.removeEventListener("visibilitychange", restoreCamera);
+      window.removeEventListener("pageshow", restoreCamera);
+    };
+  }, []);
   const moderatorIdsRef = useRef<Set<string>>(new Set());
   const commentMutedIdsRef = useRef<Set<string>>(new Set());
 
@@ -2129,14 +2162,19 @@ export default function ZooLiveRoom({
                 ♥ Like{menuComment.likes ? ` · ${menuComment.likes}` : ""}
               </button>
               {menuComment.username ? (
-                <a
-                  href={`/singers/${encodeURIComponent(menuComment.username)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfilePreview({
+                      name: menuComment.name,
+                      username: menuComment.username!,
+                    });
+                    setCommentMenuId(null);
+                  }}
                   className="rounded-2xl bg-white/10 px-4 py-4 text-center text-sm font-black text-white"
                 >
                   👤 View Profile
-                </a>
+                </button>
               ) : (
                 <button
                   type="button"
@@ -2269,6 +2307,33 @@ export default function ZooLiveRoom({
               Cancel
             </button>
           </div>
+        </div>
+      ) : null}
+
+      {profilePreview ? (
+        <div className="absolute inset-0 z-[90] flex flex-col bg-[#080b09]">
+          <div className="flex shrink-0 items-center justify-between border-b border-white/10 bg-[#0c100e] px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#f4b400]">
+                Viewing profile · Live stays connected
+              </p>
+              <p className="truncate text-sm font-black text-white">
+                {profilePreview.name}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setProfilePreview(null)}
+              className="ml-3 rounded-full bg-[#f4b400] px-4 py-2 text-sm font-black text-black"
+            >
+              Back to Live
+            </button>
+          </div>
+          <iframe
+            title={`${profilePreview.name} profile`}
+            src={`/singers/${encodeURIComponent(profilePreview.username)}`}
+            className="min-h-0 flex-1 border-0 bg-black"
+          />
         </div>
       ) : null}
 
