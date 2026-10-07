@@ -143,7 +143,7 @@ export async function POST(request: Request) {
     const tokenResponse = await fetch(`${DAILY_API}/meeting-tokens`, {
       method: "POST",
       headers: dailyHeaders(apiKey),
-      body: JSON.stringify({ properties: { room_name: room.name, user_id: user.id, user_name: name.slice(0, 50), is_owner: canModerate, permissions: { canSend: entryMode === "viewer" ? [] : ["audio", "video"] }, exp: expires } }),
+      body: JSON.stringify({ properties: { room_name: room.name, user_id: user.id, user_name: name.slice(0, 50), is_owner: role === "owner", permissions: { canSend: entryMode === "viewer" ? [] : ["audio", "video"] }, exp: expires } }),
     });
     if (!tokenResponse.ok) throw new Error("Daily meeting token creation failed.");
     const token = (await tokenResponse.json()) as { token: string };
