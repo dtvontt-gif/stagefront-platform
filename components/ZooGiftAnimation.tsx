@@ -14,7 +14,7 @@ export const zooGiftCatalog: Record<ZooGiftId, { name: string; icon: string; fut
   paw: { name: "Zoo Paw", icon: "🐾", futurePrice: "$0.10", duration: 2200 },
   anaconda: { name: "Anaconda Heart", icon: "🐍", futurePrice: "$3.00", duration: 4800 },
   lion: { name: "King’s Roar", icon: "🦁", futurePrice: "$10.00", duration: 5200 },
-  sha_monkey: { name: "Sha & Her Monkey", icon: "🐒", futurePrice: "$25.00", duration: 7200 },
+  sha_monkey: { name: "Sha & Her Monkey", icon: "🐒", futurePrice: "$25.00", duration: 8200 },
 };
 
 function GiftCaption({ gift }: { gift: ActiveZooGift }) {
@@ -87,13 +87,15 @@ function ShaMonkeyAnimation() {
   return (
     <div className="zoo-sha-monkey-wrap">
       <div className="zoo-sha-monkey-spotlight" />
-      <div className="zoo-sha-monkey-stage">
-        <div
-          className="zoo-sha-monkey-sprite"
-          role="img"
-          aria-label="Sha walks in with her monkey, who climbs onto her shoulder before they wave"
-        />
-      </div>
+      <video
+        className="zoo-sha-monkey-video"
+        src="/videos/zoo-crew/sha-monkey-gift-v2.mp4"
+        autoPlay
+        muted
+        playsInline
+        preload="auto"
+        aria-label="Sha walks in with her monkey, who climbs onto her shoulder before they wave"
+      />
       <div className="zoo-sha-monkey-title">SHA &amp; HER MONKEY</div>
       {Array.from({ length: 12 }).map((_, index) => (
         <i key={index} className={`zoo-sha-spark zoo-sha-spark-${index + 1}`} />
