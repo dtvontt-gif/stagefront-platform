@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 
-export type ZooGiftId = "paw" | "anaconda" | "lion";
+export type ZooGiftId = "paw" | "anaconda" | "lion" | "sha_monkey";
 
 export type ActiveZooGift = {
   id: ZooGiftId;
@@ -14,6 +14,7 @@ export const zooGiftCatalog: Record<ZooGiftId, { name: string; icon: string; fut
   paw: { name: "Zoo Paw", icon: "🐾", futurePrice: "$0.10", duration: 2200 },
   anaconda: { name: "Anaconda Heart", icon: "🐍", futurePrice: "$3.00", duration: 4800 },
   lion: { name: "King’s Roar", icon: "🦁", futurePrice: "$10.00", duration: 5200 },
+  sha_monkey: { name: "Sha & Her Monkey", icon: "🐒", futurePrice: "$25.00", duration: 7200 },
 };
 
 function GiftCaption({ gift }: { gift: ActiveZooGift }) {
@@ -82,6 +83,25 @@ function LionAnimation() {
   );
 }
 
+function ShaMonkeyAnimation() {
+  return (
+    <div className="zoo-sha-monkey-wrap">
+      <div className="zoo-sha-monkey-spotlight" />
+      <div className="zoo-sha-monkey-stage">
+        <div
+          className="zoo-sha-monkey-sprite"
+          role="img"
+          aria-label="Sha walks in with her monkey, who climbs onto her shoulder before they wave"
+        />
+      </div>
+      <div className="zoo-sha-monkey-title">SHA &amp; HER MONKEY</div>
+      {Array.from({ length: 12 }).map((_, index) => (
+        <i key={index} className={`zoo-sha-spark zoo-sha-spark-${index + 1}`} />
+      ))}
+    </div>
+  );
+}
+
 export default function ZooGiftAnimation({ gift }: { gift: ActiveZooGift | null }) {
   if (!gift) return null;
   return (
@@ -89,6 +109,7 @@ export default function ZooGiftAnimation({ gift }: { gift: ActiveZooGift | null 
       {gift.id === "paw" ? <PawAnimation /> : null}
       {gift.id === "anaconda" ? <AnacondaAnimation /> : null}
       {gift.id === "lion" ? <LionAnimation /> : null}
+      {gift.id === "sha_monkey" ? <ShaMonkeyAnimation /> : null}
       <GiftCaption gift={gift} />
     </div>
   );

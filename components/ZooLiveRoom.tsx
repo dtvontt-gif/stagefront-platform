@@ -1176,6 +1176,7 @@ export default function ZooLiveRoom({
       paw: 10,
       anaconda: 300,
       lion: 1000,
+      sha_monkey: 2500,
     };
     if (coinBalance < coinCosts[giftId]) {
       setCoinStoreOpen(true);
@@ -2032,7 +2033,13 @@ export default function ZooLiveRoom({
               {(Object.keys(zooGiftCatalog) as ZooGiftId[]).map((giftId) => {
                 const gift = zooGiftCatalog[giftId];
                 const cost =
-                  giftId === "paw" ? 10 : giftId === "anaconda" ? 300 : 1000;
+                  giftId === "paw"
+                    ? 10
+                    : giftId === "anaconda"
+                      ? 300
+                      : giftId === "lion"
+                        ? 1000
+                        : 2500;
                 return (
                   <button
                     key={giftId}
