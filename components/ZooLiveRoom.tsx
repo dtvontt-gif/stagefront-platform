@@ -2074,7 +2074,7 @@ export default function ZooLiveRoom({
             onClick={() => setGiftMenuOpen((open) => !open)}
             className="rounded-full border border-[#f4b400]/30 bg-[#f4b400]/10 px-4 py-2 text-xs font-black text-[#f4b400]"
           >
-            🎁 Send a Gift · {coinBalance.toLocaleString()} coins
+            🪙 My Wallet: {coinBalance.toLocaleString()} coins · 🎁 Gifts
           </button>
         </div>
         <form onSubmit={sendComment} className="flex items-center gap-2">
