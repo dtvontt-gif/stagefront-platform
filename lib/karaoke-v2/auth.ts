@@ -1,10 +1,10 @@
 import { cookies } from "next/headers";
 import type { User } from "@supabase/supabase-js";
 import { supabaseAnon } from "./supabase";
-import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/stagefront-auth";
+import { ACCESS_COOKIE, REFRESH_COOKIE, SESSION_MAX_AGE } from "@/lib/stagefront-auth";
 
 export { ACCESS_COOKIE, REFRESH_COOKIE };
-export const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
+export { SESSION_MAX_AGE };
 
 export type KaraokeSession = { user: User; accessToken: string };
 

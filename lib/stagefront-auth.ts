@@ -1,5 +1,8 @@
 export const ACCESS_COOKIE = "stagefront_access_token";
 export const REFRESH_COOKIE = "stagefront_refresh_token";
+// Browsers cap persistent cookies at roughly 400 days. Refreshing the session
+// renews this window, so active members stay signed in until they sign out.
+export const SESSION_MAX_AGE = 60 * 60 * 24 * 400;
 
 type SupabaseUser = { id: string; email?: string };
 export type StaffRole = "owner" | "manager" | "moderator";

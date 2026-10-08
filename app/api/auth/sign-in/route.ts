@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import {
   ACCESS_COOKIE,
   REFRESH_COOKIE,
+  SESSION_MAX_AGE,
   isAdministrator,
   supabaseConfiguration,
 } from "@/lib/stagefront-auth";
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
     sameSite: "lax",
     secure,
     path: "/",
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: SESSION_MAX_AGE,
   });
 
   return Response.json({
