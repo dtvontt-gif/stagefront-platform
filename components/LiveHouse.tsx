@@ -17,6 +17,7 @@ export default function LiveHouse() {
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
   const [canControlLive, setCanControlLive] = useState(false);
   const [canEndLive, setCanEndLive] = useState(false);
+  const [liveStarterUserId, setLiveStarterUserId] = useState<string | null>(null);
   const [entryMode, setEntryMode] = useState<"viewer" | "stage">("viewer");
 
   useEffect(() => {
@@ -75,7 +76,7 @@ export default function LiveHouse() {
       return;
     }
     const response = await fetch("/api/live/room", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "enter", mode: requestedMode }) });
-    const result = (await response.json().catch(() => ({}))) as { roomUrl?: string; message?: string; isOwner?: boolean; canModerate?: boolean; canControlLive?: boolean; canEndLive?: boolean; entryMode?: "viewer" | "stage"; role?: string | null; username?: string | null; profileImageUrl?: string | null };
+    const result = (await response.json().catch(() => ({}))) as { roomUrl?: string; message?: string; isOwner?: boolean; canModerate?: boolean; canControlLive?: boolean; canEndLive?: boolean; entryMode?: "viewer" | "stage"; role?: string | null; username?: string | null; profileImageUrl?: string | null; liveStarterUserId?: string | null };
     if (!response.ok || !result.roomUrl) {
       setState("error");
       setMessage(result.message || "The Live House could not open.");
@@ -86,6 +87,7 @@ export default function LiveHouse() {
     setCanModerate(Boolean(result.canModerate));
     setCanControlLive(Boolean(result.canControlLive));
     setCanEndLive(Boolean(result.canEndLive));
+    setLiveStarterUserId(result.liveStarterUserId || null);
     setStaffRole(result.role || null);
     setProfileImageUrl(result.profileImageUrl || null);
     setProfileUsername(result.username || null);
@@ -118,7 +120,7 @@ export default function LiveHouse() {
   if (state === "ready") {
     return (
       <section className="fixed inset-0 z-[100] h-dvh overflow-hidden bg-black">
-        <ZooLiveRoom roomUrl={roomUrl} isOwner={owner} canModerate={canModerate} canEndLive={canEndLive} initialMode={entryMode} staffRole={staffRole} profileImageUrl={profileImageUrl} profileUsername={profileUsername} onEndLive={endLive} />
+        <ZooLiveRoom roomUrl={roomUrl} isOwner={owner} canModerate={canModerate} canEndLive={canEndLive} liveStarterUserId={liveStarterUserId} initialMode={entryMode} staffRole={staffRole} profileImageUrl={profileImageUrl} profileUsername={profileUsername} onEndLive={endLive} />
       </section>
     );
   }

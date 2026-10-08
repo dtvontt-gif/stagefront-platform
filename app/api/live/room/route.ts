@@ -351,6 +351,7 @@ export async function POST(request: Request) {
       name,
       username,
       profileImageUrl: imageUrl,
+      liveStarterUserId: starterId(room),
       isOwner: role === "owner",
       canModerate,
       canControlLive,

@@ -257,6 +257,7 @@ export default function ZooLiveRoom({
   isOwner,
   canModerate,
   canEndLive,
+  liveStarterUserId,
   initialMode,
   staffRole,
   profileImageUrl,
@@ -267,6 +268,7 @@ export default function ZooLiveRoom({
   isOwner: boolean;
   canModerate: boolean;
   canEndLive: boolean;
+  liveStarterUserId: string | null;
   initialMode: "viewer" | "stage";
   staffRole: string | null;
   profileImageUrl: string | null;
@@ -682,7 +684,7 @@ export default function ZooLiveRoom({
         if (
           data?.kind === "stage-drop" &&
           sender?.owner &&
-          !call?.participants().local?.owner &&
+          call?.participants().local?.user_id !== liveStarterUserId &&
           data.sessionId === call?.participants().local?.session_id
         ) {
           call?.setLocalAudio(false);
@@ -813,6 +815,7 @@ export default function ZooLiveRoom({
     initialMode,
     canModerate,
     canEndLive,
+    liveStarterUserId,
   ]);
 
   const membershipUserIds = useMemo(() => {
@@ -1612,17 +1615,12 @@ export default function ZooLiveRoom({
       !canModerateNow ||
       !call ||
       droppingStageId ||
-      !people.some((person) => {
-        const data =
-          person.userData && typeof person.userData === "object"
-            ? (person.userData as Record<string, unknown>)
-            : {};
-        return (
+      !people.some(
+        (person) =>
           person.session_id === sessionId &&
           !person.local &&
-          data.role !== "owner"
-        );
-      })
+          person.user_id !== liveStarterUserId,
+      )
     )
       return;
     setDroppingStageId(sessionId);
@@ -2903,7 +2901,7 @@ export default function ZooLiveRoom({
                 </>
               ) : null}
             </div>
-            {!moderationTarget.owner ? (
+            {moderationTarget.user_id !== liveStarterUserId ? (
               <button
                 onClick={() => void dropToLobby(moderationTarget.session_id)}
                 disabled={Boolean(droppingStageId)}
@@ -2915,7 +2913,7 @@ export default function ZooLiveRoom({
               </button>
             ) : (
               <p className="mt-3 text-xs text-[#f4b400]">
-                Hosts are protected from mute, camera off, and lobby drops.
+                The host who started this live cannot be dropped to the lobby.
               </p>
             )}
             <p className="mt-3 text-[11px] leading-4 text-white/45">
