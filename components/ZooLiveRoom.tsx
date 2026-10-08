@@ -635,8 +635,7 @@ export default function ZooLiveRoom({
           data?.kind === "stage-invite" &&
           senderCanModerate &&
           data.inviterSessionId === sender?.session_id &&
-          data.sessionId === call?.participants().local?.session_id &&
-          !call?.participants().local?.owner
+          data.sessionId === call?.participants().local?.session_id
         ) {
           setCageInvite({
             inviterSessionId: data.inviterSessionId,
@@ -943,6 +942,38 @@ export default function ZooLiveRoom({
     );
     setControlsOpen(false);
     setStatus("Your box was moved to a cage");
+  }
+
+  async function returnSelfToLobby() {
+    const call = callRef.current;
+    const local = call?.participants().local;
+    if (!call || !local || local.user_id === liveStarterUserId) return;
+    const localData =
+      local.userData && typeof local.userData === "object"
+        ? (local.userData as Record<string, unknown>)
+        : {};
+    try {
+      call.setLocalAudio(false);
+      call.setLocalVideo(false);
+      cameraTrackRef.current?.stop();
+      microphoneTrackRef.current?.stop();
+      cameraTrackRef.current = null;
+      microphoneTrackRef.current = null;
+      await call.setUserData({
+        ...localData,
+        mode: "viewer",
+        wantsCage: false,
+      });
+      setViewerMode(true);
+      setAudioOn(false);
+      setVideoOn(false);
+      setStageRequested(false);
+      setCageInvite(null);
+      setControlsOpen(false);
+      setStatus("You returned to the viewer lobby.");
+    } catch {
+      setStatus("Could not return to the lobby. Please try again.");
+    }
   }
 
   function openParticipantControls(person: DailyParticipant) {
@@ -1551,16 +1582,11 @@ export default function ZooLiveRoom({
     const target = Object.values(call?.participants() || {}).find(
       (person) => person.session_id === sessionId,
     );
-    const targetData =
-      target?.userData && typeof target.userData === "object"
-        ? (target.userData as Record<string, unknown>)
-        : {};
     if (
       !canModerateNow ||
       !call ||
       !local ||
       !target ||
-      targetData.role === "owner" ||
       pendingInvitesRef.current.has(sessionId)
     )
       return;
@@ -2813,6 +2839,20 @@ export default function ZooLiveRoom({
                 </div>
               </>
             ) : null}
+            {callRef.current?.participants().local?.user_id !==
+            liveStarterUserId ? (
+              <button
+                type="button"
+                onClick={() => void returnSelfToLobby()}
+                className="mt-3 w-full rounded-2xl border border-white/15 bg-white/[.07] px-4 py-3 text-sm font-black text-white"
+              >
+                ⬇ Leave My Box and Return to Lobby
+              </button>
+            ) : (
+              <p className="mt-3 text-xs text-[#f4b400]">
+                The host who started this live must remain in a box.
+              </p>
+            )}
             <p className="mt-5 text-xs font-black uppercase tracking-[.16em] text-white/50">
               Choose your box background
             </p>
