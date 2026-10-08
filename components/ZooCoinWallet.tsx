@@ -108,7 +108,7 @@ export default function ZooCoinWallet() {
               {pack.coins.toLocaleString()} coins
             </strong>
             <span className="mt-1 block text-sm font-black text-[#f4b400]">
-              {busy === pack.amount ? "Opening PayPal…" : pack.price}
+              {busy === pack.amount ? "Opening secure checkout…" : pack.price}
             </span>
           </button>
         ))}
@@ -116,8 +116,8 @@ export default function ZooCoinWallet() {
 
       {!enabled ? (
         <p className="mt-5 rounded-2xl border border-white/10 bg-black/25 p-4 text-sm text-white/55">
-          Coin purchases are coming soon. Your wallet is ready, but real-money
-          checkout remains disabled during beta.
+          Secure card checkout is being activated. Stripe Link, Apple Pay, or
+          Google Pay may appear automatically when available on your device.
         </p>
       ) : null}
       <div className="mt-5 flex flex-wrap items-center gap-4">
