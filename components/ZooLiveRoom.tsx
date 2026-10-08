@@ -463,25 +463,35 @@ export default function ZooLiveRoom({
     const call = callRef.current;
     if (!call) return;
     const next = call.participants();
+    const present = Object.values(next);
+    const stage = present.filter((person) => {
+      const data =
+        person.userData && typeof person.userData === "object"
+          ? (person.userData as Record<string, unknown>)
+          : {};
+      return data.mode === "stage" && hasCageAccess(person);
+    });
     setParticipants({ ...next });
     const local = next.local;
     setAudioOn(local?.tracks.audio.state === "playable");
     setVideoOn(local?.tracks.video.state === "playable");
-    setFeaturedId((current) =>
-      current &&
-      Object.values(next).some((person) => person.session_id === current)
-        ? current
-        : Object.values(next).find((person) => !person.local)?.session_id ||
-          local?.session_id ||
-          "",
-    );
+    setFeaturedId((current) => {
+      if (stage.some((person) => person.session_id === current)) return current;
+      return (
+        stage.find((person) => person.user_id === liveStarterUserId)
+          ?.session_id ||
+        stage[0]?.session_id ||
+        ""
+      );
+    });
     setSlotOrder((current) => {
-      const available = Object.values(next).map((person) => person.session_id);
+      const available = present.map((person) => person.session_id);
+      const stageIds = stage.map((person) => person.session_id);
       for (const id of pendingInvitesRef.current)
         if (!available.includes(id)) pendingInvitesRef.current.delete(id);
       return [
         ...current.filter((id) => available.includes(id)),
-        ...available.filter((id) => !current.includes(id)),
+        ...stageIds.filter((id) => !current.includes(id)),
       ];
     });
     setStageRequests((current) => {
@@ -890,9 +900,14 @@ export default function ZooLiveRoom({
     .filter((person): person is DailyParticipant => Boolean(person));
   const featured =
     people.find((person) => person.session_id === featuredId) || people[0];
-  const rail = people.filter(
-    (person) => person.session_id !== featured?.session_id,
+  const cageSlotIds = slotOrder.filter(
+    (sessionId) => sessionId !== featured?.session_id,
   );
+  const railSlots: Array<DailyParticipant | null> = cageSlotIds.map(
+    (sessionId) =>
+      people.find((person) => person.session_id === sessionId) || null,
+  );
+  while (railSlots.length < 4) railSlots.push(null);
   const moderationTarget = people.find(
     (person) => person.session_id === moderationTargetId,
   );
@@ -901,7 +916,28 @@ export default function ZooLiveRoom({
 
   function feature(person: DailyParticipant) {
     if (!canModerateNow) return;
+    const currentFeaturedId = featured?.session_id;
+    const nextOrder = [...slotOrder];
+    if (currentFeaturedId && !nextOrder.includes(currentFeaturedId))
+      nextOrder.push(currentFeaturedId);
+    if (!nextOrder.includes(person.session_id))
+      nextOrder.push(person.session_id);
+    const currentIndex = currentFeaturedId
+      ? nextOrder.indexOf(currentFeaturedId)
+      : -1;
+    const targetIndex = nextOrder.indexOf(person.session_id);
+    if (currentIndex >= 0 && targetIndex >= 0) {
+      [nextOrder[currentIndex], nextOrder[targetIndex]] = [
+        nextOrder[targetIndex],
+        nextOrder[currentIndex],
+      ];
+    }
+    setSlotOrder(nextOrder);
     setFeaturedId(person.session_id);
+    callRef.current?.sendAppMessage(
+      { kind: "positions", sessionIds: nextOrder } satisfies RoomMessage,
+      "*",
+    );
     callRef.current?.sendAppMessage(
       { kind: "feature", sessionId: person.session_id } satisfies RoomMessage,
       "*",
@@ -913,33 +949,20 @@ export default function ZooLiveRoom({
     if (!canModerateNow) return;
     const local = callRef.current?.participants().local;
     if (!local) return;
-    setFeaturedId(local.session_id);
-    callRef.current?.sendAppMessage(
-      { kind: "self-stage", sessionId: local.session_id } satisfies RoomMessage,
-      "*",
-    );
+    feature(local);
     setControlsOpen(false);
     setStatus("You moved to the main stage");
   }
 
   function moveSelfToCage() {
     if (!canModerateNow) return;
-    const current = Object.values(callRef.current?.participants() || {});
-    const local = current.find((person) => person.local);
-    const next = current.find((person) => !person.local);
+    const local = callRef.current?.participants().local;
+    const next = people.find((person) => !person.local);
     if (!local || !next) {
       setStatus("Someone else must be inside before you can move to a cage.");
       return;
     }
-    setFeaturedId(next.session_id);
-    callRef.current?.sendAppMessage(
-      {
-        kind: "self-cage",
-        sessionId: local.session_id,
-        nextSessionId: next.session_id,
-      } satisfies RoomMessage,
-      "*",
-    );
+    feature(next);
     setControlsOpen(false);
     setStatus("Your box was moved to a cage");
   }
@@ -1517,13 +1540,6 @@ export default function ZooLiveRoom({
       targetData.mode !== "viewer"
     )
       return;
-    const mainStageId = Object.values(call.participants()).find((person) => {
-      const data =
-        person.userData && typeof person.userData === "object"
-          ? (person.userData as Record<string, unknown>)
-          : {};
-      return data.mode === "stage";
-    })?.session_id;
     const isLocalTarget =
       target.local || sessionId === call.participants().local?.session_id;
     setApprovingStageId(sessionId);
@@ -1552,13 +1568,6 @@ export default function ZooLiveRoom({
         { kind: "stage-approve", sessionId } satisfies RoomMessage,
         "*",
       );
-      if (mainStageId) {
-        setFeaturedId(mainStageId);
-        call.sendAppMessage(
-          { kind: "feature", sessionId: mainStageId } satisfies RoomMessage,
-          "*",
-        );
-      }
       setStageRequests((current) => current.filter((id) => id !== sessionId));
       setMembersOpen(false);
       if (!isLocalTarget) setStatus("Viewer accepted into a cage");
@@ -1933,21 +1942,20 @@ export default function ZooLiveRoom({
 
         <aside className="grid min-h-0 grid-rows-[1fr_auto] gap-1 sm:gap-2">
           <div className="grid min-h-0 auto-rows-[106px] gap-1 overflow-y-auto sm:auto-rows-[150px] sm:gap-2">
-            {rail.map((person) => (
-              <MediaTile
-                key={person.session_id}
-                participant={person}
-                caged
-                isSuperfan={superfanIds.has(person.user_id)}
-                outputDeviceId={outputDeviceId}
-                onSelect={() => openParticipantControls(person)}
-                onSelfSettings={() => setControlsOpen(true)}
-              />
-            ))}
-            {Array.from({ length: Math.max(0, 4 - rail.length) }).map(
-              (_, index) => (
+            {railSlots.map((person, index) =>
+              person ? (
+                <MediaTile
+                  key={person.session_id}
+                  participant={person}
+                  caged
+                  isSuperfan={superfanIds.has(person.user_id)}
+                  outputDeviceId={outputDeviceId}
+                  onSelect={() => openParticipantControls(person)}
+                  onSelfSettings={() => setControlsOpen(true)}
+                />
+              ) : (
                 <div
-                  key={index}
+                  key={`open-cage-${cageSlotIds[index] || index}`}
                   className="relative grid place-items-center overflow-hidden rounded-xl border border-[#8b6835]/35 bg-[linear-gradient(145deg,#11130f,#080908)] text-center text-[10px] font-bold uppercase text-white/25 sm:rounded-2xl sm:text-xs"
                 >
                   <span className="relative z-10">
