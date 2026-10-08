@@ -147,7 +147,18 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .zoo-gift-layer *, .zoo-gift-layer::before { animation-duration: 1ms !important; animation-delay: 0ms !important; }
+  /* Keep gifts visible for members who use Reduce Motion. The former 1ms
+     animation rule immediately landed on the invisible final keyframe. */
+  .zoo-gift-layer *, .zoo-gift-layer::before { animation: none !important; }
+  .zoo-gift-layer::before { opacity: 1; }
+  .zoo-gift-caption { opacity: 1; transform: translateX(-50%); }
+  .zoo-gift-paw { opacity: 1; }
+  .zoo-anaconda-art, .zoo-lion-art { opacity: 1; scale: 1; translate: 0 0; rotate: 0deg; }
+  .zoo-anaconda-glow { opacity: .75; }
+  .zoo-anaconda-heart { opacity: 1; scale: 1; }
+  .zoo-lion-rays { opacity: .55; scale: 1; }
+  .zoo-roar-word { opacity: 1; scale: 1; translate: 0 0; }
+  .zoo-sha-monkey-title { opacity: 1; translate: 0 0; scale: 1; }
 }
 
 h1,

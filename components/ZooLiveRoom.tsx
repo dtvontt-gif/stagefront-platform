@@ -1480,7 +1480,6 @@ export default function ZooLiveRoom({
       !canModerateNow ||
       !call ||
       !target ||
-      (targetData.role === "owner" && !target.local) ||
       targetData.mode !== "viewer"
     )
       return;

@@ -333,7 +333,11 @@ export async function POST(request: Request) {
           user_name: name.slice(0, 50),
           is_owner: canModerate,
           permissions: {
-            canSend: entryMode === "viewer" ? [] : ["audio", "video"],
+            // Staff may enter through the viewer lobby and promote themselves
+            // later. Keep their media permission available so that promotion
+            // actually enables the camera and microphone controls.
+            canSend:
+              canModerate || entryMode === "stage" ? ["audio", "video"] : [],
           },
           exp: expires,
         },
