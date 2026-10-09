@@ -104,15 +104,14 @@ function LionAnimation() {
 function ShaMonkeyAnimation() {
   return (
     <div className="zoo-sha-monkey-wrap">
-      <div className="zoo-sha-monkey-spotlight" />
-      <video
+      <Image
         className="zoo-sha-monkey-video"
-        src="/videos/zoo-crew/sha-monkey-gift-v2.mp4"
-        autoPlay
-        muted
-        playsInline
-        preload="auto"
-        aria-label="Sha walks in with her monkey, who climbs onto her shoulder before they wave"
+        src="/videos/zoo-crew/sha-monkey-gift-transparent.webp?v=1"
+        width={459}
+        height={816}
+        unoptimized
+        priority
+        alt="Sha walks in with her monkey, who climbs onto her shoulder before they wave"
       />
       <div className="zoo-sha-monkey-title">SHA &amp; HER MONKEY</div>
       {Array.from({ length: 12 }).map((_, index) => (
