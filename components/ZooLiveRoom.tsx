@@ -1229,14 +1229,8 @@ export default function ZooLiveRoom({
       setStatus("Paid Zoo Crew gifts are not enabled yet.");
       return;
     }
-    const coinCosts: Record<ZooGiftId, number> = {
-      paw: 10,
-      anaconda: 300,
-      lion: 1000,
-      don_anaconda: 2500,
-      sha_monkey: 2500,
-    };
-    if (coinBalance < coinCosts[giftId]) {
+    const coinCost = zooGiftCatalog[giftId].coinCost;
+    if (coinBalance < coinCost) {
       setCoinStoreOpen(true);
       setStatus("You need more coins for that gift.");
       return;
@@ -1255,7 +1249,7 @@ export default function ZooLiveRoom({
       if (!response.ok)
         throw new Error(data.message || "Gift could not be sent.");
       setCoinBalance(
-        Number(data.balance ?? Math.max(0, coinBalance - coinCosts[giftId])),
+        Number(data.balance ?? Math.max(0, coinBalance - coinCost)),
       );
       setStatus(`You sent ${zooGiftCatalog[giftId].name} to the Zoo Crew.`);
       setGiftMenuOpen(false);
@@ -2064,14 +2058,7 @@ export default function ZooLiveRoom({
             <div className="grid grid-cols-3 gap-2">
               {(Object.keys(zooGiftCatalog) as ZooGiftId[]).map((giftId) => {
                 const gift = zooGiftCatalog[giftId];
-                const cost =
-                  giftId === "paw"
-                    ? 10
-                    : giftId === "anaconda"
-                      ? 300
-                      : giftId === "lion"
-                        ? 1000
-                        : 2500;
+                const cost = gift.coinCost;
                 return (
                   <button
                     key={giftId}

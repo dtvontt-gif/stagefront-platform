@@ -2,7 +2,19 @@
 
 import Image from "next/image";
 
-export type ZooGiftId = "paw" | "anaconda" | "lion" | "don_anaconda" | "sha_monkey";
+export type ZooGiftId =
+  | "paw"
+  | "anaconda"
+  | "lion"
+  | "black_panther"
+  | "white_tiger"
+  | "monkey"
+  | "money"
+  | "feed_bag"
+  | "fly_swatter"
+  | "hot_dogs"
+  | "don_anaconda"
+  | "sha_monkey";
 
 export type ActiveZooGift = {
   id: ZooGiftId;
@@ -10,12 +22,19 @@ export type ActiveZooGift = {
   senderName: string;
 };
 
-export const zooGiftCatalog: Record<ZooGiftId, { name: string; icon: string; futurePrice: string; duration: number }> = {
-  paw: { name: "Zoo Paw", icon: "🐾", futurePrice: "$0.10", duration: 2200 },
-  anaconda: { name: "Anaconda Heart", icon: "🐍", futurePrice: "$3.00", duration: 4800 },
-  lion: { name: "King’s Roar", icon: "🦁", futurePrice: "$10.00", duration: 5200 },
-  don_anaconda: { name: "Don and His Anaconda", icon: "🐍", futurePrice: "$25.00", duration: 6500 },
-  sha_monkey: { name: "Sha & Her Monkey", icon: "🐒", futurePrice: "$25.00", duration: 8200 },
+export const zooGiftCatalog: Record<ZooGiftId, { name: string; icon: string; futurePrice: string; coinCost: number; duration: number }> = {
+  paw: { name: "Zoo Paw", icon: "🐾", futurePrice: "$0.10", coinCost: 10, duration: 2200 },
+  fly_swatter: { name: "Orange Fly Swatter", icon: "🪰", futurePrice: "$0.50", coinCost: 50, duration: 3600 },
+  hot_dogs: { name: "Zoo Hot Dogs", icon: "🌭", futurePrice: "$0.50", coinCost: 50, duration: 3600 },
+  feed_bag: { name: "Feed the Animals", icon: "🥜", futurePrice: "$1.00", coinCost: 100, duration: 4000 },
+  anaconda: { name: "Anaconda Heart", icon: "🐍", futurePrice: "$2.00", coinCost: 200, duration: 4800 },
+  lion: { name: "King’s Roar", icon: "🦁", futurePrice: "$2.00", coinCost: 200, duration: 5200 },
+  black_panther: { name: "Black Panther", icon: "🐈‍⬛", futurePrice: "$2.00", coinCost: 200, duration: 4800 },
+  white_tiger: { name: "White Siberian Tiger", icon: "🐅", futurePrice: "$2.00", coinCost: 200, duration: 4800 },
+  monkey: { name: "Monkey Wave", icon: "🐒", futurePrice: "$2.00", coinCost: 200, duration: 4400 },
+  money: { name: "Money Shower", icon: "💵", futurePrice: "$2.00", coinCost: 200, duration: 4400 },
+  don_anaconda: { name: "Don and His Anaconda", icon: "🐍", futurePrice: "$3.00", coinCost: 300, duration: 6500 },
+  sha_monkey: { name: "Sha & Her Monkey", icon: "🐒", futurePrice: "$3.00", coinCost: 300, duration: 8200 },
 };
 
 function GiftCaption({ gift }: { gift: ActiveZooGift }) {
@@ -126,6 +145,32 @@ function LionAnimation() {
   );
 }
 
+const regularGiftArtwork = {
+  black_panther: { src: "/images/zoo-crew/gifts/black-panther.webp", title: "BLACK PANTHER", tone: "gold" },
+  white_tiger: { src: "/images/zoo-crew/gifts/white-siberian-tiger.webp", title: "WHITE SIBERIAN TIGER", tone: "ice" },
+  monkey: { src: "/images/zoo-crew/gifts/monkey.webp", title: "MONKEY WAVE", tone: "gold" },
+  money: { src: "/images/zoo-crew/gifts/money.webp", title: "MONEY SHOWER", tone: "green" },
+  feed_bag: { src: "/images/zoo-crew/gifts/feed-bag.webp", title: "FEED THE ANIMALS", tone: "gold" },
+  fly_swatter: { src: "/images/zoo-crew/gifts/orange-fly-swatter.webp", title: "FLY SWATTER", tone: "orange" },
+  hot_dogs: { src: "/images/zoo-crew/gifts/hot-dog-plate.webp", title: "ZOO HOT DOGS", tone: "red" },
+} as const;
+
+type RegularArtworkGiftId = keyof typeof regularGiftArtwork;
+
+function RegularArtworkAnimation({ giftId }: { giftId: RegularArtworkGiftId }) {
+  const gift = regularGiftArtwork[giftId];
+  return (
+    <div className={`zoo-regular-gift zoo-regular-gift-${gift.tone}`}>
+      <div className="zoo-regular-gift-glow" />
+      <Image className="zoo-regular-gift-art" src={gift.src} width={1024} height={1024} priority alt={gift.title} />
+      <div className="zoo-regular-gift-title">{gift.title}</div>
+      {Array.from({ length: 12 }).map((_, index) => (
+        <i key={index} className={`zoo-gold-spark zoo-gold-spark-${index + 1}`} />
+      ))}
+    </div>
+  );
+}
+
 function ShaMonkeyAnimation() {
   return (
     <div className="zoo-sha-monkey-wrap">
@@ -150,6 +195,7 @@ export default function ZooGiftAnimation({ gift }: { gift: ActiveZooGift | null 
       {gift.id === "paw" ? <PawAnimation /> : null}
       {gift.id === "anaconda" ? <AnacondaAnimation /> : null}
       {gift.id === "lion" ? <LionAnimation /> : null}
+      {gift.id in regularGiftArtwork ? <RegularArtworkAnimation giftId={gift.id as RegularArtworkGiftId} /> : null}
       {gift.id === "don_anaconda" ? <DonAnacondaAnimation /> : null}
       {gift.id === "sha_monkey" ? <ShaMonkeyAnimation /> : null}
       <GiftCaption gift={gift} />

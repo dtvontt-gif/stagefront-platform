@@ -230,7 +230,20 @@ export async function POST(request: Request) {
     if (action === "gift") {
       if (
         !body.giftId ||
-        !["paw", "anaconda", "lion", "don_anaconda", "sha_monkey"].includes(body.giftId) ||
+        ![
+          "paw",
+          "anaconda",
+          "lion",
+          "black_panther",
+          "white_tiger",
+          "monkey",
+          "money",
+          "feed_bag",
+          "fly_swatter",
+          "hot_dogs",
+          "don_anaconda",
+          "sha_monkey",
+        ].includes(body.giftId) ||
         !body.eventId ||
         !/^[0-9a-f-]{36}$/i.test(body.eventId)
       )

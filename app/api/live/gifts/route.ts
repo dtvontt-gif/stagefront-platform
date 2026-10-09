@@ -3,7 +3,20 @@ import { authenticatedUser, serviceConfiguration } from "@/lib/stagefront-auth";
 export const runtime = "nodejs";
 const DAILY_API = "https://api.daily.co/v1";
 const ROOM_PREFIX = process.env.VERCEL_ENV === "production" ? "zoo-crew-vibe-live-" : "zoo-crew-vibe-preview-";
-const COSTS = { paw: 10, anaconda: 300, lion: 1000, don_anaconda: 2500, sha_monkey: 2500 } as const;
+const COSTS = {
+  paw: 10,
+  fly_swatter: 50,
+  hot_dogs: 50,
+  feed_bag: 100,
+  anaconda: 200,
+  lion: 200,
+  black_panther: 200,
+  white_tiger: 200,
+  monkey: 200,
+  money: 200,
+  don_anaconda: 300,
+  sha_monkey: 300,
+} as const;
 type GiftId = keyof typeof COSTS;
 
 function serviceHeaders(key: string) {
