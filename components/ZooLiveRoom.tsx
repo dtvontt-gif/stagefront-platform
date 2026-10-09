@@ -1233,6 +1233,7 @@ export default function ZooLiveRoom({
       paw: 10,
       anaconda: 300,
       lion: 1000,
+      don_anaconda: 2500,
       sha_monkey: 2500,
     };
     if (coinBalance < coinCosts[giftId]) {

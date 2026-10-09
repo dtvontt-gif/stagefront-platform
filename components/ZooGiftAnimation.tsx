@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 
-export type ZooGiftId = "paw" | "anaconda" | "lion" | "sha_monkey";
+export type ZooGiftId = "paw" | "anaconda" | "lion" | "don_anaconda" | "sha_monkey";
 
 export type ActiveZooGift = {
   id: ZooGiftId;
@@ -12,8 +12,9 @@ export type ActiveZooGift = {
 
 export const zooGiftCatalog: Record<ZooGiftId, { name: string; icon: string; futurePrice: string; duration: number }> = {
   paw: { name: "Zoo Paw", icon: "🐾", futurePrice: "$0.10", duration: 2200 },
-  anaconda: { name: "Don and His Anaconda", icon: "🐍", futurePrice: "$3.00", duration: 6500 },
+  anaconda: { name: "Anaconda Heart", icon: "🐍", futurePrice: "$3.00", duration: 4800 },
   lion: { name: "King’s Roar", icon: "🦁", futurePrice: "$10.00", duration: 5200 },
+  don_anaconda: { name: "Don and His Anaconda", icon: "🐍", futurePrice: "$25.00", duration: 6500 },
   sha_monkey: { name: "Sha & Her Monkey", icon: "🐒", futurePrice: "$25.00", duration: 8200 },
 };
 
@@ -56,6 +57,19 @@ function PawAnimation() {
 }
 
 function AnacondaAnimation() {
+  return (
+    <div className="zoo-anaconda-wrap">
+      <div className="zoo-anaconda-glow" />
+      <div className="zoo-anaconda-orbit zoo-anaconda-orbit-one" />
+      <div className="zoo-anaconda-orbit zoo-anaconda-orbit-two" />
+      <Image className="zoo-anaconda-art" src="/images/zoo-crew/gifts/anaconda-heart-v2.webp" width={1024} height={1024} priority alt="Albino anaconda curling into a heart" />
+      <div className="zoo-anaconda-sheen" />
+      <div className="zoo-anaconda-heart">♥</div>
+    </div>
+  );
+}
+
+function DonAnacondaAnimation() {
   return (
     <div className="zoo-anaconda-wrap">
       <video
@@ -115,6 +129,7 @@ export default function ZooGiftAnimation({ gift }: { gift: ActiveZooGift | null 
       {gift.id === "paw" ? <PawAnimation /> : null}
       {gift.id === "anaconda" ? <AnacondaAnimation /> : null}
       {gift.id === "lion" ? <LionAnimation /> : null}
+      {gift.id === "don_anaconda" ? <DonAnacondaAnimation /> : null}
       {gift.id === "sha_monkey" ? <ShaMonkeyAnimation /> : null}
       <GiftCaption gift={gift} />
     </div>
