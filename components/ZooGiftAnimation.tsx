@@ -69,20 +69,43 @@ function AnacondaAnimation() {
   );
 }
 
+// Premium animated gifts use a smaller, lower-frame-rate transparent asset on
+// phones so they stay smooth without reducing desktop/Chromebook quality.
+function PremiumGiftMedia({
+  className,
+  desktopSrc,
+  phoneSrc,
+  alt,
+}: {
+  className: string;
+  desktopSrc: string;
+  phoneSrc: string;
+  alt: string;
+}) {
+  return (
+    <picture>
+      <source media="(max-width: 640px)" srcSet={phoneSrc} />
+      <img
+        className={className}
+        src={desktopSrc}
+        width={459}
+        height={816}
+        fetchPriority="high"
+        alt={alt}
+      />
+    </picture>
+  );
+}
+
 function DonAnacondaAnimation() {
   return (
     <div className="zoo-anaconda-wrap">
-      <picture>
-        <source media="(max-width: 640px)" srcSet="/videos/zoo-crew/don-anaconda-gift-iphone.webp?v=2" />
-        <img
-          className="zoo-anaconda-video"
-          src="/videos/zoo-crew/don-anaconda-gift-mobile.webp?v=1"
-          width={459}
-          height={816}
-          fetchPriority="high"
-          alt="Don with his albino anaconda"
-        />
-      </picture>
+      <PremiumGiftMedia
+        className="zoo-anaconda-video"
+        desktopSrc="/videos/zoo-crew/don-anaconda-gift-mobile.webp?v=1"
+        phoneSrc="/videos/zoo-crew/don-anaconda-gift-iphone.webp?v=2"
+        alt="Don with his albino anaconda"
+      />
       <div className="zoo-anaconda-title">Don and his Anaconda</div>
     </div>
   );
@@ -106,13 +129,10 @@ function LionAnimation() {
 function ShaMonkeyAnimation() {
   return (
     <div className="zoo-sha-monkey-wrap">
-      <Image
+      <PremiumGiftMedia
         className="zoo-sha-monkey-video"
-        src="/videos/zoo-crew/sha-monkey-gift-transparent.webp?v=1"
-        width={459}
-        height={816}
-        unoptimized
-        priority
+        desktopSrc="/videos/zoo-crew/sha-monkey-gift-transparent.webp?v=1"
+        phoneSrc="/videos/zoo-crew/sha-monkey-gift-iphone.webp?v=2"
         alt="Sha walks in with her monkey, who climbs onto her shoulder before they wave"
       />
       <div className="zoo-sha-monkey-title">SHA &amp; HER MONKEY</div>
