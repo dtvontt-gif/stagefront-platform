@@ -8,12 +8,16 @@ export const metadata: Metadata = {
   description: "The official live room for Zoo Crew Vibe on StageFront.",
 };
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default function LivePage() {
+  const buildVersion = process.env.VERCEL_GIT_COMMIT_SHA || "development";
   return (
     <>
       <Navbar />
       <main className="min-h-screen bg-[#070708] pt-20">
-        <LiveHouse />
+        <LiveHouse buildVersion={buildVersion} />
       </main>
       <Footer />
     </>

@@ -6,7 +6,7 @@ import InstallZooCrewApp from "@/components/InstallZooCrewApp";
 
 type RoomState = "checking" | "offline" | "live" | "opening" | "ready" | "error";
 
-export default function LiveHouse() {
+export default function LiveHouse({ buildVersion }: { buildVersion: string }) {
   const [state, setState] = useState<RoomState>("checking");
   const [roomUrl, setRoomUrl] = useState("");
   const [message, setMessage] = useState("");
@@ -19,6 +19,23 @@ export default function LiveHouse() {
   const [canEndLive, setCanEndLive] = useState(false);
   const [liveStarterUserId, setLiveStarterUserId] = useState<string | null>(null);
   const [entryMode, setEntryMode] = useState<"viewer" | "stage">("viewer");
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    async function checkVersion() {
+      const response = await fetch(`/api/live/version?t=${Date.now()}`, { cache: "no-store" });
+      const result = (await response.json().catch(() => ({}))) as { version?: string };
+      if (!active || !response.ok || !result.version || result.version === buildVersion) return;
+      if (state === "ready") setUpdateAvailable(true);
+      else window.location.reload();
+    }
+    const timer = window.setInterval(() => void checkVersion(), 30000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [buildVersion, state]);
 
   useEffect(() => {
     if (state === "ready" || state === "opening") return;
@@ -121,6 +138,7 @@ export default function LiveHouse() {
     return (
       <section className="fixed inset-0 z-[100] h-dvh overflow-hidden bg-black">
         <ZooLiveRoom roomUrl={roomUrl} isOwner={owner} canModerate={canModerate} canEndLive={canEndLive} liveStarterUserId={liveStarterUserId} initialMode={entryMode} staffRole={staffRole} profileImageUrl={profileImageUrl} profileUsername={profileUsername} onEndLive={endLive} />
+        {updateAvailable ? <div className="fixed inset-x-3 top-3 z-[250] mx-auto flex max-w-lg items-center justify-between gap-3 rounded-2xl border border-[#f4b400]/50 bg-black/95 p-3 text-sm shadow-2xl"><span>A newer Live House version is ready.</span><button type="button" onClick={() => window.location.reload()} className="rounded-full bg-[#f4b400] px-4 py-2 text-xs font-black text-black">Reload now</button></div> : null}
       </section>
     );
   }
