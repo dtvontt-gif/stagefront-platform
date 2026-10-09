@@ -13,6 +13,7 @@ type Job = {
   duration?: number | null;
   progress?: number | null;
   error?: string | null;
+  outputFormat?: "mp4" | "prores";
 };
 
 type Access = {
@@ -25,6 +26,8 @@ type Access = {
 const TERMINAL = new Set(["succeeded", "failed", "cancelled", "expired"]);
 const MAX_IMAGE_BYTES = 2_500_000;
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_VIDEO_BYTES = 4_000_000;
+const VIDEO_TYPES = new Set(["video/mp4", "video/quicktime", "video/webm"]);
 const SAVED_JOB_KEY = "stagefront:last-video-job";
 
 export default function VideoStudioPage() {
@@ -33,6 +36,8 @@ export default function VideoStudioPage() {
   const [referenceUrl, setReferenceUrl] = useState("");
   const [referenceImage, setReferenceImage] = useState("");
   const [referenceName, setReferenceName] = useState("");
+  const [studioMode, setStudioMode] = useState<"create" | "edit">("create");
+  const [sourceVideo, setSourceVideo] = useState<File | null>(null);
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -103,7 +108,7 @@ export default function VideoStudioPage() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Could not check generation status.");
         if (!cancelled) {
-          setJob(data);
+          setJob((current) => ({ ...current, ...data }));
           setError("");
         }
       } catch (err) {
@@ -153,6 +158,23 @@ export default function VideoStudioPage() {
     setReferenceName("");
   }
 
+  function chooseVideo(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    setError("");
+    if (!file) return;
+    if (!VIDEO_TYPES.has(file.type)) {
+      setError("Choose an MP4, MOV, or WebM video.");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > MAX_VIDEO_BYTES) {
+      setError("Choose a video smaller than 4 MB.");
+      event.target.value = "";
+      return;
+    }
+    setSourceVideo(file);
+  }
+
   async function generate(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
@@ -161,14 +183,26 @@ export default function VideoStudioPage() {
     window.localStorage.removeItem(SAVED_JOB_KEY);
 
     try {
-      const response = await fetch("/api/video/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      let body: BodyInit;
+      let headers: HeadersInit | undefined;
+      if (studioMode === "edit") {
+        if (!sourceVideo) throw new Error("Choose a video to edit first.");
+        const form = new FormData();
+        form.append("idea", idea);
+        form.append("video", sourceVideo);
+        body = form;
+      } else {
+        headers = { "Content-Type": "application/json" };
+        body = JSON.stringify({
           idea,
           duration: Number(duration),
           referenceUrl: referenceImage || referenceUrl,
-        }),
+        });
+      }
+      const response = await fetch("/api/video/generate", {
+        method: "POST",
+        headers,
+        body,
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not start generation.");
@@ -241,6 +275,14 @@ export default function VideoStudioPage() {
         </div>
 
         <form onSubmit={generate} className="mt-12 grid gap-6 rounded-3xl border border-white/10 bg-[#0b0b0f] p-6 sm:p-8">
+          <div className="grid grid-cols-2 gap-2 rounded-2xl bg-black/30 p-1.5">
+            <button type="button" onClick={() => setStudioMode("create")} className={`rounded-xl px-4 py-3 text-sm font-black uppercase ${studioMode === "create" ? "bg-[#f4b400] text-black" : "text-white/55"}`}>
+              Create New
+            </button>
+            <button type="button" onClick={() => setStudioMode("edit")} className={`rounded-xl px-4 py-3 text-sm font-black uppercase ${studioMode === "edit" ? "bg-[#f4b400] text-black" : "text-white/55"}`}>
+              Edit Existing Video
+            </button>
+          </div>
           <label className="grid gap-2">
             <span className="text-sm font-black uppercase tracking-wide">Your idea</span>
             <textarea
@@ -255,7 +297,19 @@ export default function VideoStudioPage() {
             <span className="text-right text-xs text-white/40">{idea.length}/1,000 characters</span>
           </label>
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          {studioMode === "edit" ? (
+            <div className="grid gap-3">
+              <span className="text-sm font-black uppercase tracking-wide">Upload the video to edit</span>
+              <label className="grid min-h-36 cursor-pointer place-items-center rounded-2xl border border-dashed border-[#f4b400]/45 bg-[#f4b400]/5 p-5 text-center transition hover:border-[#f4b400]">
+                <input type="file" accept="video/mp4,video/quicktime,video/webm" onChange={chooseVideo} className="sr-only" />
+                <span>
+                  <strong className="block text-[#f4b400]">{sourceVideo ? sourceVideo.name : "Choose video"}</strong>
+                  <span className="mt-1 block text-xs leading-5 text-white/45">MP4, MOV, or WebM · up to 4 MB</span>
+                </span>
+              </label>
+              <p className="text-xs leading-5 text-white/45">Aleph 2 edits the existing footage while preserving its timing, people, animals, framing, and motion. Transparent edits are returned as ProRes 4444.</p>
+            </div>
+          ) : <div className="grid gap-5 sm:grid-cols-2">
             <div className="grid gap-3">
               <span className="text-sm font-black uppercase tracking-wide">Upload a starting image</span>
               <label className="relative grid min-h-40 cursor-pointer place-items-center overflow-hidden rounded-2xl border border-dashed border-[#f4b400]/45 bg-[#f4b400]/5 p-4 text-center transition hover:border-[#f4b400]">
@@ -304,10 +358,12 @@ export default function VideoStudioPage() {
                 </select>
               </label>
             </div>
-          </div>
+          </div>}
 
           <div className="rounded-2xl border border-white/10 bg-black/25 p-4 text-sm leading-6 text-white/60">
-            Output is directed as a TikTok-style vertical MP4. Your Runway API key stays on the server and is never sent to the browser.
+            {studioMode === "edit"
+              ? "Your existing video is edited in place with Aleph 2. Background-removal jobs use transparent ProRes 4444 so the alpha channel is preserved."
+              : "Output is directed as a TikTok-style vertical MP4. Your Runway API key stays on the server and is never sent to the browser."}
           </div>
 
           <button disabled={loading || Boolean(working) || !access?.signedIn || (!access.owner && access.credits < 1)} className="rounded-full bg-[#f4b400] px-7 py-4 font-black uppercase tracking-wide text-black disabled:opacity-50">
@@ -328,7 +384,11 @@ export default function VideoStudioPage() {
 
               {job.status === "succeeded" && job.videoUrl && (
                 <div className="mt-5 grid gap-4">
-                  <video src={job.videoUrl} controls playsInline className="mx-auto max-h-[70vh] w-full max-w-sm rounded-2xl bg-black" />
+                  {job.outputFormat === "prores" ? (
+                    <p className="rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-4 text-sm text-emerald-100">Transparent ProRes edit ready. Download it below; some browsers cannot preview ProRes video.</p>
+                  ) : (
+                    <video src={job.videoUrl} controls playsInline className="mx-auto max-h-[70vh] w-full max-w-sm rounded-2xl bg-black" />
+                  )}
                   <div className="flex flex-wrap items-center gap-3 text-xs text-white/50">
                     {job.resolution && <span>{job.resolution}</span>}
                     {job.ratio && <span>{job.ratio}</span>}

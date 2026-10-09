@@ -6,6 +6,9 @@ import { consumeVideoCredit, grantVideoCredits, ownerHasFreeVideoAccess } from "
 const MODEL = "gen4.5" as const;
 const RATIO = "720:1280" as const;
 const MAX_DATA_URI_LENGTH = 3_400_000;
+// Keep uploads below Vercel's function request-body ceiling.
+const MAX_VIDEO_BYTES = 4_000_000;
+const VIDEO_TYPES = new Set(["video/mp4", "video/quicktime", "video/webm"]);
 
 function buildPrompt(idea: string) {
   return idea.slice(0, 1000);
@@ -42,17 +45,35 @@ export async function POST(request: NextRequest) {
 
   let reservation = "";
   try {
-    const body = await request.json();
-    const idea = String(body.idea || "").trim();
-    const duration = Number(body.duration || 5);
-    const referenceUrl = String(body.referenceUrl || "").trim();
+    const isVideoEdit = request.headers
+      .get("content-type")
+      ?.includes("multipart/form-data");
+    const body = isVideoEdit ? await request.formData() : await request.json();
+    const idea = String(isVideoEdit ? body.get("idea") : body.idea || "").trim();
+    const duration = Number(isVideoEdit ? 5 : body.duration || 5);
+    const referenceUrl = String(
+      isVideoEdit ? "" : body.referenceUrl || "",
+    ).trim();
+    const sourceVideo = isVideoEdit ? body.get("video") : null;
 
     if (!idea) return NextResponse.json({ error: "Describe your video idea first." }, { status: 400 });
     if (idea.length > 1000) {
       return NextResponse.json({ error: "Keep the video idea under 1,000 characters." }, { status: 400 });
     }
-    if (!Number.isInteger(duration) || duration < 2 || duration > 10) {
+    if (!isVideoEdit && (!Number.isInteger(duration) || duration < 2 || duration > 10)) {
       return NextResponse.json({ error: "Duration must be between 2 and 10 seconds." }, { status: 400 });
+    }
+
+    if (isVideoEdit) {
+      if (!(sourceVideo instanceof File) || !sourceVideo.size) {
+        return NextResponse.json({ error: "Choose a video to edit first." }, { status: 400 });
+      }
+      if (!VIDEO_TYPES.has(sourceVideo.type) || sourceVideo.size > MAX_VIDEO_BYTES) {
+        return NextResponse.json(
+          { error: "Choose an MP4, MOV, or WebM video under 4 MB." },
+          { status: 400 },
+        );
+      }
     }
 
     if (referenceUrl.startsWith("data:")) {
@@ -80,6 +101,22 @@ export async function POST(request: NextRequest) {
     }
 
     const runway = new RunwayML({ apiKey });
+    if (isVideoEdit && sourceVideo instanceof File) {
+      const upload = await runway.uploads.createEphemeral({ file: sourceVideo });
+      const task = await runway.videoToVideo.create({
+        model: "aleph2",
+        videoUri: upload.uri,
+        promptText: buildPrompt(idea),
+        outputFormat: "prores",
+        proresProfile: "4444",
+      });
+      return NextResponse.json({
+        id: task.id,
+        status: "pending",
+        outputFormat: "prores",
+        estimatedCredits: task.estimatedCost?.credits ?? null,
+      });
+    }
     const common = {
       model: MODEL,
       promptText: buildPrompt(idea),
@@ -94,6 +131,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       id: task.id,
       status: "pending",
+      outputFormat: "mp4",
       estimatedCredits: task.estimatedCost?.credits ?? null,
     });
   } catch (error) {

@@ -27,10 +27,12 @@ export async function GET(
     if (!source.ok || !source.body) {
       return NextResponse.json({ error: "The finished video could not be downloaded." }, { status: 502 });
     }
+    const contentType = source.headers.get("content-type") || "video/mp4";
+    const extension = contentType.includes("quicktime") ? "mov" : "mp4";
     return new Response(source.body, {
       headers: {
-        "Content-Type": source.headers.get("content-type") || "video/mp4",
-        "Content-Disposition": `attachment; filename="stagefront-ai-video-${id.slice(0, 8)}.mp4"`,
+        "Content-Type": contentType,
+        "Content-Disposition": `attachment; filename="stagefront-ai-video-${id.slice(0, 8)}.${extension}"`,
         "Cache-Control": "private, no-store",
       },
     });
