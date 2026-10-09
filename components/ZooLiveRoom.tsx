@@ -909,11 +909,45 @@ export default function ZooLiveRoom({
       people.find((person) => person.session_id === sessionId) || null,
   );
   while (railSlots.length < 8) railSlots.push(null);
+  const leftRailSlots = railSlots.slice(0, 4);
+  const rightRailSlots = railSlots.slice(4, 8);
   const moderationTarget = people.find(
     (person) => person.session_id === moderationTargetId,
   );
   const pinnedComment = messages.find((item) => item.id === pinnedCommentId);
   const menuComment = messages.find((item) => item.id === commentMenuId);
+
+  function renderCageSlot(
+    person: DailyParticipant | null,
+    slotIndex: number,
+  ) {
+    return person ? (
+      <MediaTile
+        key={person.session_id}
+        participant={person}
+        caged
+        isSuperfan={superfanIds.has(person.user_id)}
+        outputDeviceId={outputDeviceId}
+        onSelect={() => openParticipantControls(person)}
+        onSelfSettings={() => setControlsOpen(true)}
+      />
+    ) : (
+      <div
+        key={`open-cage-${cageSlotIds[slotIndex] || slotIndex}`}
+        className="relative grid place-items-center overflow-hidden rounded-lg border border-[#8b6835]/35 bg-[linear-gradient(145deg,#11130f,#080908)] text-center text-[8px] font-bold uppercase text-white/25 sm:rounded-2xl sm:text-xs"
+      >
+        <span className="relative z-10">
+          Open
+          <br />
+          cage
+        </span>
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+          <div className="absolute inset-y-0 left-1/4 w-1 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f] sm:w-1.5" />
+          <div className="absolute inset-y-0 right-1/4 w-1 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f] sm:w-1.5" />
+        </div>
+      </div>
+    );
+  }
 
   function feature(person: DailyParticipant) {
     if (!canModerateNow) return;
@@ -1852,7 +1886,10 @@ export default function ZooLiveRoom({
         </div>
       ) : null}
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_88px] gap-1 bg-black p-1 sm:grid-cols-[minmax(0,1fr)_190px] sm:gap-2 sm:p-2 lg:grid-cols-[minmax(0,1fr)_230px]">
+      <div className="grid min-h-0 flex-1 grid-cols-[68px_minmax(0,1fr)_68px] gap-1 bg-black p-1 sm:grid-cols-[150px_minmax(0,1fr)_150px] sm:gap-2 sm:p-2 lg:grid-cols-[190px_minmax(0,1fr)_190px]">
+        <aside className="grid min-h-0 grid-rows-4 gap-1 sm:gap-2">
+          {leftRailSlots.map((person, index) => renderCageSlot(person, index))}
+        </aside>
         <div className="relative min-w-0 overflow-hidden rounded-2xl bg-[#0c100e] sm:rounded-3xl">
           {featured ? (
             <MediaTile
@@ -1937,49 +1974,10 @@ export default function ZooLiveRoom({
           </div>
         </div>
 
-        <aside className="grid min-h-0 grid-rows-[1fr_auto] gap-1 sm:gap-2">
-          <div className="grid min-h-0 auto-rows-[106px] gap-1 overflow-y-auto sm:auto-rows-[150px] sm:gap-2">
-            {railSlots.map((person, index) =>
-              person ? (
-                <MediaTile
-                  key={person.session_id}
-                  participant={person}
-                  caged
-                  isSuperfan={superfanIds.has(person.user_id)}
-                  outputDeviceId={outputDeviceId}
-                  onSelect={() => openParticipantControls(person)}
-                  onSelfSettings={() => setControlsOpen(true)}
-                />
-              ) : (
-                <div
-                  key={`open-cage-${cageSlotIds[index] || index}`}
-                  className="relative grid place-items-center overflow-hidden rounded-xl border border-[#8b6835]/35 bg-[linear-gradient(145deg,#11130f,#080908)] text-center text-[10px] font-bold uppercase text-white/25 sm:rounded-2xl sm:text-xs"
-                >
-                  <span className="relative z-10">
-                    Open
-                    <br />
-                    cage
-                  </span>
-                  <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-0"
-                  >
-                    <div className="absolute inset-y-0 left-1/4 w-1.5 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" />
-                    <div className="absolute inset-y-0 right-1/4 w-1.5 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f]" />
-                  </div>
-                </div>
-              ),
-            )}
-          </div>
-          <button
-            onClick={copyInvite}
-            className="grid min-h-20 place-items-center rounded-xl border border-[#f4b400]/25 bg-[#f4b400]/10 px-1 text-center text-[10px] font-black uppercase text-[#f4b400] sm:min-h-24 sm:rounded-2xl sm:text-xs"
-          >
-            <span>
-              <span className="block text-2xl">＋</span>
-              {copied ? "Link copied" : "Invite"}
-            </span>
-          </button>
+        <aside className="grid min-h-0 grid-rows-4 gap-1 sm:gap-2">
+          {rightRailSlots.map((person, index) =>
+            renderCageSlot(person, index + 4),
+          )}
         </aside>
       </div>
 
@@ -2103,6 +2101,13 @@ export default function ZooLiveRoom({
           </div>
         ) : null}
         <div className="mb-2 flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            onClick={copyInvite}
+            className="rounded-full border border-white/15 bg-white/[.06] px-4 py-2 text-xs font-black text-white"
+          >
+            ＋ {copied ? "Link copied" : "Invite"}
+          </button>
           {isOwner ? (
             <button
               type="button"
