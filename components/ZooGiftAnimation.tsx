@@ -60,7 +60,7 @@ function AnacondaAnimation() {
     <div className="zoo-anaconda-wrap">
       <video
         className="zoo-anaconda-video"
-        src="/videos/zoo-crew/don-anaconda-gift.webm"
+        src="/videos/zoo-crew/don-anaconda-gift.webm?v=1"
         autoPlay
         muted
         playsInline
