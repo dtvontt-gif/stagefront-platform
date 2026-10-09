@@ -72,14 +72,14 @@ function AnacondaAnimation() {
 function DonAnacondaAnimation() {
   return (
     <div className="zoo-anaconda-wrap">
-      <video
+      <Image
         className="zoo-anaconda-video"
-        src="/videos/zoo-crew/don-anaconda-gift.webm?v=1"
-        autoPlay
-        muted
-        playsInline
-        preload="auto"
-        aria-label="Don with his albino anaconda"
+        src="/videos/zoo-crew/don-anaconda-gift-mobile.webp?v=1"
+        width={459}
+        height={816}
+        unoptimized
+        priority
+        alt="Don with his albino anaconda"
       />
       <div className="zoo-anaconda-title">Don and his Anaconda</div>
     </div>
