@@ -324,6 +324,7 @@ export default function ZooLiveRoom({
   const [coinBalance, setCoinBalance] = useState(0);
   const [coinsEnabled, setCoinsEnabled] = useState(false);
   const [giftMenuOpen, setGiftMenuOpen] = useState(false);
+  const [freeGiftMenuOpen, setFreeGiftMenuOpen] = useState(false);
   const [coinStoreOpen, setCoinStoreOpen] = useState(false);
   const [giftBusy, setGiftBusy] = useState(false);
   const [liveSafety, setLiveSafety] = useState<LiveSafety>({
@@ -1714,6 +1715,7 @@ export default function ZooLiveRoom({
 
   async function testGift(giftId: ZooGiftId) {
     if (giftBusy) return;
+    setFreeGiftMenuOpen(false);
     setGiftBusy(true);
     try {
       const response = await fetch("/api/live/room", {
@@ -1982,43 +1984,6 @@ export default function ZooLiveRoom({
       </div>
 
       <div className="border-t border-white/10 bg-[#090b0a] p-2 sm:p-3">
-        {isOwner ? (
-          <div className="mb-2 rounded-2xl border border-[#f4b400]/25 bg-[#f4b400]/[.06] p-2 sm:mb-3 sm:p-3">
-            <div className="mb-2 flex items-center justify-between gap-3 px-1">
-              <p className="text-[10px] font-black uppercase tracking-[.2em] text-[#f4b400] sm:text-xs">
-                Test gifts · No charge
-              </p>
-              <p className="text-[9px] font-bold uppercase text-white/35 sm:text-[10px]">
-                Everyone sees them
-              </p>
-            </div>
-            <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
-              {(Object.keys(zooGiftCatalog) as ZooGiftId[]).map((giftId) => {
-                const gift = zooGiftCatalog[giftId];
-                return (
-                  <button
-                    key={giftId}
-                    type="button"
-                    onClick={() => testGift(giftId)}
-                    className="group flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-black/45 px-2 py-2.5 text-left transition active:scale-95 hover:border-[#f4b400]/45 hover:bg-[#f4b400]/10 sm:gap-3 sm:px-4"
-                  >
-                    <span className="text-2xl transition group-hover:scale-110 sm:text-3xl">
-                      {gift.icon}
-                    </span>
-                    <span className="min-w-0">
-                      <strong className="block truncate text-[10px] text-white sm:text-sm">
-                        {gift.name}
-                      </strong>
-                      <small className="block text-[8px] font-bold uppercase text-[#f4b400]/75 sm:text-[10px]">
-                        Future {gift.futurePrice}
-                      </small>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
         {replyTo ? (
           <div className="mb-2 flex items-center justify-between rounded-xl bg-white/[.06] px-3 py-1.5 text-[11px] text-white/55">
             <span className="truncate">
@@ -2033,6 +1998,49 @@ export default function ZooLiveRoom({
             >
               ×
             </button>
+          </div>
+        ) : null}
+        {isOwner && freeGiftMenuOpen ? (
+          <div className="mb-2 rounded-2xl border border-sky-400/25 bg-sky-400/[.06] p-3">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wider text-sky-300">
+                  Free gift testing
+                </p>
+                <p className="text-[9px] font-bold uppercase text-white/35">
+                  No charge · Everyone sees them
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFreeGiftMenuOpen(false)}
+                className="text-xl text-white/50"
+              >
+                ×
+              </button>
+            </div>
+            <div className="max-h-[34vh] overflow-y-auto pr-1">
+              <div className="grid grid-cols-3 gap-2">
+                {(Object.keys(zooGiftCatalog) as ZooGiftId[]).map((giftId) => {
+                  const gift = zooGiftCatalog[giftId];
+                  return (
+                    <button
+                      key={giftId}
+                      type="button"
+                      disabled={giftBusy}
+                      onClick={() => testGift(giftId)}
+                      className="rounded-xl border border-white/10 bg-black/40 px-2 py-3 text-center text-white active:scale-95 disabled:opacity-40"
+                    >
+                      <span className="block text-2xl">{gift.icon}</span>
+                      <strong className="block truncate text-[10px]">{gift.name}</strong>
+                      <small className="block text-[9px] font-bold uppercase text-sky-300">
+                        Free test
+                      </small>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         ) : null}
         {giftMenuOpen ? (
@@ -2051,8 +2059,8 @@ export default function ZooLiveRoom({
             </div>
             {!coinsEnabled ? (
               <p className="mb-2 text-xs text-white/55">
-                Paid gifts are not enabled yet. The owner test buttons above are
-                free.
+                Paid gifts are not enabled yet. Owners can use the separate Free
+                Gifts menu.
               </p>
             ) : null}
             <div className="grid grid-cols-3 gap-2">
@@ -2094,10 +2102,25 @@ export default function ZooLiveRoom({
             </button>
           </div>
         ) : null}
-        <div className="mb-2 flex justify-end">
+        <div className="mb-2 flex flex-wrap justify-end gap-2">
+          {isOwner ? (
+            <button
+              type="button"
+              onClick={() => {
+                setFreeGiftMenuOpen((open) => !open);
+                setGiftMenuOpen(false);
+              }}
+              className="rounded-full border border-sky-400/30 bg-sky-400/10 px-4 py-2 text-xs font-black text-sky-300"
+            >
+              🧪 Free Gifts
+            </button>
+          ) : null}
           <button
             type="button"
-            onClick={() => setGiftMenuOpen((open) => !open)}
+            onClick={() => {
+              setGiftMenuOpen((open) => !open);
+              setFreeGiftMenuOpen(false);
+            }}
             className="rounded-full border border-[#f4b400]/30 bg-[#f4b400]/10 px-4 py-2 text-xs font-black text-[#f4b400]"
           >
             🪙 My Wallet: {coinBalance.toLocaleString()} coins · 🎁 Gifts
