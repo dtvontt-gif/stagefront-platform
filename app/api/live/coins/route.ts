@@ -29,18 +29,30 @@ export async function GET() {
     user_id: "eq." + user.id,
     limit: "1",
   });
-  const response = await fetch(
-    db.url + "/rest/v1/zoo_live_coin_wallets?" + query,
-    { headers: headers(db.serviceKey), cache: "no-store" },
-  );
+  const [response, giftPointsResponse] = await Promise.all([
+    fetch(db.url + "/rest/v1/zoo_live_coin_wallets?" + query, {
+      headers: headers(db.serviceKey),
+      cache: "no-store",
+    }),
+    fetch(db.url + "/rest/v1/rpc/zoo_live_gift_points", {
+      method: "POST",
+      headers: headers(db.serviceKey),
+      body: "{}",
+      cache: "no-store",
+    }),
+  ]);
   if (!response.ok)
     return Response.json(
       { message: "Coin balance could not be loaded." },
       { status: 502 },
     );
   const [wallet] = (await response.json()) as { balance_coins: number }[];
+  const giftPoints = giftPointsResponse.ok
+    ? Number(await giftPointsResponse.json())
+    : 0;
   return Response.json({
     balance: Number(wallet?.balance_coins || 0),
+    giftPoints,
     coinsPerDollar: 100,
     enabled: process.env.ZOO_LIVE_PAID_GIFTS_ENABLED === "true",
   });

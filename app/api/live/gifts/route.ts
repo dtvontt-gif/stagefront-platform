@@ -79,7 +79,7 @@ export async function POST(request: Request) {
       broadcast = await fetch(DAILY_API + "/rooms/" + encodeURIComponent(room.name) + "/send-app-message", {
         method: "POST",
         headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ data: { kind: "gift", giftId, eventId: body.eventId, senderName }, recipient: "*" }),
+        body: JSON.stringify({ data: { kind: "gift", giftId, eventId: body.eventId, senderName, paid: true, coinsSpent: COSTS[giftId] }, recipient: "*" }),
       });
     } catch (error) {
       console.error("Zoo gift animation request failed", error);

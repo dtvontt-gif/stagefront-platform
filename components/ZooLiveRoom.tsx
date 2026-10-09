@@ -51,7 +51,14 @@ type RoomMessage =
   | { kind: "self-stage"; sessionId: string }
   | { kind: "self-cage"; sessionId: string; nextSessionId: string }
   | { kind: "positions"; sessionIds: string[] }
-  | { kind: "gift"; giftId: ZooGiftId; eventId: string; senderName: string }
+  | {
+      kind: "gift";
+      giftId: ZooGiftId;
+      eventId: string;
+      senderName: string;
+      paid?: boolean;
+      coinsSpent?: number;
+    }
   | { kind: "end-live" };
 
 type Backdrop = "night" | "jungle" | "gold";
@@ -322,6 +329,7 @@ export default function ZooLiveRoom({
   } | null>(null);
   const [activeGift, setActiveGift] = useState<ActiveZooGift | null>(null);
   const [coinBalance, setCoinBalance] = useState(0);
+  const [giftPoints, setGiftPoints] = useState(0);
   const [coinsEnabled, setCoinsEnabled] = useState(false);
   const [giftMenuOpen, setGiftMenuOpen] = useState(false);
   const [freeGiftMenuOpen, setFreeGiftMenuOpen] = useState(false);
@@ -427,9 +435,11 @@ export default function ZooLiveRoom({
         const data = (await response.json()) as {
           balance?: number;
           enabled?: boolean;
+          giftPoints?: number;
         };
         if (active) {
           setCoinBalance(Number(data.balance || 0));
+          setGiftPoints(Number(data.giftPoints || 0));
           setCoinsEnabled(Boolean(data.enabled));
         }
       } catch {
@@ -763,6 +773,8 @@ export default function ZooLiveRoom({
             eventId: data.eventId,
             senderName: data.senderName || sender?.user_name || "Zoo Crew",
           });
+          if (data.paid && Number(data.coinsSpent) > 0)
+            setGiftPoints((current) => current + Number(data.coinsSpent));
         }
         if (
           data?.kind === "end-live" &&
@@ -1780,7 +1792,15 @@ export default function ZooLiveRoom({
               Zoo Crew Vibe · Live
             </p>
           </div>
-          <p className="mt-1 truncate text-[11px] text-white/45">{status}</p>
+          <div className="mt-1 flex min-w-0 items-center gap-2">
+            <p className="min-w-0 truncate text-[11px] text-white/45">{status}</p>
+            <span
+              className="shrink-0 rounded-full border border-[#f4b400]/25 bg-[#f4b400]/10 px-2 py-0.5 text-[10px] font-black text-[#f4b400]"
+              title="Total paid gift points"
+            >
+              🎁 {giftPoints.toLocaleString()} pts
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {isOwnerNow ? (

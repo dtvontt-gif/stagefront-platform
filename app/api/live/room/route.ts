@@ -269,6 +269,7 @@ export async function POST(request: Request) {
               giftId: body.giftId,
               eventId: body.eventId,
               senderName: name.slice(0, 50),
+              paid: false,
             },
             recipient: "*",
           }),
