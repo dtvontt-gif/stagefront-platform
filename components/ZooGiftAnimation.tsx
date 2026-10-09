@@ -12,7 +12,7 @@ export type ActiveZooGift = {
 
 export const zooGiftCatalog: Record<ZooGiftId, { name: string; icon: string; futurePrice: string; duration: number }> = {
   paw: { name: "Zoo Paw", icon: "🐾", futurePrice: "$0.10", duration: 2200 },
-  anaconda: { name: "Anaconda Heart", icon: "🐍", futurePrice: "$3.00", duration: 4800 },
+  anaconda: { name: "Don and His Anaconda", icon: "🐍", futurePrice: "$3.00", duration: 6500 },
   lion: { name: "King’s Roar", icon: "🦁", futurePrice: "$10.00", duration: 5200 },
   sha_monkey: { name: "Sha & Her Monkey", icon: "🐒", futurePrice: "$25.00", duration: 8200 },
 };
@@ -58,12 +58,16 @@ function PawAnimation() {
 function AnacondaAnimation() {
   return (
     <div className="zoo-anaconda-wrap">
-      <div className="zoo-anaconda-glow" />
-      <div className="zoo-anaconda-orbit zoo-anaconda-orbit-one" />
-      <div className="zoo-anaconda-orbit zoo-anaconda-orbit-two" />
-      <Image className="zoo-anaconda-art" src="/images/zoo-crew/gifts/anaconda-heart-v2.webp" width={1024} height={1024} priority alt="Albino anaconda curling into a heart" />
-      <div className="zoo-anaconda-sheen" />
-      <div className="zoo-anaconda-heart">♥</div>
+      <video
+        className="zoo-anaconda-video"
+        src="/videos/zoo-crew/don-anaconda-gift.webm"
+        autoPlay
+        muted
+        playsInline
+        preload="auto"
+        aria-label="Don with his albino anaconda"
+      />
+      <div className="zoo-anaconda-title">Don and his Anaconda</div>
     </div>
   );
 }

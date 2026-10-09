@@ -90,6 +90,9 @@ body {
 }
 
 .zoo-anaconda-wrap, .zoo-lion-wrap { position: absolute; inset: 0; display: grid; place-items: center; }
+.zoo-anaconda-wrap { overflow: hidden; }
+.zoo-anaconda-video { position: absolute; z-index: 3; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.zoo-anaconda-title { position: absolute; z-index: 5; left: 50%; top: 9%; color: #ffe394; font-family: "Arial Black", sans-serif; font-size: clamp(1.1rem, 5vw, 3.25rem); font-style: italic; font-weight: 950; letter-spacing: -.045em; opacity: 0; transform: translateX(-50%); white-space: nowrap; text-shadow: 0 4px 0 #6b3400, 0 0 20px rgba(244,180,0,.88); -webkit-text-stroke: 1px rgba(78,36,0,.8); animation: zoo-anaconda-title 2.5s .3s ease both; }
 .zoo-anaconda-glow { position: absolute; width: min(92vw, 39rem); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(244,180,0,.25) 0 18%, rgba(16,185,129,.18) 34%, transparent 68%); animation: zoo-breathe 1.05s ease-in-out infinite alternate; }
 .zoo-anaconda-art { position: relative; z-index: 3; width: min(93%, 39rem); height: min(88%, 39rem); object-fit: contain; opacity: 0; transform-origin: 50% 68%; filter: drop-shadow(0 18px 25px rgba(0,0,0,.9)) drop-shadow(0 0 20px rgba(16,185,129,.38)); animation: zoo-anaconda-arrive 4.45s cubic-bezier(.18,.8,.24,1) both; }
 .zoo-anaconda-orbit { position: absolute; z-index: 2; width: min(64vw, 24rem); aspect-ratio: 1; border: 2px solid rgba(255,216,107,.62); border-radius: 50%; opacity: 0; box-shadow: 0 0 22px rgba(244,180,0,.3), inset 0 0 22px rgba(16,185,129,.2); }
@@ -124,6 +127,7 @@ body {
 @keyframes zoo-anaconda-arrive { 0% { opacity: 0; scale: .12; translate: 0 58%; rotate: -18deg; } 18% { opacity: 1; scale: .58; translate: 0 24%; rotate: 8deg; } 42% { opacity: 1; scale: 1.08; translate: 0 -1%; rotate: -2deg; } 56% { scale: .96; rotate: 1deg; } 72%, 88% { opacity: 1; scale: 1; translate: 0 0; rotate: 0deg; } 100% { opacity: 0; scale: 1.1; translate: 0 -5%; } }
 @keyframes zoo-anaconda-orbit { 0% { opacity: 0; scale: .2; rotate: -60deg; } 28% { opacity: .9; } 100% { opacity: 0; scale: 1.7; rotate: 80deg; } }
 @keyframes zoo-anaconda-sheen { 0% { opacity: 0; translate: -230% 0; } 30% { opacity: .8; } 100% { opacity: 0; translate: 250% 0; } }
+@keyframes zoo-anaconda-title { 0% { opacity: 0; translate: 0 24px; scale: .72; } 18%, 82% { opacity: 1; translate: 0 0; scale: 1; } 100% { opacity: 0; translate: 0 -12px; scale: 1.05; } }
 @keyframes zoo-heart-beat { 0% { opacity: 0; scale: .3; } 30% { opacity: 1; scale: 1.18; } 48% { scale: .92; } 68% { scale: 1.08; } 100% { opacity: 1; scale: 1; } }
 @keyframes zoo-breathe { from { scale: .88; opacity: .4; } to { scale: 1.08; opacity: 1; } }
 @keyframes zoo-lion-cinematic { 0% { opacity: 0; scale: .34; translate: 0 42%; } 19% { opacity: .68; scale: .67; translate: 0 16%; } 34% { opacity: 1; scale: 1.03; translate: 0 0; } 48% { scale: .94; } 59% { scale: 1.16; } 68% { scale: 1.02; } 88% { opacity: 1; scale: 1.05; } 100% { opacity: 0; scale: 1.28; } }
@@ -144,6 +148,7 @@ body {
   .zoo-gift-caption p { font-size: .62rem; }
   .zoo-gold-spark { scale: .72; }
   .zoo-sha-monkey-title { top: 7%; }
+  .zoo-anaconda-title { top: 7%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -156,6 +161,7 @@ body {
   .zoo-anaconda-art, .zoo-lion-art { opacity: 1; scale: 1; translate: 0 0; rotate: 0deg; }
   .zoo-anaconda-glow { opacity: .75; }
   .zoo-anaconda-heart { opacity: 1; scale: 1; }
+  .zoo-anaconda-title { opacity: 1; translate: 0 0; scale: 1; }
   .zoo-lion-rays { opacity: .55; scale: 1; }
   .zoo-roar-word { opacity: 1; scale: 1; translate: 0 0; }
   .zoo-sha-monkey-title { opacity: 1; translate: 0 0; scale: 1; }
