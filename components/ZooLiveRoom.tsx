@@ -908,7 +908,7 @@ export default function ZooLiveRoom({
     (sessionId) =>
       people.find((person) => person.session_id === sessionId) || null,
   );
-  while (railSlots.length < 4) railSlots.push(null);
+  while (railSlots.length < 8) railSlots.push(null);
   const moderationTarget = people.find(
     (person) => person.session_id === moderationTargetId,
   );
