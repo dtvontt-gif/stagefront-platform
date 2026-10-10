@@ -37,14 +37,13 @@ function canControl(role: string | null) {
 
 function starterId(room: DailyRoom | null, experience: LiveExperience) {
   const prefix = roomPrefix(experience);
-  const id = room?.name.startsWith(prefix)
+  const suffix = room?.name.startsWith(prefix)
     ? room.name.slice(prefix.length)
     : "";
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
-    id,
-  )
-    ? id
-    : null;
+  const match = suffix.match(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/,
+  );
+  return match?.[0] || null;
 }
 
 async function getRoom(
@@ -71,7 +70,7 @@ async function getOrCreateRoom(
     method: "POST",
     headers: dailyHeaders(apiKey),
     body: JSON.stringify({
-      name: `${roomPrefix(experience)}${userId}`,
+      name: `${roomPrefix(experience)}${userId}-${Date.now()}`,
       privacy: "private",
       properties: {
         max_participants: 100,

@@ -297,7 +297,7 @@ export default function ZooLiveRoom({
   onEndLive: () => Promise<void>;
 }) {
   const isJungle = experience === "jungle";
-  const roomPath = isJungle ? "/jungle" : "/live";
+  const roomPath = isJungle ? "/jungle" : "/live/zoo";
   const deckName = isJungle ? "On Deck" : "cage";
   const callRef = useRef<DailyCall | null>(null);
   const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
@@ -449,7 +449,7 @@ export default function ZooLiveRoom({
     let active = true;
     async function refreshWallet() {
       try {
-        const response = await fetch("/api/live/coins", { cache: "no-store" });
+        const response = await fetch(`/api/live/coins?experience=${experience}`, { cache: "no-store" });
         if (!response.ok) return;
         const data = (await response.json()) as {
           balance?: number;

@@ -11,7 +11,7 @@ function headers(key: string) {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await authenticatedUser();
   if (!user)
     return Response.json(
@@ -29,17 +29,25 @@ export async function GET() {
     user_id: "eq." + user.id,
     limit: "1",
   });
-  const [response, giftPointsResponse] = await Promise.all([
+  const experience = new URL(request.url).searchParams.get("experience");
+  const environment =
+    process.env.VERCEL_ENV === "production" ? "live" : "preview";
+  const roomPrefix =
+    experience === "jungle"
+      ? `stagefront-jungle-${environment}-`
+      : `zoo-crew-vibe-${environment}-`;
+  const dailyKey = process.env.DAILY_API_KEY?.trim();
+  const [response, roomsResponse] = await Promise.all([
     fetch(db.url + "/rest/v1/zoo_live_coin_wallets?" + query, {
       headers: headers(db.serviceKey),
       cache: "no-store",
     }),
-    fetch(db.url + "/rest/v1/rpc/zoo_live_gift_points", {
-      method: "POST",
-      headers: headers(db.serviceKey),
-      body: "{}",
-      cache: "no-store",
-    }),
+    dailyKey
+      ? fetch("https://api.daily.co/v1/rooms?limit=100", {
+          headers: { Authorization: `Bearer ${dailyKey}` },
+          cache: "no-store",
+        })
+      : Promise.resolve(null),
   ]);
   if (!response.ok)
     return Response.json(
@@ -47,9 +55,24 @@ export async function GET() {
       { status: 502 },
     );
   const [wallet] = (await response.json()) as { balance_coins: number }[];
-  const giftPoints = giftPointsResponse.ok
-    ? Number(await giftPointsResponse.json())
-    : 0;
+  let giftPoints = 0;
+  if (roomsResponse?.ok) {
+    const rooms = (await roomsResponse.json()) as { data?: { name: string }[] };
+    const room = rooms.data?.find((item) => item.name.startsWith(roomPrefix));
+    if (room) {
+      const giftPointsResponse = await fetch(
+        db.url + "/rest/v1/rpc/zoo_live_gift_points",
+        {
+          method: "POST",
+          headers: headers(db.serviceKey),
+          body: JSON.stringify({ p_room_id: room.name }),
+          cache: "no-store",
+        },
+      );
+      if (giftPointsResponse.ok)
+        giftPoints = Number(await giftPointsResponse.json());
+    }
+  }
   return Response.json({
     balance: Number(wallet?.balance_coins || 0),
     giftPoints,
