@@ -6,10 +6,19 @@ import {
 import { profileImageUrl } from "@/lib/profile-images";
 
 const DAILY_API = "https://api.daily.co/v1";
-const ROOM_PREFIX =
-  process.env.VERCEL_ENV === "production"
-    ? "zoo-crew-vibe-live-"
-    : "zoo-crew-vibe-preview-";
+type LiveExperience = "zoo" | "jungle";
+
+function liveExperience(value: unknown): LiveExperience {
+  return value === "jungle" ? "jungle" : "zoo";
+}
+
+function roomPrefix(experience: LiveExperience) {
+  const environment =
+    process.env.VERCEL_ENV === "production" ? "live" : "preview";
+  return experience === "jungle"
+    ? `stagefront-jungle-${environment}-`
+    : `zoo-crew-vibe-${environment}-`;
+}
 
 type DailyRoom = { name: string; url: string };
 type LiveAction = "start" | "enter" | "end" | "gift";
@@ -26,9 +35,10 @@ function canControl(role: string | null) {
   return role === "owner" || role === "manager";
 }
 
-function starterId(room: DailyRoom | null) {
-  const id = room?.name.startsWith(ROOM_PREFIX)
-    ? room.name.slice(ROOM_PREFIX.length)
+function starterId(room: DailyRoom | null, experience: LiveExperience) {
+  const prefix = roomPrefix(experience);
+  const id = room?.name.startsWith(prefix)
+    ? room.name.slice(prefix.length)
     : "";
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
     id,
@@ -37,27 +47,31 @@ function starterId(room: DailyRoom | null) {
     : null;
 }
 
-async function getRoom(apiKey: string): Promise<DailyRoom | null> {
+async function getRoom(
+  apiKey: string,
+  experience: LiveExperience,
+): Promise<DailyRoom | null> {
   const response = await fetch(`${DAILY_API}/rooms?limit=100`, {
     headers: dailyHeaders(apiKey),
     cache: "no-store",
   });
   if (!response.ok) throw new Error("Daily room lookup failed.");
   const { data } = (await response.json()) as { data: DailyRoom[] };
-  return data.find((room) => starterId(room)) || null;
+  return data.find((room) => starterId(room, experience)) || null;
 }
 
 async function getOrCreateRoom(
   apiKey: string,
   userId: string,
+  experience: LiveExperience,
 ): Promise<DailyRoom> {
-  const existing = await getRoom(apiKey);
+  const existing = await getRoom(apiKey, experience);
   if (existing) return existing;
   const created = await fetch(`${DAILY_API}/rooms`, {
     method: "POST",
     headers: dailyHeaders(apiKey),
     body: JSON.stringify({
-      name: `${ROOM_PREFIX}${userId}`,
+      name: `${roomPrefix(experience)}${userId}`,
       privacy: "private",
       properties: {
         max_participants: 100,
@@ -133,7 +147,7 @@ async function memberIdentity(userId: string, email: string) {
     : fallback;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await authenticatedUser();
   if (!user?.email)
     return Response.json(
@@ -147,12 +161,18 @@ export async function GET() {
       { status: 503 },
     );
   try {
-    const [room, access] = await Promise.all([getRoom(apiKey), staffAccess()]);
+    const experience = liveExperience(
+      new URL(request.url).searchParams.get("experience"),
+    );
+    const [room, access] = await Promise.all([
+      getRoom(apiKey, experience),
+      staffAccess(),
+    ]);
     const role = access?.role || null;
     return Response.json({
       isLive: Boolean(room),
       canControlLive: canControl(role),
-      canEndLive: canControl(role) && starterId(room) === user.id,
+      canEndLive: canControl(role) && starterId(room, experience) === user.id,
       role,
     });
   } catch (error) {
@@ -183,7 +203,9 @@ export async function POST(request: Request) {
       mode?: EntryMode;
       giftId?: string;
       eventId?: string;
+      experience?: string;
     };
+    const experience = liveExperience(body.experience);
     const action = body.action || "enter";
     const access = await staffAccess();
     const role = access?.role || null;
@@ -198,17 +220,17 @@ export async function POST(request: Request) {
           { message: "Only a Zoo Crew owner or manager can start the live." },
           { status: 403 },
         );
-      const room = await getOrCreateRoom(apiKey, user.id);
+      const room = await getOrCreateRoom(apiKey, user.id, experience);
       return Response.json({
         isLive: true,
         canControlLive,
-        canEndLive: starterId(room) === user.id,
+        canEndLive: starterId(room, experience) === user.id,
         role,
       });
     }
     if (action === "end") {
-      const room = await getRoom(apiKey);
-      if (!room || !canControlLive || starterId(room) !== user.id)
+      const room = await getRoom(apiKey, experience);
+      if (!room || !canControlLive || starterId(room, experience) !== user.id)
         return Response.json(
           { message: "Only the person who started this live can end it." },
           { status: 403 },
@@ -251,7 +273,7 @@ export async function POST(request: Request) {
           { message: "Invalid test gift." },
           { status: 400 },
         );
-      const room = await getRoom(apiKey);
+      const room = await getRoom(apiKey, experience);
       if (!room)
         return Response.json(
           { message: "The live is offline." },
@@ -279,7 +301,7 @@ export async function POST(request: Request) {
       return Response.json({ sent: true });
     }
 
-    const room = await getRoom(apiKey);
+    const room = await getRoom(apiKey, experience);
     if (!room)
       return Response.json(
         {
@@ -365,11 +387,11 @@ export async function POST(request: Request) {
       name,
       username,
       profileImageUrl: imageUrl,
-      liveStarterUserId: starterId(room),
+      liveStarterUserId: starterId(room, experience),
       isOwner: role === "owner",
       canModerate,
       canControlLive,
-      canEndLive: canControlLive && starterId(room) === user.id,
+      canEndLive: canControlLive && starterId(room, experience) === user.id,
       entryMode,
       role,
     });

@@ -6,7 +6,14 @@ import InstallZooCrewApp from "@/components/InstallZooCrewApp";
 
 type RoomState = "checking" | "offline" | "live" | "opening" | "ready" | "error";
 
-export default function LiveHouse({ buildVersion }: { buildVersion: string }) {
+export default function LiveHouse({
+  buildVersion,
+  experience = "zoo",
+}: {
+  buildVersion: string;
+  experience?: "zoo" | "jungle";
+}) {
+  const isJungle = experience === "jungle";
   const [state, setState] = useState<RoomState>("checking");
   const [roomUrl, setRoomUrl] = useState("");
   const [message, setMessage] = useState("");
@@ -41,7 +48,7 @@ export default function LiveHouse({ buildVersion }: { buildVersion: string }) {
     if (state === "ready" || state === "opening") return;
     let active = true;
     async function checkStatus() {
-      const response = await fetch("/api/live/room", { cache: "no-store" });
+      const response = await fetch(`/api/live/room?experience=${experience}`, { cache: "no-store" });
       const result = (await response.json().catch(() => ({}))) as { isLive?: boolean; canControlLive?: boolean; canEndLive?: boolean; role?: string | null; message?: string };
       if (!active) return;
       if (!response.ok) {
@@ -61,7 +68,7 @@ export default function LiveHouse({ buildVersion }: { buildVersion: string }) {
       active = false;
       window.clearInterval(timer);
     };
-  }, [state]);
+  }, [state, experience]);
 
   useEffect(() => {
     if (state !== "ready") return;
@@ -92,7 +99,7 @@ export default function LiveHouse({ buildVersion }: { buildVersion: string }) {
       setMessage(permissionMessage);
       return;
     }
-    const response = await fetch("/api/live/room", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "enter", mode: requestedMode }) });
+    const response = await fetch("/api/live/room", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "enter", mode: requestedMode, experience }) });
     const result = (await response.json().catch(() => ({}))) as { roomUrl?: string; message?: string; isOwner?: boolean; canModerate?: boolean; canControlLive?: boolean; canEndLive?: boolean; entryMode?: "viewer" | "stage"; role?: string | null; username?: string | null; profileImageUrl?: string | null; liveStarterUserId?: string | null };
     if (!response.ok || !result.roomUrl) {
       setState("error");
@@ -115,7 +122,7 @@ export default function LiveHouse({ buildVersion }: { buildVersion: string }) {
   async function startLive() {
     setState("opening");
     setMessage("");
-    const response = await fetch("/api/live/room", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "start" }) });
+    const response = await fetch("/api/live/room", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "start", experience }) });
     const result = (await response.json().catch(() => ({}))) as { message?: string };
     if (!response.ok) {
       setState("error");
@@ -127,7 +134,7 @@ export default function LiveHouse({ buildVersion }: { buildVersion: string }) {
   }
 
   async function endLive() {
-    const response = await fetch("/api/live/room", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "end" }) });
+    const response = await fetch("/api/live/room", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "end", experience }) });
     const result = (await response.json().catch(() => ({}))) as { message?: string };
     if (!response.ok) throw new Error(result.message || "The live could not be ended.");
     setRoomUrl("");
@@ -137,7 +144,7 @@ export default function LiveHouse({ buildVersion }: { buildVersion: string }) {
   if (state === "ready") {
     return (
       <section className="fixed inset-0 z-[100] h-dvh overflow-hidden bg-black">
-        <ZooLiveRoom roomUrl={roomUrl} isOwner={owner} canModerate={canModerate} canEndLive={canEndLive} liveStarterUserId={liveStarterUserId} initialMode={entryMode} staffRole={staffRole} profileImageUrl={profileImageUrl} profileUsername={profileUsername} onEndLive={endLive} />
+        <ZooLiveRoom experience={experience} roomUrl={roomUrl} isOwner={owner} canModerate={canModerate} canEndLive={canEndLive} liveStarterUserId={liveStarterUserId} initialMode={entryMode} staffRole={staffRole} profileImageUrl={profileImageUrl} profileUsername={profileUsername} onEndLive={endLive} />
         {updateAvailable ? <div className="fixed inset-x-3 top-3 z-[250] mx-auto flex max-w-lg items-center justify-between gap-3 rounded-2xl border border-[#f4b400]/50 bg-black/95 p-3 text-sm shadow-2xl"><span>A newer Live House version is ready.</span><button type="button" onClick={() => window.location.reload()} className="rounded-full bg-[#f4b400] px-4 py-2 text-xs font-black text-black">Reload now</button></div> : null}
       </section>
     );
@@ -153,8 +160,8 @@ export default function LiveHouse({ buildVersion }: { buildVersion: string }) {
         <header className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div>
             <div className="flex flex-wrap gap-3"><span className="rounded-full border border-[#f4b400]/30 bg-[#f4b400]/10 px-3 py-1.5 text-xs font-black uppercase tracking-[.18em] text-[#f4b400]">After-hours private beta</span><span className="rounded-full border border-emerald-500/25 bg-emerald-950/60 px-3 py-1.5 text-xs font-bold uppercase tracking-[.15em] text-emerald-200">Visitor viewing gallery</span></div>
-            <h1 className="mt-4 font-display text-4xl font-black uppercase sm:text-6xl">Zoo Crew Live House</h1>
-            <p className="mt-3 max-w-3xl text-white/60">Step up to the glass and enter the official nighttime habitat of the Zoo Crew family.</p>
+            <h1 className="mt-4 font-display text-4xl font-black uppercase sm:text-6xl">{isJungle ? "The Jungle" : "Zoo Crew Live House"}</h1>
+            <p className="mt-3 max-w-3xl text-white/60">{isJungle ? "Enter the canopy, take an On Deck spot, and swing into the center stage when your moment comes." : "Step up to the glass and enter the official nighttime habitat of the Zoo Crew family."}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2"><InstallZooCrewApp />{state === "live" ? <button onClick={() => enterRoom(canModerate ? "stage" : "viewer")} className="primary-cta">{canModerate ? "Enter host stage" : "Watch live"}</button> : canControlLive ? <button onClick={startLive} disabled={state === "opening" || state === "checking"} className="primary-cta disabled:opacity-50">{state === "opening" ? "Starting live…" : "Start Live"}</button> : null}</div>
         </header>
@@ -179,14 +186,14 @@ export default function LiveHouse({ buildVersion }: { buildVersion: string }) {
             <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-1/3 z-30 w-px bg-cyan-100/10" />
             <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-1/3 z-30 w-px bg-cyan-100/10" />
 
-            <div className="absolute left-5 top-5 z-40 rounded-lg border border-[#d8a729]/35 bg-[#171006]/90 px-4 py-2 text-left"><p className="text-[9px] font-black uppercase tracking-[.25em] text-[#d9b75f]">Exhibit status</p><p className="text-sm font-black uppercase text-white">{state === "live" ? "Live now" : state === "checking" ? "Checking status" : "Live is offline"}</p></div>
+            <div className="absolute left-5 top-5 z-40 rounded-lg border border-[#d8a729]/35 bg-[#171006]/90 px-4 py-2 text-left"><p className="text-[9px] font-black uppercase tracking-[.25em] text-[#d9b75f]">{isJungle ? "Canopy status" : "Exhibit status"}</p><p className="text-sm font-black uppercase text-white">{state === "live" ? "Live now" : state === "checking" ? "Checking status" : "Live is offline"}</p></div>
             <div className="relative z-40 max-w-xl rounded-[2rem] border border-white/10 bg-black/55 px-8 py-9 shadow-[0_22px_70px_rgba(0,0,0,.75)] backdrop-blur-sm">
-              <div className="mx-auto grid h-24 w-24 place-items-center rounded-full border border-[#f4b400]/40 bg-[#f4b400]/10 text-5xl shadow-[0_0_45px_rgba(244,180,0,.12)]">🦁</div>
-              <h2 className="mt-6 font-display text-3xl font-black uppercase">{state === "live" ? "The Zoo Crew is live" : state === "checking" ? "Checking the habitat" : "The live is offline"}</h2>
-              <p className="mt-3 leading-7 text-white/60">{state === "live" ? "The owners have opened the habitat. Enter when you are ready; your camera and mic begin off." : canControlLive ? "The habitat stays closed until an owner starts the live. Press Start Live when the crew is ready." : "Nobody can enter a box until a Zoo Crew owner starts the live. This page checks automatically, so you can stay right here."}</p>
-              {state === "error" ? <div className="mt-5 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-200">{message}{message.toLowerCase().includes("sign in") ? <a className="ml-2 font-black underline" href="/sign-in?next=/live">Sign in</a> : null}</div> : null}
-              {state === "live" ? <div className="mt-7 flex flex-col justify-center gap-2 sm:flex-row"><button onClick={() => enterRoom("viewer")} className="rounded-full bg-[#f4b400] px-7 py-3.5 font-black text-black">Watch & Comment</button>{canModerate ? <button onClick={() => enterRoom("stage")} className="rounded-full border border-[#f4b400]/45 bg-black/50 px-7 py-3.5 font-black text-[#f4b400]">Enter Host Stage</button> : null}</div> : canControlLive ? <button onClick={startLive} disabled={state === "opening" || state === "checking"} className="mt-7 rounded-full bg-[#f4b400] px-7 py-3.5 font-black text-black disabled:opacity-50">{state === "opening" ? "Starting the live…" : "Start Zoo Crew Live"}</button> : null}
-              <p className="mt-4 text-xs uppercase tracking-[.15em] text-white/35">Viewer lobby · Up to 100 inside · Hosts manage the stage</p>
+              <div className="mx-auto grid h-24 w-24 place-items-center rounded-full border border-[#f4b400]/40 bg-[#f4b400]/10 text-5xl shadow-[0_0_45px_rgba(244,180,0,.12)]">{isJungle ? "🌿" : "🦁"}</div>
+              <h2 className="mt-6 font-display text-3xl font-black uppercase">{state === "live" ? (isJungle ? "The Jungle is live" : "The Zoo Crew is live") : state === "checking" ? (isJungle ? "Checking the canopy" : "Checking the habitat") : "The live is offline"}</h2>
+              <p className="mt-3 leading-7 text-white/60">{state === "live" ? (isJungle ? "The canopy is open. Enter when you are ready; your camera and mic begin off." : "The owners have opened the habitat. Enter when you are ready; your camera and mic begin off.") : canControlLive ? `The ${isJungle ? "canopy" : "habitat"} stays closed until an owner starts the live. Press Start Live when the crew is ready.` : `Nobody can enter an ${isJungle ? "On Deck spot" : "box"} until a Zoo Crew owner starts the live. This page checks automatically, so you can stay right here.`}</p>
+              {state === "error" ? <div className="mt-5 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-200">{message}{message.toLowerCase().includes("sign in") ? <a className="ml-2 font-black underline" href={`/sign-in?next=${isJungle ? "/jungle" : "/live"}`}>Sign in</a> : null}</div> : null}
+              {state === "live" ? <div className="mt-7 flex flex-col justify-center gap-2 sm:flex-row"><button onClick={() => enterRoom("viewer")} className="rounded-full bg-[#f4b400] px-7 py-3.5 font-black text-black">Watch & Comment</button>{canModerate ? <button onClick={() => enterRoom("stage")} className="rounded-full border border-[#f4b400]/45 bg-black/50 px-7 py-3.5 font-black text-[#f4b400]">Enter Host Stage</button> : null}</div> : canControlLive ? <button onClick={startLive} disabled={state === "opening" || state === "checking"} className="mt-7 rounded-full bg-[#f4b400] px-7 py-3.5 font-black text-black disabled:opacity-50">{state === "opening" ? "Starting the live…" : `Start ${isJungle ? "The Jungle" : "Zoo Crew Live"}`}</button> : null}
+              <p className="mt-4 text-xs uppercase tracking-[.15em] text-white/35">Viewer lobby · Up to 100 inside · Hosts manage the {isJungle ? "canopy" : "stage"}</p>
             </div>
         </div>
       </div>

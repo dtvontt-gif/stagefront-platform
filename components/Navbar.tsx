@@ -6,6 +6,7 @@ import MobileNavigation from "@/components/MobileNavigation";
 
 const navigation = [
   { label: "Live House", href: "/live" },
+  { label: "The Jungle", href: "/jungle" },
   { label: "AI Video Studio", href: "/create/video" },
   { label: "Music Generator", href: "https://longplay-song-studio.domchop22.chatgpt.site/" },
   { label: "Karaoke Studio", href: "/studio" },
@@ -24,7 +25,7 @@ const navigation = [
 ];
 
 const desktopNavigation = navigation.filter((item) =>
-  ["Live House", "Community", "Superfans", "Original Artists", "Hosts", "Karaoke Studio", "AI Video Studio"].includes(item.label),
+  ["Live House", "The Jungle", "Community", "Superfans", "Original Artists", "Hosts", "Karaoke Studio", "AI Video Studio"].includes(item.label),
 );
 
 export default async function Navbar() {

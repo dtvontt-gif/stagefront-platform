@@ -104,6 +104,7 @@ function MediaTile({
   participant,
   featured = false,
   caged = false,
+  deckStyle = false,
   isSuperfan = false,
   outputDeviceId,
   onSelect,
@@ -112,6 +113,7 @@ function MediaTile({
   participant: DailyParticipant;
   featured?: boolean;
   caged?: boolean;
+  deckStyle?: boolean;
   isSuperfan?: boolean;
   outputDeviceId?: string;
   onSelect?: () => void;
@@ -208,7 +210,7 @@ function MediaTile({
       {!participant.local ? (
         <audio ref={audioRef} autoPlay playsInline />
       ) : null}
-      {caged ? (
+      {caged && !deckStyle ? (
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 z-10"
@@ -219,6 +221,16 @@ function MediaTile({
           <div className="absolute inset-x-0 bottom-0 h-2 bg-gradient-to-b from-[#d5ac63] via-[#59401f] to-[#21170c] shadow-[0_-3px_8px_rgba(0,0,0,.85)] sm:h-3" />
           <div className="absolute bottom-2.5 right-1.5 rounded bg-black/75 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider text-[#e9c477] sm:bottom-3.5 sm:right-2 sm:text-[9px]">
             Caged
+          </div>
+        </div>
+      ) : null}
+      {caged && deckStyle ? (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-10 rounded-xl ring-2 ring-inset ring-emerald-400/30 sm:rounded-2xl">
+          <div className="absolute inset-x-0 top-0 h-3 bg-[linear-gradient(180deg,#173d20,#0b2111)] shadow-[0_3px_10px_rgba(0,0,0,.8)]" />
+          <span className="absolute -left-1 top-1 text-base">🌿</span>
+          <span className="absolute -right-1 top-1 text-base">🌿</span>
+          <div className="absolute bottom-1.5 right-1.5 rounded-full bg-emerald-950/85 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider text-emerald-200 sm:text-[9px]">
+            On Deck
           </div>
         </div>
       ) : null}
@@ -260,6 +272,7 @@ function MediaTile({
 }
 
 export default function ZooLiveRoom({
+  experience = "zoo",
   roomUrl,
   isOwner,
   canModerate,
@@ -271,6 +284,7 @@ export default function ZooLiveRoom({
   profileUsername,
   onEndLive,
 }: {
+  experience?: "zoo" | "jungle";
   roomUrl: string;
   isOwner: boolean;
   canModerate: boolean;
@@ -282,6 +296,9 @@ export default function ZooLiveRoom({
   profileUsername: string | null;
   onEndLive: () => Promise<void>;
 }) {
+  const isJungle = experience === "jungle";
+  const roomPath = isJungle ? "/jungle" : "/live";
+  const deckName = isJungle ? "On Deck" : "cage";
   const callRef = useRef<DailyCall | null>(null);
   const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
   const microphoneTrackRef = useRef<MediaStreamTrack | null>(null);
@@ -295,7 +312,9 @@ export default function ZooLiveRoom({
   const [slotOrder, setSlotOrder] = useState<string[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [superfanIds, setSuperfanIds] = useState<Set<string>>(() => new Set());
-  const [status, setStatus] = useState("Opening the habitat…");
+  const [status, setStatus] = useState(
+    isJungle ? "Opening the canopy…" : "Opening the habitat…",
+  );
   const [audioOn, setAudioOn] = useState(false);
   const [videoOn, setVideoOn] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -387,7 +406,7 @@ export default function ZooLiveRoom({
       document.removeEventListener("visibilitychange", restoreCamera);
       window.removeEventListener("pageshow", restoreCamera);
     };
-  }, []);
+  }, [experience]);
   const moderatorIdsRef = useRef<Set<string>>(new Set());
   const commentMutedIdsRef = useRef<Set<string>>(new Set());
 
@@ -395,7 +414,7 @@ export default function ZooLiveRoom({
     let active = true;
     async function refreshSafety() {
       try {
-        const response = await fetch("/api/live/safety", { cache: "no-store" });
+        const response = await fetch(`/api/live/safety?experience=${experience}`, { cache: "no-store" });
         if (!response.ok) return;
         const data = (await response.json()) as LiveSafety & {
           isLive?: boolean;
@@ -424,7 +443,7 @@ export default function ZooLiveRoom({
       active = false;
       window.clearInterval(timer);
     };
-  }, []);
+  }, [experience]);
 
   useEffect(() => {
     let active = true;
@@ -565,7 +584,7 @@ export default function ZooLiveRoom({
           void call
             ?.leave()
             .catch(() => undefined)
-            .finally(() => window.location.assign("/live?blocked=1"));
+            .finally(() => window.location.assign(`${roomPath}?blocked=1`));
         }
         if (
           data?.kind === "comment" &&
@@ -639,7 +658,7 @@ export default function ZooLiveRoom({
           setViewerMode(false);
           setStageRequested(false);
           setStatus(
-            "Welcome to a Zoo Crew cage! Camera and microphone controls are now available.",
+            `Welcome to ${isJungle ? "On Deck" : "a Zoo Crew cage"}! Camera and microphone controls are now available.`,
           );
           const localData =
             call?.participants().local?.userData &&
@@ -662,7 +681,7 @@ export default function ZooLiveRoom({
             inviterSessionId: data.inviterSessionId,
             inviterName: sender?.user_name || "Zoo Crew",
           });
-          setStatus("You have an invitation to join a Zoo Crew cage.");
+          setStatus(`You have an invitation to join ${isJungle ? "On Deck" : "a Zoo Crew cage"}.`);
         }
         if (
           data?.kind === "stage-invite-accept" &&
@@ -682,7 +701,7 @@ export default function ZooLiveRoom({
         ) {
           pendingInvitesRef.current.delete(data.sessionId);
           setStatus(
-            `${sender?.user_name || "Viewer"} declined the cage invitation.`,
+            `${sender?.user_name || "Viewer"} declined the ${deckName} invitation.`,
           );
         }
         if (
@@ -692,7 +711,7 @@ export default function ZooLiveRoom({
         ) {
           setStageRequested(false);
           setStatus(
-            "Your cage request was declined. You can keep watching from the lobby.",
+            `Your ${deckName} request was declined. You can keep watching from the lobby.`,
           );
           const localData =
             call?.participants().local?.userData &&
@@ -781,15 +800,15 @@ export default function ZooLiveRoom({
           event.fromId === "API" &&
           !canEndLive
         ) {
-          setStatus("The Zoo Crew live has ended");
+          setStatus(`${isJungle ? "The Jungle" : "The Zoo Crew live"} has ended`);
           void call
             ?.leave()
             .catch(() => undefined)
-            .finally(() => window.location.assign("/live"));
+            .finally(() => window.location.assign(roomPath));
         }
       });
       call.on("error", () =>
-        setStatus("The habitat connection was interrupted."),
+        setStatus(`${isJungle ? "The canopy" : "The habitat"} connection was interrupted.`),
       );
       await call.join({
         url: parsed.toString(),
@@ -809,12 +828,14 @@ export default function ZooLiveRoom({
         setStatus(
           initialMode === "viewer"
             ? "Watching from the viewer lobby"
-            : "Live inside the Zoo Crew habitat",
+            : isJungle
+              ? "Live inside The Jungle"
+              : "Live inside the Zoo Crew habitat",
         );
       }
     }
     void connect().catch(() =>
-      setStatus("The habitat could not open. Refresh and try again."),
+      setStatus(`${isJungle ? "The Jungle" : "The habitat"} could not open. Refresh and try again.`),
     );
     return () => {
       active = false;
@@ -838,6 +859,7 @@ export default function ZooLiveRoom({
     canModerate,
     canEndLive,
     liveStarterUserId,
+    experience,
   ]);
 
   const membershipUserIds = useMemo(() => {
@@ -938,6 +960,7 @@ export default function ZooLiveRoom({
         key={person.session_id}
         participant={person}
         caged
+        deckStyle={isJungle}
         isSuperfan={superfanIds.has(person.user_id)}
         outputDeviceId={outputDeviceId}
         onSelect={() => openParticipantControls(person)}
@@ -946,16 +969,26 @@ export default function ZooLiveRoom({
     ) : (
       <div
         key={`open-cage-${cageSlotIds[slotIndex] || slotIndex}`}
-        className="relative grid place-items-center overflow-hidden rounded-lg border border-[#8b6835]/35 bg-[linear-gradient(145deg,#11130f,#080908)] text-center text-[8px] font-bold uppercase text-white/25 sm:rounded-2xl sm:text-xs"
+        className={`relative grid place-items-center overflow-hidden rounded-lg border text-center text-[8px] font-bold uppercase sm:rounded-2xl sm:text-xs ${isJungle ? "border-emerald-500/30 bg-[radial-gradient(circle_at_20%_20%,rgba(34,197,94,.22),transparent_35%),linear-gradient(145deg,#102b18,#041009)] text-emerald-100/45" : "border-[#8b6835]/35 bg-[linear-gradient(145deg,#11130f,#080908)] text-white/25"}`}
       >
         <span className="relative z-10">
-          Open
+          {isJungle ? "On" : "Open"}
           <br />
-          cage
+          {isJungle ? "Deck" : "cage"}
         </span>
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-y-0 left-1/4 w-1 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f] sm:w-1.5" />
-          <div className="absolute inset-y-0 right-1/4 w-1 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f] sm:w-1.5" />
+          {isJungle ? (
+            <>
+              <div className="absolute inset-x-0 top-0 h-2 bg-gradient-to-b from-[#245d31] to-[#0d2814]" />
+              <span className="absolute left-0 top-0 text-sm">🌿</span>
+              <span className="absolute right-0 top-0 text-sm">🌿</span>
+            </>
+          ) : (
+            <>
+              <div className="absolute inset-y-0 left-1/4 w-1 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f] sm:w-1.5" />
+              <div className="absolute inset-y-0 right-1/4 w-1 bg-gradient-to-r from-[#3a2917] via-[#b48948] to-[#30200f] sm:w-1.5" />
+            </>
+          )}
         </div>
       </div>
     );
@@ -1287,7 +1320,7 @@ export default function ZooLiveRoom({
       const response = await fetch("/api/live/gifts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ giftId, eventId: crypto.randomUUID() }),
+        body: JSON.stringify({ giftId, eventId: crypto.randomUUID(), experience }),
       });
       const data = (await response.json()) as {
         balance?: number;
@@ -1410,7 +1443,7 @@ export default function ZooLiveRoom({
     targetUserId: string,
     extra: Record<string, unknown> = {},
   ) {
-    const response = await fetch("/api/live/safety", {
+    const response = await fetch(`/api/live/safety?experience=${experience}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, targetUserId, ...extra }),
@@ -1420,7 +1453,7 @@ export default function ZooLiveRoom({
     };
     if (!response.ok)
       throw new Error(data.message || "Live safety change failed.");
-    const refresh = await fetch("/api/live/safety", { cache: "no-store" });
+    const refresh = await fetch(`/api/live/safety?experience=${experience}`, { cache: "no-store" });
     if (refresh.ok) {
       const safety = (await refresh.json()) as LiveSafety;
       safety.restrictions = (safety.restrictions || []).filter(
@@ -1461,7 +1494,7 @@ export default function ZooLiveRoom({
     event.preventDefault();
     if (!reportTarget) return;
     try {
-      const response = await fetch("/api/live/safety", {
+      const response = await fetch(`/api/live/safety?experience=${experience}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1493,7 +1526,7 @@ export default function ZooLiveRoom({
 
   async function loadReportInbox() {
     try {
-      const response = await fetch("/api/live/safety?view=reports", {
+      const response = await fetch(`/api/live/safety?experience=${experience}&view=reports`, {
         cache: "no-store",
       });
       const data = (await response.json().catch(() => ({}))) as {
@@ -1520,7 +1553,7 @@ export default function ZooLiveRoom({
     status: "reviewed" | "actioned" | "dismissed",
   ) {
     try {
-      const response = await fetch("/api/live/safety", {
+      const response = await fetch(`/api/live/safety?experience=${experience}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "report_status", reportId, status }),
@@ -1559,7 +1592,7 @@ export default function ZooLiveRoom({
         } satisfies RoomMessage,
         "*",
       );
-      setStatus("Your request for a Zoo Crew cage was sent");
+      setStatus(`Your request for ${isJungle ? "an On Deck spot" : "a Zoo Crew cage"} was sent`);
     } catch {
       setStageRequested(false);
       setStatus("Your request could not be sent. Please try again.");
@@ -1612,7 +1645,7 @@ export default function ZooLiveRoom({
       );
       setStageRequests((current) => current.filter((id) => id !== sessionId));
       setMembersOpen(false);
-      if (!isLocalTarget) setStatus("Viewer accepted into a cage");
+      if (!isLocalTarget) setStatus(`Viewer accepted ${isJungle ? "On Deck" : "into a cage"}`);
     } catch {
       setStatus(
         "Could not accept that viewer. Check that they are still in the lobby and try again.",
@@ -1672,7 +1705,7 @@ export default function ZooLiveRoom({
     setStatus(
       accepted
         ? "Cage invitation accepted. Waiting for the host to open your cage…"
-        : "You declined the cage invitation. You can keep watching.",
+        : `You declined the ${deckName} invitation. You can keep watching.`,
     );
   }
 
@@ -1734,7 +1767,7 @@ export default function ZooLiveRoom({
   }
 
   async function copyInvite() {
-    await navigator.clipboard.writeText(`${window.location.origin}/live`);
+    await navigator.clipboard.writeText(`${window.location.origin}${roomPath}`);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
   }
@@ -1769,6 +1802,7 @@ export default function ZooLiveRoom({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "gift",
+          experience,
           giftId,
           eventId: crypto.randomUUID(),
         }),
@@ -1789,7 +1823,7 @@ export default function ZooLiveRoom({
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
             <p className="truncate text-xs font-black uppercase tracking-[.16em] text-[#f4b400]">
-              Zoo Crew Vibe · Live
+              {isJungle ? "The Jungle · Live" : "Zoo Crew Vibe · Live"}
             </p>
           </div>
           <div className="mt-1 flex min-w-0 items-center gap-2">
@@ -1862,7 +1896,7 @@ export default function ZooLiveRoom({
                 >
                   {approvingStageId === person.session_id
                     ? "Accepting…"
-                    : "Accept to Cage"}
+                    : isJungle ? "Accept On Deck" : "Accept to Cage"}
                 </button>
                 <button
                   type="button"
@@ -1906,20 +1940,36 @@ export default function ZooLiveRoom({
         </div>
       ) : null}
 
-      <div className="grid min-h-0 flex-1 grid-cols-[68px_minmax(0,1fr)_68px] gap-1 bg-black p-1 sm:grid-cols-[150px_minmax(0,1fr)_150px] sm:gap-2 sm:p-2 lg:grid-cols-[190px_minmax(0,1fr)_190px]">
+      <div className={`relative grid min-h-0 flex-1 grid-cols-[68px_minmax(0,1fr)_68px] gap-1 p-1 sm:grid-cols-[150px_minmax(0,1fr)_150px] sm:gap-2 sm:p-2 lg:grid-cols-[190px_minmax(0,1fr)_190px] ${isJungle ? "jungle-live-room bg-[#020b05]" : "bg-black"}`}>
+        {isJungle ? (
+          <div aria-hidden="true" className="jungle-canopy pointer-events-none absolute inset-x-0 top-0 z-30 h-12">
+            <span className="jungle-hanging-vine jungle-hanging-vine-1" />
+            <span className="jungle-hanging-vine jungle-hanging-vine-2" />
+            <span className="jungle-hanging-vine jungle-hanging-vine-3" />
+            <span className="jungle-hanging-vine jungle-hanging-vine-4" />
+          </div>
+        ) : null}
         <aside className="grid min-h-0 grid-rows-4 gap-1 sm:gap-2">
           {leftRailSlots.map((person, index) => renderCageSlot(person, index))}
         </aside>
         <div className="relative min-w-0 overflow-hidden rounded-2xl bg-[#0c100e] sm:rounded-3xl">
           {featured ? (
-            <MediaTile
-              participant={featured}
-              featured
-              isSuperfan={superfanIds.has(featured.user_id)}
-              outputDeviceId={outputDeviceId}
-              onSelect={() => openParticipantControls(featured)}
-              onSelfSettings={() => setControlsOpen(true)}
-            />
+            <div
+              key={featured.session_id}
+              className={`relative h-full w-full ${isJungle ? "jungle-stage-swing" : ""}`}
+            >
+              <MediaTile
+                participant={featured}
+                featured
+                isSuperfan={superfanIds.has(featured.user_id)}
+                outputDeviceId={outputDeviceId}
+                onSelect={() => openParticipantControls(featured)}
+                onSelfSettings={() => setControlsOpen(true)}
+              />
+              {isJungle ? (
+                <div aria-hidden="true" className="jungle-stage-vines pointer-events-none absolute inset-0 z-30" />
+              ) : null}
+            </div>
           ) : (
             <div className="grid h-full place-items-center text-center text-white/45">
               <div>
@@ -2169,7 +2219,7 @@ export default function ZooLiveRoom({
               aria-label="Request to join a cage"
               className={`shrink-0 rounded-full px-3 py-3 text-[10px] font-black uppercase ${stageRequested ? "bg-emerald-900 text-emerald-200" : "bg-white/10 text-white"}`}
             >
-              {stageRequested ? "Requested" : "Join cage"}
+              {stageRequested ? "Requested" : isJungle ? "Join On Deck" : "Join cage"}
             </button>
           ) : (
             <>
@@ -2648,7 +2698,7 @@ export default function ZooLiveRoom({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[.18em] text-[#f4b400]">
-                  Inside the habitat
+                  {isJungle ? "Inside the canopy" : "Inside the habitat"}
                 </p>
                 <h2 className="mt-1 text-xl font-black text-white">
                   Stage {people.length} · Lobby {audience.length}
@@ -2716,7 +2766,7 @@ export default function ZooLiveRoom({
                       <p className="text-xs text-white/40">
                         Watching and commenting
                         {stageRequests.includes(person.session_id)
-                          ? " · Requested cage"
+                          ? ` · Requested ${deckName}`
                           : ""}
                       </p>
                     </div>
@@ -2733,10 +2783,10 @@ export default function ZooLiveRoom({
                         {approvingStageId === person.session_id
                           ? "Accepting…"
                           : stageRequests.includes(person.session_id)
-                            ? "Accept to Cage"
+                            ? isJungle ? "Accept On Deck" : "Accept to Cage"
                             : pendingInvitesRef.current.has(person.session_id)
                               ? "Invited"
-                              : "Invite to Cage"}
+                              : isJungle ? "Invite On Deck" : "Invite to Cage"}
                       </button>
                     ) : null}
                   </div>
@@ -2878,7 +2928,7 @@ export default function ZooLiveRoom({
                     onClick={moveSelfToCage}
                     className="rounded-2xl border border-[#f4b400]/25 bg-white/10 px-3 py-4 text-sm font-black text-white"
                   >
-                    ⬇️ Shrink Me to Cage
+                    ⬇️ {isJungle ? "Move Me On Deck" : "Shrink Me to Cage"}
                   </button>
                 </div>
               </>

@@ -2,7 +2,12 @@ import { authenticatedUser, serviceConfiguration } from "@/lib/stagefront-auth";
 
 export const runtime = "nodejs";
 const DAILY_API = "https://api.daily.co/v1";
-const ROOM_PREFIX = process.env.VERCEL_ENV === "production" ? "zoo-crew-vibe-live-" : "zoo-crew-vibe-preview-";
+function roomPrefix(experience: string | undefined) {
+  const environment = process.env.VERCEL_ENV === "production" ? "live" : "preview";
+  return experience === "jungle"
+    ? `stagefront-jungle-${environment}-`
+    : `zoo-crew-vibe-${environment}-`;
+}
 const COSTS = {
   paw: 10,
   fly_swatter: 50,
@@ -45,7 +50,7 @@ export async function POST(request: Request) {
   const user = await authenticatedUser();
   if (!user) return Response.json({ message: "Sign in before sending gifts." }, { status: 401 });
   if (process.env.ZOO_LIVE_PAID_GIFTS_ENABLED !== "true") return Response.json({ message: "Paid Zoo Crew gifts are not enabled yet." }, { status: 503 });
-  const body = await request.json().catch(() => ({})) as { giftId?: string; eventId?: string };
+  const body = await request.json().catch(() => ({})) as { giftId?: string; eventId?: string; experience?: string };
   if (!(body.giftId && body.giftId in COSTS) || !body.eventId || !/^[0-9a-f-]{36}$/i.test(body.eventId)) {
     return Response.json({ message: "Invalid gift request." }, { status: 400 });
   }
@@ -60,7 +65,7 @@ export async function POST(request: Request) {
     });
     if (!roomsResponse.ok) throw new Error("Live room lookup failed.");
     const rooms = (await roomsResponse.json() as { data?: { name: string; url: string }[] }).data || [];
-    const room = rooms.find((item) => item.name.startsWith(ROOM_PREFIX));
+    const room = rooms.find((item) => item.name.startsWith(roomPrefix(body.experience)));
     if (!room) return Response.json({ message: "The live is offline." }, { status: 409 });
 
     const spend = await fetch(db.url + "/rest/v1/rpc/zoo_live_spend_gift_coins", {

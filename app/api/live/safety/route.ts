@@ -3,8 +3,14 @@ import { authenticatedUser, isAdministrator, serviceConfiguration, staffAccess }
 export const runtime = "nodejs";
 
 const DAILY_API = "https://api.daily.co/v1";
-const ROOM_PREFIX = process.env.VERCEL_ENV === "production" ? "zoo-crew-vibe-live-" : "zoo-crew-vibe-preview-";
 type Room = { name: string; url: string };
+
+function roomPrefix(experience: string | null) {
+  const environment = process.env.VERCEL_ENV === "production" ? "live" : "preview";
+  return experience === "jungle"
+    ? `stagefront-jungle-${environment}-`
+    : `zoo-crew-vibe-${environment}-`;
+}
 
 function dailyHeaders(key: string) {
   return { Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
@@ -15,11 +21,11 @@ function dbHeaders(key: string) {
 function isUuid(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
-async function activeRoom(apiKey: string): Promise<Room | null> {
+async function activeRoom(apiKey: string, experience: string | null): Promise<Room | null> {
   const response = await fetch(`${DAILY_API}/rooms?limit=100`, { headers: dailyHeaders(apiKey), cache: "no-store" });
   if (!response.ok) throw new Error("Daily room lookup failed.");
   const result = await response.json() as { data?: Room[] };
-  return result.data?.find((room) => room.name.startsWith(ROOM_PREFIX)) || null;
+  return result.data?.find((room) => room.name.startsWith(roomPrefix(experience))) || null;
 }
 async function dbRequest(config: NonNullable<ReturnType<typeof serviceConfiguration>>, table: string, query: URLSearchParams, init?: RequestInit) {
   return fetch(`${config.url}/rest/v1/${table}?${query}`, {
@@ -59,12 +65,11 @@ export async function GET(request: Request) {
   if (!apiKey || !config) return Response.json({ message: "Live safety is not configured." }, { status: 503 });
 
   try {
-    const room = await activeRoom(apiKey);
+    const { searchParams } = new URL(request.url);
+    const room = await activeRoom(apiKey, searchParams.get("experience"));
     const staff = await staffAccess();
     const isOwner = staff?.role === "owner";
     const isStaffMod = staff?.role === "moderator";
-    const { searchParams } = new URL(request.url);
-
     if (searchParams.get("view") === "reports") {
       if (!isOwner) return Response.json({ message: "Only Zoo Crew owners can view reports." }, { status: 403 });
       const query = new URLSearchParams({ select: "id,room_id,reporter_user_id,reported_user_id,reported_name,comment_id,comment_body,reason,status,created_at", status: "in.(new,reviewed,actioned,dismissed)", order: "created_at.desc", limit: "100" });
@@ -105,7 +110,10 @@ export async function POST(request: Request) {
     action?: string; targetUserId?: string; targetName?: string; commentId?: string; commentBody?: string; reason?: string; reportId?: string; status?: string;
   };
   try {
-    const room = await activeRoom(apiKey);
+    const room = await activeRoom(
+      apiKey,
+      new URL(request.url).searchParams.get("experience"),
+    );
     const staff = await staffAccess();
     const isOwner = staff?.role === "owner";
     const isStaffMod = staff?.role === "moderator";
