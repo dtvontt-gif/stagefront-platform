@@ -14,7 +14,8 @@ export type ZooGiftId =
   | "fly_swatter"
   | "hot_dogs"
   | "don_anaconda"
-  | "sha_monkey";
+  | "sha_monkey"
+  | "tori_tiger";
 
 export type ActiveZooGift = {
   id: ZooGiftId;
@@ -35,6 +36,7 @@ export const zooGiftCatalog: Record<ZooGiftId, { name: string; icon: string; fut
   money: { name: "Money Shower", icon: "💵", futurePrice: "$2.00", coinCost: 200, duration: 4400 },
   don_anaconda: { name: "Don and His Anaconda", icon: "🐍", futurePrice: "$3.00", coinCost: 300, duration: 6500 },
   sha_monkey: { name: "Sha & Her Monkey", icon: "🐒", futurePrice: "$3.00", coinCost: 300, duration: 8200 },
+  tori_tiger: { name: "Tori & Her Tiger", icon: "🐅", futurePrice: "$3.00", coinCost: 300, duration: 6500 },
 };
 
 function GiftCaption({ gift }: { gift: ActiveZooGift }) {
@@ -188,6 +190,23 @@ function ShaMonkeyAnimation() {
   );
 }
 
+function ToriTigerAnimation() {
+  return (
+    <div className="zoo-sha-monkey-wrap">
+      <PremiumGiftMedia
+        className="zoo-sha-monkey-video"
+        desktopSrc="/videos/zoo-crew/tori-tiger-gift-transparent.webp?v=1"
+        phoneSrc="/videos/zoo-crew/tori-tiger-gift-iphone.webp?v=1"
+        alt="Tori walks beside her white tiger and hugs the tiger around the head"
+      />
+      <div className="zoo-sha-monkey-title">TORI &amp; HER TIGER</div>
+      {Array.from({ length: 12 }).map((_, index) => (
+        <i key={index} className={`zoo-sha-spark zoo-sha-spark-${index + 1}`} />
+      ))}
+    </div>
+  );
+}
+
 export default function ZooGiftAnimation({ gift }: { gift: ActiveZooGift | null }) {
   if (!gift) return null;
   return (
@@ -198,6 +217,7 @@ export default function ZooGiftAnimation({ gift }: { gift: ActiveZooGift | null 
       {gift.id in regularGiftArtwork ? <RegularArtworkAnimation giftId={gift.id as RegularArtworkGiftId} /> : null}
       {gift.id === "don_anaconda" ? <DonAnacondaAnimation /> : null}
       {gift.id === "sha_monkey" ? <ShaMonkeyAnimation /> : null}
+      {gift.id === "tori_tiger" ? <ToriTigerAnimation /> : null}
       <GiftCaption gift={gift} />
     </div>
   );
