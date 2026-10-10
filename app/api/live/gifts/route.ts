@@ -22,6 +22,7 @@ const COSTS = {
   don_anaconda: 300,
   sha_monkey: 300,
   tori_tiger: 300,
+  unk_lion: 300,
 } as const;
 type GiftId = keyof typeof COSTS;
 
