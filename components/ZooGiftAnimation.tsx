@@ -233,8 +233,8 @@ function PlatinumPantherAnimation() {
     <div className="zoo-sha-monkey-wrap">
       <PremiumGiftMedia
         className="zoo-sha-monkey-video"
-        desktopSrc="/videos/zoo-crew/platinum-panther-gift-transparent.webp?v=3"
-        phoneSrc="/videos/zoo-crew/platinum-panther-gift-iphone.webp?v=3"
+        desktopSrc="/videos/zoo-crew/platinum-panther-gift-transparent.webp?v=4"
+        phoneSrc="/videos/zoo-crew/platinum-panther-gift-iphone.webp?v=4"
         alt="Platinum straightens his golden-eyed panther's chain before the loyal panther affectionately licks his face"
       />
       <div className="zoo-sha-monkey-title">PLATINUM &amp; HIS GOLDEN-EYED PANTHER</div>
