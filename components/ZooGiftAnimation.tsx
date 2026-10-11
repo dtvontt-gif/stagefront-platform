@@ -16,7 +16,8 @@ export type ZooGiftId =
   | "don_anaconda"
   | "sha_monkey"
   | "tori_tiger"
-  | "unk_lion";
+  | "unk_lion"
+  | "platinum_panther";
 
 export type ActiveZooGift = {
   id: ZooGiftId;
@@ -39,6 +40,7 @@ export const zooGiftCatalog: Record<ZooGiftId, { name: string; icon: string; fut
   sha_monkey: { name: "Sha & Her Monkey", icon: "🐒", futurePrice: "$3.00", coinCost: 300, duration: 8200 },
   tori_tiger: { name: "Tori & Her Tiger", icon: "🐅", futurePrice: "$3.00", coinCost: 300, duration: 6500 },
   unk_lion: { name: "Unk & His Lion", icon: "🦁", futurePrice: "$3.00", coinCost: 300, duration: 8200 },
+  platinum_panther: { name: "Platinum & His Golden-Eyed Panther", icon: "🐈‍⬛", futurePrice: "$3.00", coinCost: 300, duration: 8200 },
 };
 
 function GiftCaption({ gift }: { gift: ActiveZooGift }) {
@@ -226,6 +228,23 @@ function UnkLionAnimation() {
   );
 }
 
+function PlatinumPantherAnimation() {
+  return (
+    <div className="zoo-sha-monkey-wrap">
+      <PremiumGiftMedia
+        className="zoo-sha-monkey-video"
+        desktopSrc="/videos/zoo-crew/platinum-panther-gift-transparent.webp?v=1"
+        phoneSrc="/videos/zoo-crew/platinum-panther-gift-iphone.webp?v=1"
+        alt="Platinum straightens his golden-eyed panther's chain before the loyal panther affectionately licks his face"
+      />
+      <div className="zoo-sha-monkey-title">PLATINUM &amp; HIS GOLDEN-EYED PANTHER</div>
+      {Array.from({ length: 12 }).map((_, index) => (
+        <i key={index} className={`zoo-sha-spark zoo-sha-spark-${index + 1}`} />
+      ))}
+    </div>
+  );
+}
+
 export default function ZooGiftAnimation({ gift }: { gift: ActiveZooGift | null }) {
   if (!gift) return null;
   return (
@@ -238,6 +257,7 @@ export default function ZooGiftAnimation({ gift }: { gift: ActiveZooGift | null 
       {gift.id === "sha_monkey" ? <ShaMonkeyAnimation /> : null}
       {gift.id === "tori_tiger" ? <ToriTigerAnimation /> : null}
       {gift.id === "unk_lion" ? <UnkLionAnimation /> : null}
+      {gift.id === "platinum_panther" ? <PlatinumPantherAnimation /> : null}
       <GiftCaption gift={gift} />
     </div>
   );

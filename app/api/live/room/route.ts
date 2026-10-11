@@ -266,6 +266,7 @@ export async function POST(request: Request) {
           "sha_monkey",
           "tori_tiger",
           "unk_lion",
+          "platinum_panther",
         ].includes(body.giftId) ||
         !body.eventId ||
         !/^[0-9a-f-]{36}$/i.test(body.eventId)
