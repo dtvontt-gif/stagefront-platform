@@ -197,8 +197,8 @@ function ToriTigerAnimation() {
     <div className="zoo-sha-monkey-wrap">
       <PremiumGiftMedia
         className="zoo-sha-monkey-video"
-        desktopSrc="/videos/zoo-crew/tori-tiger-gift-transparent.webp?v=1"
-        phoneSrc="/videos/zoo-crew/tori-tiger-gift-iphone.webp?v=1"
+        desktopSrc="/videos/zoo-crew/tori-tiger-gift-transparent.webp?v=2"
+        phoneSrc="/videos/zoo-crew/tori-tiger-gift-iphone.webp?v=2"
         alt="Tori walks beside her white tiger and hugs the tiger around the head"
       />
       <div className="zoo-sha-monkey-title">TORI &amp; HER TIGER</div>
@@ -214,8 +214,8 @@ function UnkLionAnimation() {
     <div className="zoo-sha-monkey-wrap">
       <PremiumGiftMedia
         className="zoo-sha-monkey-video"
-        desktopSrc="/videos/zoo-crew/unk-lion-gift-transparent.webp?v=1"
-        phoneSrc="/videos/zoo-crew/unk-lion-gift-iphone.webp?v=1"
+        desktopSrc="/videos/zoo-crew/unk-lion-gift-transparent.webp?v=2"
+        phoneSrc="/videos/zoo-crew/unk-lion-gift-iphone.webp?v=2"
         alt="Unk walks beside his lion, who roars as Unk proudly rests his hand on its head"
       />
       <div className="zoo-sha-monkey-title">UNK &amp; HIS LION</div>
