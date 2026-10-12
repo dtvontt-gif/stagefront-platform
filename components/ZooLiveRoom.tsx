@@ -47,6 +47,7 @@ type RoomMessage =
     }
   | { kind: "stage-reject"; sessionId: string }
   | { kind: "stage-drop"; sessionId: string }
+  | { kind: "cage-open"; sessionId: string }
   | { kind: "feature"; sessionId: string }
   | { kind: "self-stage"; sessionId: string }
   | { kind: "self-cage"; sessionId: string; nextSessionId: string }
@@ -105,6 +106,7 @@ function MediaTile({
   featured = false,
   caged = false,
   deckStyle = false,
+  cageOpening = false,
   isSuperfan = false,
   outputDeviceId,
   onSelect,
@@ -114,6 +116,7 @@ function MediaTile({
   featured?: boolean;
   caged?: boolean;
   deckStyle?: boolean;
+  cageOpening?: boolean;
   isSuperfan?: boolean;
   outputDeviceId?: string;
   onSelect?: () => void;
@@ -213,10 +216,10 @@ function MediaTile({
       {caged && !deckStyle ? (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-10"
+          className={`zoo-cage-box pointer-events-none absolute inset-0 z-10 ${cageOpening ? "zoo-cage-box-opening" : "zoo-cage-box-closing"}`}
         >
-          <div className="absolute inset-y-0 left-[20%] w-[5px] bg-gradient-to-r from-[#3a2917] via-[#c89c52] to-[#392716] shadow-[2px_0_7px_rgba(0,0,0,.8)] sm:w-2" />
-          <div className="absolute inset-y-0 right-[20%] w-[5px] bg-gradient-to-r from-[#3a2917] via-[#c89c52] to-[#392716] shadow-[2px_0_7px_rgba(0,0,0,.8)] sm:w-2" />
+          <span className="zoo-box-door zoo-box-door-left" />
+          <span className="zoo-box-door zoo-box-door-right" />
           <div className="absolute inset-x-0 top-0 h-2 bg-gradient-to-b from-[#d5ac63] via-[#59401f] to-[#21170c] shadow-[0_3px_8px_rgba(0,0,0,.85)] sm:h-3" />
           <div className="absolute inset-x-0 bottom-0 h-2 bg-gradient-to-b from-[#d5ac63] via-[#59401f] to-[#21170c] shadow-[0_-3px_8px_rgba(0,0,0,.85)] sm:h-3" />
           <div className="absolute bottom-2.5 right-1.5 rounded bg-black/75 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider text-[#e9c477] sm:bottom-3.5 sm:right-2 sm:text-[9px]">
@@ -302,6 +305,7 @@ export default function ZooLiveRoom({
   const callRef = useRef<DailyCall | null>(null);
   const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
   const microphoneTrackRef = useRef<MediaStreamTrack | null>(null);
+  const featureTimerRef = useRef<number | null>(null);
   const commentsRef = useRef<HTMLDivElement | null>(null);
   const autoScrollRef = useRef(true);
   const longPressTimerRef = useRef<number | null>(null);
@@ -309,6 +313,7 @@ export default function ZooLiveRoom({
     Record<string, DailyParticipant>
   >({});
   const [featuredId, setFeaturedId] = useState("");
+  const [openingCageId, setOpeningCageId] = useState("");
   const [slotOrder, setSlotOrder] = useState<string[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [superfanIds, setSuperfanIds] = useState<Set<string>>(() => new Set());
@@ -382,6 +387,13 @@ export default function ZooLiveRoom({
   useEffect(() => {
     videoOnRef.current = videoOn;
   }, [videoOn]);
+  useEffect(
+    () => () => {
+      if (featureTimerRef.current !== null)
+        window.clearTimeout(featureTimerRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     const restoreCamera = () => {
@@ -752,11 +764,19 @@ export default function ZooLiveRoom({
           });
         }
         if (
-          data?.kind === "feature" &&
+          data?.kind === "cage-open" &&
           sender?.owner &&
           typeof data.sessionId === "string"
         )
+          setOpeningCageId(data.sessionId);
+        if (
+          data?.kind === "feature" &&
+          sender?.owner &&
+          typeof data.sessionId === "string"
+        ) {
+          setOpeningCageId("");
           setFeaturedId(data.sessionId);
+        }
         if (
           data?.kind === "self-stage" &&
           sender?.owner &&
@@ -961,6 +981,7 @@ export default function ZooLiveRoom({
         participant={person}
         caged
         deckStyle={isJungle}
+        cageOpening={!isJungle && openingCageId === person.session_id}
         isSuperfan={superfanIds.has(person.user_id)}
         outputDeviceId={outputDeviceId}
         onSelect={() => openParticipantControls(person)}
@@ -996,6 +1017,24 @@ export default function ZooLiveRoom({
 
   function feature(person: DailyParticipant) {
     if (!canModerateNow) return;
+    if (featureTimerRef.current !== null) return;
+    if (!isJungle && person.session_id !== featured?.session_id) {
+      setOpeningCageId(person.session_id);
+      callRef.current?.sendAppMessage(
+        { kind: "cage-open", sessionId: person.session_id } satisfies RoomMessage,
+        "*",
+      );
+      featureTimerRef.current = window.setTimeout(() => {
+        featureTimerRef.current = null;
+        setOpeningCageId("");
+        commitFeature(person);
+      }, 1050);
+      return;
+    }
+    commitFeature(person);
+  }
+
+  function commitFeature(person: DailyParticipant) {
     const currentFeaturedId = featured?.session_id;
     const nextOrder = [...slotOrder];
     if (currentFeaturedId && !nextOrder.includes(currentFeaturedId))
@@ -1956,7 +1995,7 @@ export default function ZooLiveRoom({
           {featured ? (
             <div
               key={featured.session_id}
-              className={`relative h-full w-full ${isJungle ? "jungle-stage-transfer" : "zoo-stage-release"}`}
+              className={`relative h-full w-full ${isJungle ? "jungle-stage-transfer" : ""}`}
             >
               <MediaTile
                 participant={featured}
@@ -1974,13 +2013,7 @@ export default function ZooLiveRoom({
                   <span className="jungle-vine-leaves jungle-vine-leaves-left">🍃</span>
                   <span className="jungle-vine-leaves jungle-vine-leaves-right">🌿</span>
                 </div>
-              ) : (
-                <div aria-hidden="true" className="zoo-cage-opening pointer-events-none absolute inset-0 z-30">
-                  <span className="zoo-cage-door zoo-cage-door-left" />
-                  <span className="zoo-cage-door zoo-cage-door-right" />
-                  <span className="zoo-cage-lock">🔓</span>
-                </div>
-              )}
+              ) : null}
             </div>
           ) : (
             <div className="grid h-full place-items-center text-center text-white/45">

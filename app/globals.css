@@ -180,17 +180,21 @@ body {
 @keyframes jungle-harness-grab { 0%,14% { opacity:0; scale:.82; } 22% { opacity:1; scale:1.04; } 30%,84% { opacity:1; scale:1; } 100% { opacity:0; scale:1.03; } }
 @keyframes jungle-leaf-burst { 0%,14% { opacity:0; scale:.2; } 24% { opacity:1; scale:1.35; } 34%,82% { opacity:1; scale:1; } 100% { opacity:0; translate:0 -24px; } }
 
-.zoo-stage-release { animation:zoo-stage-emerge 1.65s cubic-bezier(.2,.8,.25,1) both; }
-.zoo-cage-opening { perspective:900px; overflow:hidden; }
-.zoo-cage-door { position:absolute; top:0; bottom:0; width:51%; border-block:clamp(7px,1vw,13px) solid #8c632e; background:repeating-linear-gradient(90deg,transparent 0 18%,#4a3218 19% 21%,#d0a65f 22% 25%,#402912 26% 29%,transparent 30% 48%); box-shadow:inset 0 0 22px #000,0 0 18px rgba(0,0,0,.9); animation-duration:1.65s; animation-timing-function:cubic-bezier(.32,.02,.2,1); animation-fill-mode:both; }
-.zoo-cage-door::after { content:""; position:absolute; left:0; right:0; top:46%; height:clamp(8px,1.1vw,14px); background:linear-gradient(#d2a963,#4d3317 48%,#b48343); box-shadow:0 3px 7px #000; }
-.zoo-cage-door-left { left:0; transform-origin:left center; border-right:clamp(5px,.8vw,10px) solid #b88b4b; animation-name:zoo-cage-open-left; }
-.zoo-cage-door-right { right:0; transform-origin:right center; border-left:clamp(5px,.8vw,10px) solid #b88b4b; animation-name:zoo-cage-open-right; }
-.zoo-cage-lock { position:absolute; left:50%; top:50%; translate:-50% -50%; z-index:2; display:grid; place-items:center; width:clamp(44px,8vw,78px); aspect-ratio:1; border:4px solid #d5ad67; border-radius:50%; background:#241607; box-shadow:0 0 22px #000,0 0 16px rgba(244,180,0,.5); font-size:clamp(1.4rem,4vw,2.7rem); animation:zoo-cage-unlock 1.65s ease-in-out both; }
-@keyframes zoo-stage-emerge { 0%,22% { filter:brightness(.35); transform:scale(.72); } 62% { filter:brightness(1.16); transform:scale(1.045); } 82% { transform:scale(.985); } 100% { filter:brightness(1); transform:scale(1); } }
-@keyframes zoo-cage-open-left { 0%,25% { opacity:1; transform:translateX(0) rotateY(0); } 72% { opacity:1; transform:translateX(-86%) rotateY(64deg); } 100% { opacity:0; transform:translateX(-112%) rotateY(78deg); } }
-@keyframes zoo-cage-open-right { 0%,25% { opacity:1; transform:translateX(0) rotateY(0); } 72% { opacity:1; transform:translateX(86%) rotateY(-64deg); } 100% { opacity:0; transform:translateX(112%) rotateY(-78deg); } }
-@keyframes zoo-cage-unlock { 0%,18% { opacity:1; scale:1; rotate:0deg; } 34% { scale:1.28; rotate:-12deg; } 48% { scale:.9; rotate:12deg; } 64% { opacity:1; scale:1.08; rotate:0deg; } 100% { opacity:0; scale:.5; translate:-50% -80%; } }
+.zoo-cage-box { perspective:420px; overflow:visible; }
+.zoo-box-door { position:absolute; top:0; bottom:0; width:51%; background:repeating-linear-gradient(90deg,transparent 0 29%,#4a3218 30% 34%,#d0a65f 35% 42%,#402912 43% 49%,transparent 50% 79%); border-block:clamp(5px,.7vw,9px) solid #8c632e; box-shadow:inset 0 0 12px #000,0 0 9px rgba(0,0,0,.85); backface-visibility:hidden; }
+.zoo-box-door::after { content:""; position:absolute; left:0; right:0; top:47%; height:clamp(5px,.65vw,9px); background:linear-gradient(#d2a963,#4d3317 48%,#b48343); box-shadow:0 2px 5px #000; }
+.zoo-box-door-left { left:0; transform-origin:left center; border-right:clamp(3px,.45vw,6px) solid #c09350; }
+.zoo-box-door-right { right:0; transform-origin:right center; border-left:clamp(3px,.45vw,6px) solid #c09350; }
+.zoo-cage-box-opening .zoo-box-door-left { animation:zoo-box-open-left 1.05s cubic-bezier(.25,.75,.2,1) both; }
+.zoo-cage-box-opening .zoo-box-door-right { animation:zoo-box-open-right 1.05s cubic-bezier(.25,.75,.2,1) both; }
+.zoo-cage-box-opening::after { content:"🔓"; position:absolute; left:50%; top:50%; z-index:3; translate:-50% -50%; filter:drop-shadow(0 2px 3px #000); animation:zoo-box-unlock 1.05s ease-in-out both; }
+.zoo-cage-box-closing .zoo-box-door-left { animation:zoo-box-close-left .85s cubic-bezier(.3,.8,.25,1) both; }
+.zoo-cage-box-closing .zoo-box-door-right { animation:zoo-box-close-right .85s cubic-bezier(.3,.8,.25,1) both; }
+@keyframes zoo-box-open-left { 0%,18% { transform:translateX(0) rotateY(0); } 100% { transform:translateX(-18%) rotateY(-112deg); opacity:.2; } }
+@keyframes zoo-box-open-right { 0%,18% { transform:translateX(0) rotateY(0); } 100% { transform:translateX(18%) rotateY(112deg); opacity:.2; } }
+@keyframes zoo-box-close-left { 0% { transform:translateX(-18%) rotateY(-112deg); opacity:.2; } 100% { transform:translateX(0) rotateY(0); opacity:1; } }
+@keyframes zoo-box-close-right { 0% { transform:translateX(18%) rotateY(112deg); opacity:.2; } 100% { transform:translateX(0) rotateY(0); opacity:1; } }
+@keyframes zoo-box-unlock { 0%,18% { opacity:1; scale:1; rotate:0deg; } 45% { scale:1.45; rotate:-18deg; } 70% { opacity:1; scale:.9; rotate:10deg; } 100% { opacity:0; scale:.4; translate:-50% -90%; } }
 
 @media (max-width: 639px) {
   .zoo-gift-caption { bottom: 4.25rem; min-width: min(15rem, 84%); padding: .5rem .75rem; }
@@ -206,8 +210,9 @@ body {
 @media (prefers-reduced-motion: reduce) {
   /* Keep gifts visible for members who use Reduce Motion. The former 1ms
      animation rule immediately landed on the invisible final keyframe. */
-  .jungle-stage-transfer, .zoo-stage-release { animation: none !important; }
-  .jungle-vine-rig, .zoo-cage-opening { display: none !important; }
+  .jungle-stage-transfer { animation: none !important; }
+  .jungle-vine-rig { display: none !important; }
+  .zoo-cage-box-opening .zoo-box-door, .zoo-cage-box-closing .zoo-box-door { animation:none !important; }
   .zoo-gift-layer *, .zoo-gift-layer::before { animation: none !important; }
   .zoo-gift-layer::before { opacity: 1; }
   .zoo-gift-caption { opacity: 1; transform: translateX(-50%); }
