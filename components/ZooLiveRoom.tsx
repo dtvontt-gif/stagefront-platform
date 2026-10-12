@@ -1956,7 +1956,7 @@ export default function ZooLiveRoom({
           {featured ? (
             <div
               key={featured.session_id}
-              className={`relative h-full w-full ${isJungle ? "jungle-stage-swing" : ""}`}
+              className={`relative h-full w-full ${isJungle ? "jungle-stage-transfer" : "zoo-stage-release"}`}
             >
               <MediaTile
                 participant={featured}
@@ -1967,8 +1967,20 @@ export default function ZooLiveRoom({
                 onSelfSettings={() => setControlsOpen(true)}
               />
               {isJungle ? (
-                <div aria-hidden="true" className="jungle-stage-vines pointer-events-none absolute inset-0 z-30" />
-              ) : null}
+                <div aria-hidden="true" className="jungle-vine-rig pointer-events-none absolute inset-0 z-30">
+                  <span className="jungle-grab-vine" />
+                  <span className="jungle-vine-knot">🌿</span>
+                  <span className="jungle-vine-harness" />
+                  <span className="jungle-vine-leaves jungle-vine-leaves-left">🍃</span>
+                  <span className="jungle-vine-leaves jungle-vine-leaves-right">🌿</span>
+                </div>
+              ) : (
+                <div aria-hidden="true" className="zoo-cage-opening pointer-events-none absolute inset-0 z-30">
+                  <span className="zoo-cage-door zoo-cage-door-left" />
+                  <span className="zoo-cage-door zoo-cage-door-right" />
+                  <span className="zoo-cage-lock">🔓</span>
+                </div>
+              )}
             </div>
           ) : (
             <div className="grid h-full place-items-center text-center text-white/45">

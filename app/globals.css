@@ -160,13 +160,37 @@ body {
 .jungle-hanging-vine-2 { left: 31%; height: 28px; animation-delay: -.8s; }
 .jungle-hanging-vine-3 { right: 30%; height: 34px; animation-delay: -1.4s; }
 .jungle-hanging-vine-4 { right: 8%; height: 48px; animation-delay: -.35s; }
-.jungle-stage-swing { transform-origin: 50% -8%; animation: jungle-swing-to-stage 1.15s cubic-bezier(.2,.8,.25,1) both; }
-.jungle-stage-vines::before, .jungle-stage-vines::after { content: ""; position: absolute; top: -18%; width: 8px; height: 43%; border-radius: 999px; background: linear-gradient(90deg,#123719,#64a752,#183d1e); box-shadow: 0 0 10px rgba(31,120,57,.45); transform-origin: top center; animation: jungle-grab-vine 1.15s cubic-bezier(.2,.8,.25,1) both; }
-.jungle-stage-vines::before { left: 17%; rotate: -8deg; }
-.jungle-stage-vines::after { right: 17%; rotate: 8deg; }
+.jungle-stage-transfer { transform-origin: 50% -22%; animation: jungle-swing-to-stage 2.35s cubic-bezier(.18,.82,.22,1) both; }
+.jungle-vine-rig { overflow: visible; transform-origin: 50% -18%; animation: jungle-rig-swing 2.35s cubic-bezier(.18,.82,.22,1) both; }
+.jungle-grab-vine { position: absolute; left: calc(50% - 7px); top: -38%; width: 14px; height: 64%; border-radius: 999px; background: linear-gradient(90deg,#0b2610 0 12%,#37783c 28%,#86bf63 48%,#255e2e 68%,#0a220e 100%); box-shadow: 0 0 13px rgba(67,160,71,.75), inset 2px 0 2px rgba(190,235,139,.4); transform-origin: top center; animation: jungle-vine-drop 2.35s ease-in-out both; }
+.jungle-grab-vine::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: repeating-linear-gradient(165deg,transparent 0 13px,rgba(8,39,15,.85) 14px 17px,transparent 18px 29px); }
+.jungle-vine-knot { position: absolute; left: 50%; top: 23%; translate: -50% -50%; font-size: clamp(1.8rem,5vw,3.8rem); filter: drop-shadow(0 4px 5px #000); animation: jungle-knot-grab 2.35s ease-in-out both; }
+.jungle-vine-harness { position: absolute; inset: 10% 7% 7%; border: clamp(6px,1.1vw,12px) solid #34793b; border-top-color: transparent; border-radius: 18% 18% 28% 28%; box-shadow: 0 0 0 2px rgba(120,187,88,.32),0 8px 18px rgba(0,0,0,.65),inset 0 0 18px rgba(30,105,43,.32); animation: jungle-harness-grab 2.35s ease-in-out both; }
+.jungle-vine-harness::before,.jungle-vine-harness::after { content:""; position:absolute; top:-17%; width:clamp(7px,1vw,12px); height:25%; border-radius:999px; background:linear-gradient(90deg,#153d1b,#6eaa52,#183f1d); }
+.jungle-vine-harness::before { left:10%; rotate:-24deg; }
+.jungle-vine-harness::after { right:10%; rotate:24deg; }
+.jungle-vine-leaves { position:absolute; top:43%; font-size:clamp(1.6rem,4vw,3rem); filter:drop-shadow(0 3px 4px #000); animation:jungle-leaf-burst 2.35s ease-in-out both; }
+.jungle-vine-leaves-left { left:3%; rotate:-22deg; }
+.jungle-vine-leaves-right { right:3%; rotate:22deg; }
 @keyframes jungle-vine-sway { from { rotate: -4deg; } to { rotate: 5deg; } }
-@keyframes jungle-swing-to-stage { 0% { opacity: .35; transform: translateX(-42%) translateY(-12%) rotate(-10deg) scale(.68); } 48% { opacity: 1; transform: translateX(8%) translateY(2%) rotate(4deg) scale(1.03); } 72% { transform: translateX(-3%) rotate(-1.5deg) scale(.99); } 100% { opacity: 1; transform: translateX(0) translateY(0) rotate(0) scale(1); } }
-@keyframes jungle-grab-vine { 0% { opacity: 0; scale: 1 .35; } 18% { opacity: 1; scale: 1 1; } 72% { opacity: 1; } 100% { opacity: .72; } }
+@keyframes jungle-swing-to-stage { 0%,20% { opacity: .05; transform: translate(-76%,-18%) rotate(-17deg) scale(.48); } 28% { opacity: 1; transform: translate(-76%,-18%) rotate(-17deg) scale(.48); } 58% { transform: translate(15%,3%) rotate(8deg) scale(1.06); } 76% { transform: translate(-7%,-1%) rotate(-3deg) scale(.98); } 90% { transform: translate(2%,0) rotate(1deg) scale(1.01); } 100% { opacity:1; transform:translate(0,0) rotate(0) scale(1); } }
+@keyframes jungle-rig-swing { 0% { opacity:0; transform:translate(-76%,-52%) rotate(-17deg); } 12% { opacity:1; transform:translate(-76%,0) rotate(-17deg); } 28% { transform:translate(-76%,0) rotate(-17deg); } 58% { transform:translate(15%,0) rotate(8deg); } 76% { transform:translate(-7%,0) rotate(-3deg); } 90% { transform:translate(2%,0) rotate(1deg); } 100% { opacity:0; transform:translate(0,-18%) rotate(0); } }
+@keyframes jungle-vine-drop { 0% { opacity:0; transform:scaleY(.04); } 12%,84% { opacity:1; transform:scaleY(1); } 100% { opacity:0; transform:scaleY(.72); } }
+@keyframes jungle-knot-grab { 0%,8% { opacity:0; scale:.35; } 17% { opacity:1; scale:1.3; } 25%,86% { opacity:1; scale:1; } 100% { opacity:0; translate:-50% -90%; } }
+@keyframes jungle-harness-grab { 0%,14% { opacity:0; scale:.82; } 22% { opacity:1; scale:1.04; } 30%,84% { opacity:1; scale:1; } 100% { opacity:0; scale:1.03; } }
+@keyframes jungle-leaf-burst { 0%,14% { opacity:0; scale:.2; } 24% { opacity:1; scale:1.35; } 34%,82% { opacity:1; scale:1; } 100% { opacity:0; translate:0 -24px; } }
+
+.zoo-stage-release { animation:zoo-stage-emerge 1.65s cubic-bezier(.2,.8,.25,1) both; }
+.zoo-cage-opening { perspective:900px; overflow:hidden; }
+.zoo-cage-door { position:absolute; top:0; bottom:0; width:51%; border-block:clamp(7px,1vw,13px) solid #8c632e; background:repeating-linear-gradient(90deg,transparent 0 18%,#4a3218 19% 21%,#d0a65f 22% 25%,#402912 26% 29%,transparent 30% 48%); box-shadow:inset 0 0 22px #000,0 0 18px rgba(0,0,0,.9); animation-duration:1.65s; animation-timing-function:cubic-bezier(.32,.02,.2,1); animation-fill-mode:both; }
+.zoo-cage-door::after { content:""; position:absolute; left:0; right:0; top:46%; height:clamp(8px,1.1vw,14px); background:linear-gradient(#d2a963,#4d3317 48%,#b48343); box-shadow:0 3px 7px #000; }
+.zoo-cage-door-left { left:0; transform-origin:left center; border-right:clamp(5px,.8vw,10px) solid #b88b4b; animation-name:zoo-cage-open-left; }
+.zoo-cage-door-right { right:0; transform-origin:right center; border-left:clamp(5px,.8vw,10px) solid #b88b4b; animation-name:zoo-cage-open-right; }
+.zoo-cage-lock { position:absolute; left:50%; top:50%; translate:-50% -50%; z-index:2; display:grid; place-items:center; width:clamp(44px,8vw,78px); aspect-ratio:1; border:4px solid #d5ad67; border-radius:50%; background:#241607; box-shadow:0 0 22px #000,0 0 16px rgba(244,180,0,.5); font-size:clamp(1.4rem,4vw,2.7rem); animation:zoo-cage-unlock 1.65s ease-in-out both; }
+@keyframes zoo-stage-emerge { 0%,22% { filter:brightness(.35); transform:scale(.72); } 62% { filter:brightness(1.16); transform:scale(1.045); } 82% { transform:scale(.985); } 100% { filter:brightness(1); transform:scale(1); } }
+@keyframes zoo-cage-open-left { 0%,25% { opacity:1; transform:translateX(0) rotateY(0); } 72% { opacity:1; transform:translateX(-86%) rotateY(64deg); } 100% { opacity:0; transform:translateX(-112%) rotateY(78deg); } }
+@keyframes zoo-cage-open-right { 0%,25% { opacity:1; transform:translateX(0) rotateY(0); } 72% { opacity:1; transform:translateX(86%) rotateY(-64deg); } 100% { opacity:0; transform:translateX(112%) rotateY(-78deg); } }
+@keyframes zoo-cage-unlock { 0%,18% { opacity:1; scale:1; rotate:0deg; } 34% { scale:1.28; rotate:-12deg; } 48% { scale:.9; rotate:12deg; } 64% { opacity:1; scale:1.08; rotate:0deg; } 100% { opacity:0; scale:.5; translate:-50% -80%; } }
 
 @media (max-width: 639px) {
   .zoo-gift-caption { bottom: 4.25rem; min-width: min(15rem, 84%); padding: .5rem .75rem; }
@@ -182,6 +206,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   /* Keep gifts visible for members who use Reduce Motion. The former 1ms
      animation rule immediately landed on the invisible final keyframe. */
+  .jungle-stage-transfer, .zoo-stage-release { animation: none !important; }
+  .jungle-vine-rig, .zoo-cage-opening { display: none !important; }
   .zoo-gift-layer *, .zoo-gift-layer::before { animation: none !important; }
   .zoo-gift-layer::before { opacity: 1; }
   .zoo-gift-caption { opacity: 1; transform: translateX(-50%); }
