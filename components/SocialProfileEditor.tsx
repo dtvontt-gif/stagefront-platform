@@ -38,6 +38,14 @@ export default function SocialProfileEditor({ managedUser }: { managedUser?: str
     return () => window.clearTimeout(initial);
   }, [load]);
 
+  useEffect(() => {
+    const page = document.querySelector<HTMLElement>("[data-profile-page]");
+    if (!page || !profile?.wallpaper_image_url) return;
+    const previousBackground = page.style.backgroundImage;
+    page.style.backgroundImage = `linear-gradient(rgba(4,4,6,.38),rgba(4,4,6,.82)),url(${profile.wallpaper_image_url})`;
+    return () => { page.style.backgroundImage = previousBackground; };
+  }, [profile?.wallpaper_image_url]);
+
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -89,7 +97,7 @@ export default function SocialProfileEditor({ managedUser }: { managedUser?: str
       <div className="mx-auto -mt-14 aspect-square w-36 overflow-hidden rounded-full border-4 bg-[#111118] bg-cover bg-center" style={{ borderColor: profile.theme_color || "#f4b400", ...(profile.profile_image_url ? { backgroundImage: `url(${profile.profile_image_url})` } : {}) }}>
         {!profile.profile_image_url ? <div className="grid h-full place-items-center text-5xl font-black" style={{ color: profile.theme_color || "#f4b400" }}>{profile.display_name[0]}</div> : null}
       </div>
-      <div className="p-5 text-center"><p className="font-display text-2xl font-black">{profile.display_name}</p><p style={{ color: profile.theme_color || "#f4b400" }}>@{profile.username}</p>{profile.profile_song_url ? <audio controls preload="none" src={profile.profile_song_url} className="mt-4 w-full" /> : null}</div>
+      <div className="p-5 text-center"><p className="font-display text-2xl font-black">{profile.display_name}</p><p style={{ color: profile.theme_color || "#f4b400" }}>@{profile.username}</p>{profile.profile_song_url ? <audio controls preload="none" src={profile.profile_song_url} className="mt-4 w-full" /> : null}<a href={`/singers/${profile.username}`} className="mt-5 inline-flex rounded-full border border-white/20 bg-black/45 px-4 py-2 text-xs font-black uppercase text-white hover:border-[#f4b400] hover:text-[#f4b400]">View my public profile</a></div>
     </div>
     <form onSubmit={save} className="grid gap-5 rounded-3xl border border-white/10 bg-white/[.035] p-6 sm:p-8">
       {managedUser ? <p className="section-kicker">Administrator editing</p> : null}
