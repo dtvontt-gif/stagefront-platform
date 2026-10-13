@@ -25,16 +25,16 @@ export default function SocialProfileEditor({ managedUser }: { managedUser?: str
   const [message, setMessage] = useState("Loading your profile...");
   const [busy, setBusy] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (keepMessage = false) => {
     const query = managedUser ? `?user=${encodeURIComponent(managedUser)}` : "";
     const response = await fetch(`/api/social-profile${query}`, { cache: "no-store" });
     const result = await response.json() as { profile?: Profile; message?: string };
     setProfile(result.profile ?? null);
-    setMessage(result.message ?? "");
+    if (!keepMessage) setMessage(result.message ?? "");
   }, [managedUser]);
 
   useEffect(() => {
-    const initial = window.setTimeout(() => void load(), 0);
+    const initial = window.setTimeout(() => void load(false), 0);
     return () => window.clearTimeout(initial);
   }, [load]);
 
@@ -42,12 +42,24 @@ export default function SocialProfileEditor({ managedUser }: { managedUser?: str
     event.preventDefault();
     setBusy(true);
     const formData = new FormData(event.currentTarget);
+    for (const field of ["profilePhoto", "coverPhoto", "wallpaperPhoto"]) {
+      const entry = formData.get(field);
+      if (entry instanceof File && entry.size) {
+        try {
+          formData.set(field, await mobileSafeImage(entry));
+        } catch {
+          setMessage(`Could not prepare ${field === "profilePhoto" ? "the profile photo" : field === "coverPhoto" ? "the cover image" : "the wallpaper"}. Try a different JPG, PNG, or WebP image.`);
+          setBusy(false);
+          return;
+        }
+      }
+    }
     if (managedUser) formData.set("managedUserId", managedUser);
     const response = await fetch("/api/social-profile", { method: "PATCH", body: formData });
     const result = await response.json() as { message?: string };
     setMessage(result.message ?? "Profile updated.");
     setBusy(false);
-    if (response.ok) await load();
+    if (response.ok) await load(true);
   }
 
   if (!profile) return <p className="rounded-3xl border border-white/10 bg-white/[.04] p-6 text-white/60">{message}</p>;
@@ -103,4 +115,31 @@ export default function SocialProfileEditor({ managedUser }: { managedUser?: str
       {message ? <p aria-live="polite" className="text-sm text-white/60">{message}</p> : null}
     </form>
   </div>;
+}
+
+async function mobileSafeImage(file: File) {
+  const maxBytes = 1_350_000;
+  const maxSide = 1920;
+  if (file.size <= maxBytes) return file;
+  const url = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const candidate = new Image();
+      candidate.onload = () => resolve(candidate);
+      candidate.onerror = () => reject(new Error("Image could not be opened."));
+      candidate.src = url;
+    });
+    const ratio = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Image tools unavailable.");
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", .82));
+    if (!blob) throw new Error("Image could not be resized.");
+    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".webp", { type: "image/webp" });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
