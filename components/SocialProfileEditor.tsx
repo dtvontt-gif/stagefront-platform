@@ -41,25 +41,44 @@ export default function SocialProfileEditor({ managedUser }: { managedUser?: str
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
-    const formData = new FormData(event.currentTarget);
-    for (const field of ["profilePhoto", "coverPhoto", "wallpaperPhoto"]) {
-      const entry = formData.get(field);
-      if (entry instanceof File && entry.size) {
-        try {
-          formData.set(field, await mobileSafeImage(entry));
-        } catch {
-          setMessage(`Could not prepare ${field === "profilePhoto" ? "the profile photo" : field === "coverPhoto" ? "the cover image" : "the wallpaper"}. Try a different JPG, PNG, or WebP image.`);
-          setBusy(false);
-          return;
-        }
+    setMessage("Preparing your profile…");
+    try {
+      const formData = new FormData(event.currentTarget);
+      const imageFields = ["profilePhoto", "coverPhoto", "wallpaperPhoto"];
+      const prepared = await Promise.all(imageFields.map(async (field) => {
+        const entry = formData.get(field);
+        if (!(entry instanceof File) || !entry.size) return null;
+        return { field, file: await withTimeout(mobileSafeImage(entry), 20_000) };
+      }));
+      for (const item of prepared) {
+        if (item) formData.set(item.field, item.file);
       }
+      if (managedUser) formData.set("managedUserId", managedUser);
+      setMessage("Uploading and saving…");
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), 45_000);
+      let response: Response;
+      try {
+        response = await fetch("/api/social-profile", { method: "PATCH", body: formData, signal: controller.signal });
+      } finally {
+        window.clearTimeout(timer);
+      }
+      const raw = await response.text();
+      let result: { message?: string } = {};
+      try { result = raw ? JSON.parse(raw) as { message?: string } : {}; } catch { /* Vercel can return a plain request-size error. */ }
+      if (!response.ok) {
+        setMessage(result.message || (response.status === 413 ? "Those images are still too large. Try saving one image at a time." : "The profile could not be saved. Please try again."));
+        return;
+      }
+      setMessage(result.message ?? "Profile updated.");
+      await load(true);
+    } catch (error) {
+      setMessage(error instanceof DOMException && error.name === "AbortError"
+        ? "The upload took too long. Check your connection and try saving one image at a time."
+        : "The phone could not finish preparing those images. Try saving one image at a time.");
+    } finally {
+      setBusy(false);
     }
-    if (managedUser) formData.set("managedUserId", managedUser);
-    const response = await fetch("/api/social-profile", { method: "PATCH", body: formData });
-    const result = await response.json() as { message?: string };
-    setMessage(result.message ?? "Profile updated.");
-    setBusy(false);
-    if (response.ok) await load(true);
   }
 
   if (!profile) return <p className="rounded-3xl border border-white/10 bg-white/[.04] p-6 text-white/60">{message}</p>;
@@ -118,9 +137,9 @@ export default function SocialProfileEditor({ managedUser }: { managedUser?: str
 }
 
 async function mobileSafeImage(file: File) {
-  const maxBytes = 1_350_000;
-  const maxSide = 1920;
-  if (file.size <= maxBytes) return file;
+  const maxBytes = 800_000;
+  const maxSide = 1400;
+  if (file.size <= maxBytes && ["image/jpeg", "image/png", "image/webp"].includes(file.type)) return file;
   const url = URL.createObjectURL(file);
   try {
     const image = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -136,10 +155,22 @@ async function mobileSafeImage(file: File) {
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Image tools unavailable.");
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", .82));
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", .76));
     if (!blob) throw new Error("Image could not be resized.");
-    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".webp", { type: "image/webp" });
+    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
   } finally {
     URL.revokeObjectURL(url);
+  }
+}
+
+async function withTimeout<T>(promise: Promise<T>, milliseconds: number) {
+  let timer = 0;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = window.setTimeout(() => reject(new Error("Image preparation timed out.")), milliseconds);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    window.clearTimeout(timer);
   }
 }
