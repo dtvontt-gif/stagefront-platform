@@ -53,6 +53,19 @@ export async function authenticatedUser(): Promise<SupabaseUser | null> {
   return response.ok ? ((await response.json()) as SupabaseUser) : null;
 }
 
+export async function authenticatedRequestUser(request: Request): Promise<SupabaseUser | null> {
+  const authorization = request.headers.get("authorization");
+  const token = authorization?.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
+  if (!token) return authenticatedUser();
+  const config = supabaseConfiguration();
+  if (!config) return null;
+  const response = await fetch(`${config.url}/auth/v1/user`, {
+    headers: { apikey: config.anonKey, Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  return response.ok ? await response.json() as SupabaseUser : null;
+}
+
 export async function requireAdministrator() {
   const access = await staffAccess();
   return access ? access.user : null;
