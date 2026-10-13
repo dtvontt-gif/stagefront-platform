@@ -1,0 +1,1 @@
+import type {Metadata}from"next";import Navbar from"@/components/Navbar";import Inbox from"@/components/Inbox";export const metadata:Metadata={title:"Inbox | StageFront"};export default function Page(){return <main className="min-h-screen bg-[#070708] px-4 pb-24 pt-28 text-white sm:px-8"><Navbar/><Inbox/></main>}

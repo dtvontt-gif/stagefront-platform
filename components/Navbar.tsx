@@ -15,6 +15,7 @@ const navigation = [
   { label: "Original Artists", href: "/originals" },
   { label: "Members", href: "/members" },
   { label: "Connections", href: "/connections" },
+  { label: "Inbox", href: "/inbox" },
   { label: "Community", href: "/community" },
   { label: "Founders", href: "/founders" },
   { label: "Superfans", href: "/#superfans" },
