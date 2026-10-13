@@ -1,5 +1,5 @@
 import {
-  authenticatedUser,
+  authenticatedRequestUser,
   serviceConfiguration,
   staffAccess,
 } from "@/lib/stagefront-auth";
@@ -147,7 +147,7 @@ async function memberIdentity(userId: string, email: string) {
 }
 
 export async function GET(request: Request) {
-  const user = await authenticatedUser();
+  const user = await authenticatedRequestUser(request);
   if (!user?.email)
     return Response.json(
       { message: "Sign in to check the Live House." },
@@ -165,7 +165,7 @@ export async function GET(request: Request) {
     );
     const [room, access] = await Promise.all([
       getRoom(apiKey, experience),
-      staffAccess(),
+      staffAccess(request),
     ]);
     const role = access?.role || null;
     return Response.json({
@@ -184,7 +184,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const user = await authenticatedUser();
+  const user = await authenticatedRequestUser(request);
   if (!user?.email)
     return Response.json(
       { message: "Sign in before entering the Live House." },
@@ -206,7 +206,7 @@ export async function POST(request: Request) {
     };
     const experience = liveExperience(body.experience);
     const action = body.action || "enter";
-    const access = await staffAccess();
+    const access = await staffAccess(request);
     const role = access?.role || null;
     const canControlLive = canControl(role);
     const canModerate = role === "owner" || role === "moderator";

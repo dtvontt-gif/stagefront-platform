@@ -12,7 +12,8 @@
       "bundleIdentifier": "com.stagefront.live",
       "infoPlist": {
         "NSCameraUsageDescription": "StageFront uses your camera when you join a live stage.",
-        "NSMicrophoneUsageDescription": "StageFront uses your microphone when you join a live stage."
+        "NSMicrophoneUsageDescription": "StageFront uses your microphone when you join a live stage.",
+        "UIBackgroundModes": ["voip"]
       }
     },
     "android": {
@@ -23,14 +24,17 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.stagefront.live"
+      "package": "com.stagefront.live",
+      "permissions": ["CAMERA", "RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS", "ACCESS_NETWORK_STATE", "WAKE_LOCK", "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_CAMERA", "FOREGROUND_SERVICE_MICROPHONE", "POST_NOTIFICATIONS"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-secure-store",
-      "expo-router"
+      "expo-router",
+      "./plugins/withDaily",
+      ["expo-build-properties", { "android": { "minSdkVersion": 24 }, "ios": { "deploymentTarget": "16.4" } }]
     ]
   }
 }

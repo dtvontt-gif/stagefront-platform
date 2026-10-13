@@ -15,6 +15,7 @@ import {
 import * as SecureStore from "expo-secure-store";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import NativeLiveRoom from "./src/components/NativeLiveRoom";
 const API = "https://www.stagefrontdtv.com",
   gold = "#f4b400",
   bg = "#070708";
@@ -43,7 +44,7 @@ type Chat = {
   messages: Message[];
   unread: number;
 };
-async function request(path: string, options: RequestInit = {}) {
+export async function request(path: string, options: RequestInit = {}) {
   let token = await SecureStore.getItemAsync("stagefront_access");
   const run = () =>
     fetch(`${API}${path}`, {
@@ -294,46 +295,7 @@ function Members() {
   );
 }
 function Live() {
-  return (
-    <ScrollView contentContainerStyle={s.scroll}>
-      <Text style={s.title}>STAGEFRONT LIVE</Text>
-      <Text style={s.lede}>Choose your room and step into the action.</Text>
-      <Room
-        title="ZOO CREW LIVE"
-        subtitle="Cages, gifts and the Zoo Crew stage"
-        colors={["#7a4500", "#171007"]}
-        href="/live/zoo"
-      />
-      <Room
-        title="THE JUNGLE"
-        subtitle="On Deck boxes, vines and jungle energy"
-        colors={["#12451f", "#07110a"]}
-        href="/jungle"
-      />
-    </ScrollView>
-  );
-}
-function Room({
-  title,
-  subtitle,
-  colors,
-  href,
-}: {
-  title: string;
-  subtitle: string;
-  colors: [string, string];
-  href: string;
-}) {
-  return (
-    <Pressable onPress={() => Linking.openURL(`${API}${href}`)}>
-      <LinearGradient colors={colors} style={s.room}>
-        <Ionicons name="videocam" size={40} color={gold} />
-        <Text style={s.roomTitle}>{title}</Text>
-        <Text style={s.bio}>{subtitle}</Text>
-        <Text style={s.enter}>ENTER ROOM →</Text>
-      </LinearGradient>
-    </Pressable>
-  );
+  return <NativeLiveRoom request={request} />;
 }
 function Inbox() {
   const [chats, setChats] = useState<Chat[]>([]),

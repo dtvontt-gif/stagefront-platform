@@ -71,8 +71,8 @@ export async function requireAdministrator() {
   return access ? access.user : null;
 }
 
-export async function staffAccess(): Promise<{ user: SupabaseUser; role: StaffRole; permissions: StaffPermission[] } | null> {
-  const user = await authenticatedUser();
+export async function staffAccess(request?: Request): Promise<{ user: SupabaseUser; role: StaffRole; permissions: StaffPermission[] } | null> {
+  const user = request ? await authenticatedRequestUser(request) : await authenticatedUser();
   if (!user?.email) return null;
   if (isAdministrator(user.email)) return { user, role: "owner", permissions: rolePermissions.owner };
   const config = serviceConfiguration();
