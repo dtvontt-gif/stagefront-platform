@@ -75,7 +75,12 @@ export async function GET(request: Request) {
     profile = await getProfile(config.url, config.serviceKey, user.id);
   }
   if (!profile) return Response.json({ message: "That account profile was not found." }, { status: 404 });
-  return Response.json({ profile: { ...profile, profile_image_url: profileImageUrl(config.url, profile.profile_image_path as string | null) } });
+  return Response.json({ profile: {
+    ...profile,
+    profile_image_url: profileImageUrl(config.url, profile.profile_image_path as string | null),
+    cover_image_url: profileImageUrl(config.url, profile.cover_image_path as string | null),
+    wallpaper_image_url: profileImageUrl(config.url, profile.wallpaper_image_path as string | null),
+  } });
 }
 
 export async function PATCH(request: Request) {
@@ -92,7 +97,11 @@ export async function PATCH(request: Request) {
 
   const entry = form.get("profilePhoto");
   const file = entry instanceof File && entry.size ? entry : null;
-  const imageError = validateProfileImage(file);
+  const coverEntry = form.get("coverPhoto");
+  const coverFile = coverEntry instanceof File && coverEntry.size ? coverEntry : null;
+  const wallpaperEntry = form.get("wallpaperPhoto");
+  const wallpaperFile = wallpaperEntry instanceof File && wallpaperEntry.size ? wallpaperEntry : null;
+  const imageError = validateProfileImage(file) || validateProfileImage(coverFile) || validateProfileImage(wallpaperFile);
   if (imageError) return Response.json({ message: imageError }, { status: 400 });
   const displayName = String(form.get("displayName") ?? "").trim();
   const username = String(form.get("username") ?? "").trim().replace(/^@/, "").toLowerCase();
@@ -103,9 +112,21 @@ export async function PATCH(request: Request) {
     return Response.json({ message: "Choose a valid role." }, { status: 400 });
 
   const oldPath = profile.profile_image_path as string | null;
+  const oldCoverPath = profile.cover_image_path as string | null;
+  const oldWallpaperPath = profile.wallpaper_image_path as string | null;
   let imagePath = oldPath;
+  let coverPath = oldCoverPath;
+  let wallpaperPath = oldWallpaperPath;
   if (file) imagePath = await uploadProfileImage(config, target.userId, file);
+  if (coverFile) coverPath = await uploadProfileImage(config, `${target.userId}/cover`, coverFile);
+  if (wallpaperFile) wallpaperPath = await uploadProfileImage(config, `${target.userId}/wallpaper`, wallpaperFile);
   if (form.get("removePhoto") === "true") imagePath = null;
+  if (form.get("removeCover") === "true") coverPath = null;
+  if (form.get("removeWallpaper") === "true") wallpaperPath = null;
+  const themeColor = String(form.get("themeColor") ?? "#f4b400");
+  const profileLayout = String(form.get("profileLayout") ?? "spotlight");
+  const profileSongUrl = String(form.get("profileSongUrl") ?? "").trim().slice(0, 1000);
+  const safeSongUrl = profileSongUrl && /^https:\/\//i.test(profileSongUrl) ? profileSongUrl : null;
   const response = await fetch(`${config.url}/rest/v1/stagefront_profiles?user_id=eq.${target.userId}`, {
     method: "PATCH",
     headers: { ...serviceHeaders(config.serviceKey), Prefer: "return=minimal" },
@@ -119,6 +140,12 @@ export async function PATCH(request: Request) {
       looking_for: String(form.get("lookingFor") ?? "").trim().slice(0, 240) || null,
       is_public: form.get("isPublic") === "on",
       profile_image_path: imagePath,
+      cover_image_path: coverPath,
+      wallpaper_image_path: wallpaperPath,
+      theme_color: /^#[0-9a-f]{6}$/i.test(themeColor) ? themeColor : "#f4b400",
+      profile_layout: ["spotlight", "classic", "creator"].includes(profileLayout) ? profileLayout : "spotlight",
+      profile_song_url: safeSongUrl,
+      profile_song_title: String(form.get("profileSongTitle") ?? "").trim().slice(0, 120) || null,
       updated_at: new Date().toISOString(),
     }),
   });
@@ -127,6 +154,8 @@ export async function PATCH(request: Request) {
     return Response.json({ message: "That username may already be in use." }, { status: 409 });
   }
   if (oldPath && oldPath !== imagePath) await deleteProfileImage(config, oldPath);
+  if (oldCoverPath && oldCoverPath !== coverPath) await deleteProfileImage(config, oldCoverPath);
+  if (oldWallpaperPath && oldWallpaperPath !== wallpaperPath) await deleteProfileImage(config, oldWallpaperPath);
 
   if (target.managed) {
     const sync = await syncHostDiscovery(config, profile, { displayName, username, role });

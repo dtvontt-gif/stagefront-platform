@@ -16,6 +16,12 @@ type Profile = {
   looking_for?: string;
   legacy_profile?: boolean;
   profile_image_url?: string | null;
+  cover_image_url?: string | null;
+  wallpaper_image_url?: string | null;
+  theme_color?: string;
+  profile_layout?: string;
+  profile_song_url?: string | null;
+  profile_song_title?: string | null;
   tiktok_profile_url?: string | null;
   superfan_supports?: string[];
 };
@@ -55,14 +61,15 @@ export default function PublicMemberProfile({
   if (!profile) return <p className="text-white/60">{message}</p>;
 
   return (
-    <>
+    <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 p-4 sm:p-8" style={{ backgroundImage: profile.wallpaper_image_url ? `linear-gradient(rgba(4,4,6,.72),rgba(4,4,6,.94)),url(${profile.wallpaper_image_url})` : undefined, backgroundSize: "cover", backgroundPosition: "center", ["--member-accent" as string]: profile.theme_color || "#f4b400" }}>
       <Link
         href="/members"
         className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.05] px-5 py-3 text-sm font-black text-white transition hover:border-[#f4b400]/55 hover:text-[#f4b400]"
       >
         ← Back to Members
       </Link>
-      <div className="grid gap-12 lg:grid-cols-[380px_1fr]">
+      {profile.cover_image_url ? <div className="mb-8 h-40 rounded-[2rem] bg-cover bg-center sm:h-64" style={{ backgroundImage: `url(${profile.cover_image_url})` }} /> : null}
+      <div className={`grid gap-12 ${profile.profile_layout === "classic" ? "lg:grid-cols-[300px_1fr]" : "lg:grid-cols-[380px_1fr]"}`}>
         <div
           className="aspect-square overflow-hidden rounded-[2.5rem] border border-[#f4b400]/40 bg-[#111118] bg-cover bg-center"
           style={
@@ -85,7 +92,7 @@ export default function PublicMemberProfile({
           <h1 className="mt-4 font-display text-5xl font-black uppercase sm:text-7xl">
             {profile.display_name}
           </h1>
-          <p className="mt-3 text-xl text-[#f4b400]">@{profile.username}</p>
+          <p className="mt-3 text-xl" style={{ color: profile.theme_color || "#f4b400" }}>@{profile.username}</p>
           {profile.location ? (
             <p className="mt-5 text-white/50">{profile.location}</p>
           ) : null}
@@ -110,6 +117,7 @@ export default function PublicMemberProfile({
               </div>
             ) : null}
           </div>
+          {profile.profile_song_url ? <div className="mt-7 max-w-xl rounded-2xl border border-white/10 bg-black/55 p-4"><p className="mb-3 text-sm font-black uppercase" style={{ color: profile.theme_color || "#f4b400" }}>♫ {profile.profile_song_title || `${profile.display_name}'s profile song`}</p><audio controls preload="none" src={profile.profile_song_url} className="w-full" /></div> : null}
           {profile.tiktok_profile_url ? (
             <a
               href={profile.tiktok_profile_url}
@@ -147,6 +155,6 @@ export default function PublicMemberProfile({
           />
         </section>
       ) : null}
-    </>
+    </div>
   );
 }

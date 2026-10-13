@@ -16,7 +16,7 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/memb
   const normalizedUsername = username.toLowerCase();
 
   const accountQuery = new URLSearchParams({
-    select: "user_id,email,username,display_name,bio,role,genres,location,looking_for,profile_image_path",
+    select: "user_id,email,username,display_name,bio,role,genres,location,looking_for,profile_image_path,cover_image_path,wallpaper_image_path,theme_color,profile_layout,profile_song_url,profile_song_title",
     username: `eq.${normalizedUsername}`,
     is_public: "eq.true",
     limit: "1",
@@ -42,6 +42,8 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/memb
         legacy_profile: false,
         superfan_supports: superfanSupports,
         profile_image_url: profileImageUrl(config.url, accountProfile.profile_image_path as string | null),
+        cover_image_url: profileImageUrl(config.url, accountProfile.cover_image_path as string | null),
+        wallpaper_image_url: profileImageUrl(config.url, accountProfile.wallpaper_image_path as string | null),
       },
     });
   }
