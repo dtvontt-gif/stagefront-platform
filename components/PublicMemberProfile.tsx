@@ -61,7 +61,14 @@ export default function PublicMemberProfile({
   if (!profile) return <p className="text-white/60">{message}</p>;
 
   return (
-    <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 p-4 sm:p-8" style={{ backgroundImage: profile.wallpaper_image_url ? `linear-gradient(rgba(4,4,6,.72),rgba(4,4,6,.94)),url(${profile.wallpaper_image_url})` : undefined, backgroundSize: "cover", backgroundPosition: "center", ["--member-accent" as string]: profile.theme_color || "#f4b400" }}>
+    <>
+      {profile.wallpaper_image_url ? (
+        <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0">
+          <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url(${profile.wallpaper_image_url})` }} />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,4,6,.28),rgba(4,4,6,.58)_48%,rgba(4,4,6,.86))]" />
+        </div>
+      ) : null}
+      <div className="relative z-10 p-1 sm:p-3" style={{ ["--member-accent" as string]: profile.theme_color || "#f4b400" }}>
       <Link
         href="/members"
         className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.05] px-5 py-3 text-sm font-black text-white transition hover:border-[#f4b400]/55 hover:text-[#f4b400]"
@@ -69,7 +76,7 @@ export default function PublicMemberProfile({
         ← Back to Members
       </Link>
       {profile.cover_image_url ? <div className="mb-8 h-40 rounded-[2rem] bg-cover bg-center sm:h-64" style={{ backgroundImage: `url(${profile.cover_image_url})` }} /> : null}
-      <div className={`grid gap-12 ${profile.profile_layout === "classic" ? "lg:grid-cols-[300px_1fr]" : "lg:grid-cols-[380px_1fr]"}`}>
+      <div className={`grid gap-12 rounded-[2.5rem] border border-white/10 bg-black/45 p-5 shadow-2xl backdrop-blur-[3px] sm:p-8 ${profile.profile_layout === "classic" ? "lg:grid-cols-[300px_1fr]" : "lg:grid-cols-[380px_1fr]"}`}>
         <div
           className="aspect-square overflow-hidden rounded-[2.5rem] border border-[#f4b400]/40 bg-[#111118] bg-cover bg-center"
           style={
@@ -155,6 +162,7 @@ export default function PublicMemberProfile({
           />
         </section>
       ) : null}
-    </div>
+      </div>
+    </>
   );
 }
