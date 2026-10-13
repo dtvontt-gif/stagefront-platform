@@ -38,14 +38,6 @@ export default function SocialProfileEditor({ managedUser }: { managedUser?: str
     return () => window.clearTimeout(initial);
   }, [load]);
 
-  useEffect(() => {
-    const page = document.querySelector<HTMLElement>("[data-profile-page]");
-    if (!page || !profile?.wallpaper_image_url) return;
-    const previousBackground = page.style.backgroundImage;
-    page.style.backgroundImage = `linear-gradient(rgba(4,4,6,.38),rgba(4,4,6,.82)),url(${profile.wallpaper_image_url})`;
-    return () => { page.style.backgroundImage = previousBackground; };
-  }, [profile?.wallpaper_image_url]);
-
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -91,7 +83,13 @@ export default function SocialProfileEditor({ managedUser }: { managedUser?: str
 
   if (!profile) return <p className="rounded-3xl border border-white/10 bg-white/[.04] p-6 text-white/60">{message}</p>;
 
-  return <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
+  return <>
+    {profile.wallpaper_image_url ? <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-black">
+      <div className="absolute -inset-8 bg-cover bg-center opacity-50 blur-2xl" style={{ backgroundImage: `url(${profile.wallpaper_image_url})` }} />
+      <div className="absolute inset-0 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(${profile.wallpaper_image_url})` }} />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,4,6,.22),rgba(4,4,6,.52)_48%,rgba(4,4,6,.78))]" />
+    </div> : null}
+    <div className="relative z-10 grid gap-10 lg:grid-cols-[300px_1fr]">
     <div className="self-start overflow-hidden rounded-[2rem] border bg-black/70" style={{ borderColor: `${profile.theme_color || "#f4b400"}88`, backgroundImage: profile.wallpaper_image_url ? `linear-gradient(#0008,#000b),url(${profile.wallpaper_image_url})` : undefined, backgroundSize: "cover" }}>
       <div className="h-28 bg-cover bg-center" style={profile.cover_image_url ? { backgroundImage: `url(${profile.cover_image_url})` } : { background: `linear-gradient(135deg,${profile.theme_color || "#f4b400"},#090909)` }} />
       <div className="mx-auto -mt-14 aspect-square w-36 overflow-hidden rounded-full border-4 bg-[#111118] bg-cover bg-center" style={{ borderColor: profile.theme_color || "#f4b400", ...(profile.profile_image_url ? { backgroundImage: `url(${profile.profile_image_url})` } : {}) }}>
@@ -141,7 +139,8 @@ export default function SocialProfileEditor({ managedUser }: { managedUser?: str
       <button disabled={busy} className="primary-cta">{busy ? "Saving..." : "Save profile"}</button>
       {message ? <p aria-live="polite" className="text-sm text-white/60">{message}</p> : null}
     </form>
-  </div>;
+    </div>
+  </>;
 }
 
 async function mobileSafeImage(file: File) {

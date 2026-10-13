@@ -63,9 +63,10 @@ export default function PublicMemberProfile({
   return (
     <>
       {profile.wallpaper_image_url ? (
-        <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0">
-          <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url(${profile.wallpaper_image_url})` }} />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,4,6,.28),rgba(4,4,6,.58)_48%,rgba(4,4,6,.86))]" />
+        <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-black">
+          <div className="absolute -inset-8 bg-cover bg-center opacity-50 blur-2xl" style={{ backgroundImage: `url(${profile.wallpaper_image_url})` }} />
+          <div className="absolute inset-0 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(${profile.wallpaper_image_url})` }} />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,4,6,.22),rgba(4,4,6,.52)_48%,rgba(4,4,6,.78))]" />
         </div>
       ) : null}
       <div className="relative z-10 p-1 sm:p-3" style={{ ["--member-accent" as string]: profile.theme_color || "#f4b400" }}>

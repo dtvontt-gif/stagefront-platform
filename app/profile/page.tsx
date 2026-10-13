@@ -24,9 +24,9 @@ export default async function ProfilePage({
     redirect("/backstage");
 
   return (
-    <main data-profile-page className="min-h-screen bg-[#070708] bg-cover bg-center bg-fixed px-5 pb-24 pt-32 text-white sm:px-8">
+    <main data-profile-page className="relative isolate min-h-screen overflow-hidden bg-[#070708] px-5 pb-24 pt-32 text-white sm:px-8">
       <Navbar />
-      <div className="mx-auto max-w-5xl">
+      <div className="relative z-10 mx-auto max-w-5xl">
         {isManaged ? (
           <Link
             href="/admin#member-profiles"
