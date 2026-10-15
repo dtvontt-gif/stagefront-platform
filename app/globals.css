@@ -216,7 +216,11 @@ body {
      every participant can see a box move from On Deck to the stage. */
   .jungle-stage-transfer { animation: jungle-swing-to-stage 2.35s cubic-bezier(.18,.82,.22,1) both !important; }
   .jungle-vine-rig { display: block !important; animation: jungle-rig-swing 2.35s cubic-bezier(.18,.82,.22,1) both !important; }
-  .zoo-cage-box-opening .zoo-box-door, .zoo-cage-box-closing .zoo-box-door { animation:none !important; }
+  .zoo-cage-box-opening .zoo-box-door-left { animation:zoo-box-open-left 1.05s cubic-bezier(.25,.75,.2,1) both !important; }
+  .zoo-cage-box-opening .zoo-box-door-right { animation:zoo-box-open-right 1.05s cubic-bezier(.25,.75,.2,1) both !important; }
+  .zoo-cage-box-opening::after { animation:zoo-box-unlock 1.05s ease-in-out both !important; }
+  .zoo-cage-box-closing .zoo-box-door-left { animation:zoo-box-close-left .85s cubic-bezier(.3,.8,.25,1) both !important; }
+  .zoo-cage-box-closing .zoo-box-door-right { animation:zoo-box-close-right .85s cubic-bezier(.3,.8,.25,1) both !important; }
   .zoo-gift-layer *, .zoo-gift-layer::before { animation: none !important; }
   .zoo-gift-layer::before { opacity: 1; }
   .zoo-gift-caption { opacity: 1; transform: translateX(-50%); }
