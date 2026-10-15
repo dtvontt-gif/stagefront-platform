@@ -210,8 +210,12 @@ body {
 @media (prefers-reduced-motion: reduce) {
   /* Keep gifts visible for members who use Reduce Motion. The former 1ms
      animation rule immediately landed on the invisible final keyframe. */
-  .jungle-stage-transfer { animation: none !important; }
-  .jungle-vine-rig { display: none !important; }
+  /* The live-room transfer is a functional cue, not just decoration. Some
+     Android devices report reduced motion when system animations are lowered,
+     which used to remove the transfer completely. Keep this one transition so
+     every participant can see a box move from On Deck to the stage. */
+  .jungle-stage-transfer { animation: jungle-swing-to-stage 2.35s cubic-bezier(.18,.82,.22,1) both !important; }
+  .jungle-vine-rig { display: block !important; animation: jungle-rig-swing 2.35s cubic-bezier(.18,.82,.22,1) both !important; }
   .zoo-cage-box-opening .zoo-box-door, .zoo-cage-box-closing .zoo-box-door { animation:none !important; }
   .zoo-gift-layer *, .zoo-gift-layer::before { animation: none !important; }
   .zoo-gift-layer::before { opacity: 1; }
