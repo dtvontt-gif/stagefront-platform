@@ -60,6 +60,7 @@ type RoomMessage =
       paid?: boolean;
       coinsSpent?: number;
     }
+  | { kind: "reaction"; reaction: "applause" | "laugh"; id: string }
   | { kind: "end-live" };
 
 type Backdrop = "night" | "jungle" | "gold";
@@ -352,6 +353,10 @@ export default function ZooLiveRoom({
     username: string;
   } | null>(null);
   const [activeGift, setActiveGift] = useState<ActiveZooGift | null>(null);
+  const [reactions, setReactions] = useState<
+    { id: string; emoji: "👏" | "😂"; left: number }[]
+  >([]);
+  const lastReactionAtRef = useRef(0);
   const [coinBalance, setCoinBalance] = useState(0);
   const [giftPoints, setGiftPoints] = useState(0);
   const [coinsEnabled, setCoinsEnabled] = useState(false);
@@ -815,6 +820,12 @@ export default function ZooLiveRoom({
           if (data.paid && Number(data.coinsSpent) > 0)
             setGiftPoints((current) => current + Number(data.coinsSpent));
         }
+        if (
+          data?.kind === "reaction" &&
+          (data.reaction === "applause" || data.reaction === "laugh") &&
+          typeof data.id === "string"
+        )
+          showReaction(data.reaction, data.id);
         if (
           data?.kind === "end-live" &&
           event.fromId === "API" &&
@@ -1811,6 +1822,37 @@ export default function ZooLiveRoom({
     window.setTimeout(() => setCopied(false), 1800);
   }
 
+  function showReaction(reaction: "applause" | "laugh", id: string) {
+    setReactions((current) => {
+      if (current.some((item) => item.id === id)) return current;
+      return [
+        ...current.slice(-11),
+        {
+          id,
+          emoji: reaction === "applause" ? "👏" : "😂",
+          left: 8 + Math.round(Math.random() * 78),
+        },
+      ];
+    });
+    window.setTimeout(
+      () => setReactions((current) => current.filter((item) => item.id !== id)),
+      2400,
+    );
+  }
+
+  function sendReaction(reaction: "applause" | "laugh") {
+    const call = callRef.current;
+    const now = Date.now();
+    if (!call || now - lastReactionAtRef.current < 180) return;
+    lastReactionAtRef.current = now;
+    const id = crypto.randomUUID();
+    showReaction(reaction, id);
+    call.sendAppMessage(
+      { kind: "reaction", reaction, id } satisfies RoomMessage,
+      "*",
+    );
+  }
+
   async function leave() {
     await callRef.current?.leave();
     window.location.assign("/");
@@ -2026,6 +2068,17 @@ export default function ZooLiveRoom({
             </div>
           )}
           <ZooGiftAnimation gift={activeGift} />
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-40 overflow-hidden">
+            {reactions.map((reaction) => (
+              <span
+                key={reaction.id}
+                className="live-room-reaction"
+                style={{ left: `${reaction.left}%` }}
+              >
+                {reaction.emoji}
+              </span>
+            ))}
+          </div>
           {pinnedComment ? (
             <div className="absolute inset-x-3 top-20 z-30 max-w-xl rounded-xl border-l-2 border-[#f4b400] bg-black/20 px-3 py-2 text-xs font-semibold text-white [text-shadow:0_1px_4px_#000] sm:inset-x-5 sm:text-sm">
               <span className="mr-2 text-[#f4b400]">
@@ -2216,6 +2269,22 @@ export default function ZooLiveRoom({
           </div>
         ) : null}
         <div className="mb-2 flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => sendReaction("applause")}
+            aria-label="Send applause"
+            className="live-reaction-button"
+          >
+            👏 <span>Applause</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => sendReaction("laugh")}
+            aria-label="Send laughter"
+            className="live-reaction-button"
+          >
+            😂 <span>Laugh</span>
+          </button>
           <button
             type="button"
             onClick={copyInvite}
