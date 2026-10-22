@@ -358,7 +358,7 @@ export default function ZooLiveRoom({
   >([]);
   const lastReactionAtRef = useRef(0);
   const reactionIdsRef = useRef<Set<string>>(new Set());
-  const reactionAudioRef = useRef<AudioContext | null>(null);
+  const lastReactionSoundAtRef = useRef(0);
   const [coinBalance, setCoinBalance] = useState(0);
   const [giftPoints, setGiftPoints] = useState(0);
   const [coinsEnabled, setCoinsEnabled] = useState(false);
@@ -1844,57 +1844,17 @@ export default function ZooLiveRoom({
     }, 2400);
   }
 
-  function reactionAudio() {
-    if (reactionAudioRef.current) return reactionAudioRef.current;
-    const AudioContextClass =
-      window.AudioContext ||
-      (window as typeof window & { webkitAudioContext?: typeof AudioContext })
-        .webkitAudioContext;
-    if (!AudioContextClass) return null;
-    reactionAudioRef.current = new AudioContextClass();
-    return reactionAudioRef.current;
-  }
-
   function playReactionSound(reaction: "applause" | "laugh") {
-    const context = reactionAudio();
-    if (!context) return;
-    void context.resume().catch(() => undefined);
-    const start = context.currentTime + 0.02;
-    if (reaction === "applause") {
-      for (let clap = 0; clap < 9; clap += 1) {
-        const length = Math.floor(context.sampleRate * 0.075);
-        const buffer = context.createBuffer(1, length, context.sampleRate);
-        const samples = buffer.getChannelData(0);
-        for (let index = 0; index < length; index += 1)
-          samples[index] =
-            (Math.random() * 2 - 1) * Math.pow(1 - index / length, 3);
-        const source = context.createBufferSource();
-        const filter = context.createBiquadFilter();
-        const gain = context.createGain();
-        filter.type = "bandpass";
-        filter.frequency.value = 1150 + Math.random() * 900;
-        filter.Q.value = 0.7;
-        gain.gain.value = 0.16 + Math.random() * 0.09;
-        source.buffer = buffer;
-        source.connect(filter).connect(gain).connect(context.destination);
-        source.start(start + clap * 0.065 + Math.random() * 0.035);
-      }
-      return;
-    }
-    for (let laugh = 0; laugh < 4; laugh += 1) {
-      const at = start + laugh * 0.13;
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-      oscillator.type = "sawtooth";
-      oscillator.frequency.setValueAtTime(210 + (laugh % 2) * 30, at);
-      oscillator.frequency.exponentialRampToValueAtTime(135, at + 0.1);
-      gain.gain.setValueAtTime(0.0001, at);
-      gain.gain.exponentialRampToValueAtTime(0.075, at + 0.018);
-      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.11);
-      oscillator.connect(gain).connect(context.destination);
-      oscillator.start(at);
-      oscillator.stop(at + 0.12);
-    }
+    const now = Date.now();
+    if (now - lastReactionSoundAtRef.current < 1200) return;
+    lastReactionSoundAtRef.current = now;
+    const audio = new Audio(
+      reaction === "applause"
+        ? "/audio/live/reactions/quick-applause.wav"
+        : "/audio/live/reactions/crowd-laugh.wav",
+    );
+    audio.volume = reaction === "applause" ? 0.65 : 0.55;
+    void audio.play().catch(() => undefined);
   }
 
   function sendReaction(reaction: "applause" | "laugh") {
