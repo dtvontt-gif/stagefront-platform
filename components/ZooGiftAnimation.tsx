@@ -15,7 +15,6 @@ export type ZooGiftId =
   | "hot_dogs"
   | "don_anaconda"
   | "sha_monkey"
-  | "tori_tiger"
   | "unk_lion"
   | "platinum_panther";
 
@@ -38,7 +37,6 @@ export const zooGiftCatalog: Record<ZooGiftId, { name: string; icon: string; fut
   money: { name: "Money Shower", icon: "💵", futurePrice: "$2.00", coinCost: 200, duration: 4400 },
   don_anaconda: { name: "Don and His Anaconda", icon: "🐍", futurePrice: "$3.00", coinCost: 300, duration: 6500 },
   sha_monkey: { name: "Sha & Her Monkey", icon: "🐒", futurePrice: "$3.00", coinCost: 300, duration: 8200 },
-  tori_tiger: { name: "Tori & Her Tiger", icon: "🐅", futurePrice: "$3.00", coinCost: 300, duration: 6500 },
   unk_lion: { name: "Unk & His Lion", icon: "🦁", futurePrice: "$3.00", coinCost: 300, duration: 8200 },
   platinum_panther: { name: "Platinum & His Golden-Eyed Panther", icon: "🐈‍⬛", futurePrice: "$3.00", coinCost: 300, duration: 8200 },
 };
@@ -194,23 +192,6 @@ function ShaMonkeyAnimation() {
   );
 }
 
-function ToriTigerAnimation() {
-  return (
-    <div className="zoo-sha-monkey-wrap">
-      <PremiumGiftMedia
-        className="zoo-sha-monkey-video"
-        desktopSrc="/videos/zoo-crew/tori-tiger-gift-transparent.webp?v=2"
-        phoneSrc="/videos/zoo-crew/tori-tiger-gift-iphone.webp?v=2"
-        alt="Tori walks beside her white tiger and hugs the tiger around the head"
-      />
-      <div className="zoo-sha-monkey-title">TORI &amp; HER TIGER</div>
-      {Array.from({ length: 12 }).map((_, index) => (
-        <i key={index} className={`zoo-sha-spark zoo-sha-spark-${index + 1}`} />
-      ))}
-    </div>
-  );
-}
-
 function UnkLionAnimation() {
   return (
     <div className="zoo-sha-monkey-wrap">
@@ -255,7 +236,6 @@ export default function ZooGiftAnimation({ gift }: { gift: ActiveZooGift | null 
       {gift.id in regularGiftArtwork ? <RegularArtworkAnimation giftId={gift.id as RegularArtworkGiftId} /> : null}
       {gift.id === "don_anaconda" ? <DonAnacondaAnimation /> : null}
       {gift.id === "sha_monkey" ? <ShaMonkeyAnimation /> : null}
-      {gift.id === "tori_tiger" ? <ToriTigerAnimation /> : null}
       {gift.id === "unk_lion" ? <UnkLionAnimation /> : null}
       {gift.id === "platinum_panther" ? <PlatinumPantherAnimation /> : null}
       <GiftCaption gift={gift} />

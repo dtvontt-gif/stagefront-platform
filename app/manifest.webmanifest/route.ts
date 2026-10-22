@@ -14,7 +14,7 @@ export function GET() {
       categories: ["entertainment", "music", "social"],
       icons: [
         {
-          src: "/images/zoo-crew/zoo-crew-vibe-house-gate.png",
+          src: "/images/zoo-crew/zoo-crew-vibe-house-gate-v2.png",
           sizes: "1254x1254",
           type: "image/png",
           purpose: "any",

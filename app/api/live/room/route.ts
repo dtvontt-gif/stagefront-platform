@@ -264,7 +264,6 @@ export async function POST(request: Request) {
           "hot_dogs",
           "don_anaconda",
           "sha_monkey",
-          "tori_tiger",
           "unk_lion",
           "platinum_panther",
         ].includes(body.giftId) ||

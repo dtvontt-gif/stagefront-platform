@@ -21,7 +21,6 @@ const COSTS = {
   money: 200,
   don_anaconda: 300,
   sha_monkey: 300,
-  tori_tiger: 300,
   unk_lion: 300,
   platinum_panther: 300,
 } as const;

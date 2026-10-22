@@ -32,7 +32,7 @@ export default function Hero() {
         <div className="hero-reveal hero-reveal-delay relative mx-auto w-full max-w-2xl">
           <div className="absolute -inset-5 rounded-[2.5rem] bg-[#f4b400]/15 blur-3xl" />
           <div className="relative overflow-hidden rounded-[2rem] border border-[#f4b400]/35 bg-black shadow-[0_35px_120px_rgba(0,0,0,0.72)]">
-            <Image src="/images/zoo-crew/zoo-crew-vibe-house-gate.png" alt="The Zoo Crew Vibe House family at the golden zoo gate" width={1254} height={1254} priority className="h-auto w-full" />
+            <Image src="/images/zoo-crew/zoo-crew-vibe-house-gate-v2.png" alt="The Zoo Crew Vibe House family at the golden zoo gate" width={1254} height={1254} priority className="h-auto w-full" />
           </div>
         </div>
       </div>
