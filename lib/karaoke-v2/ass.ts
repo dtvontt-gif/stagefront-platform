@@ -19,7 +19,7 @@ type AssProject = {
 };
 
 // Matches the mastered StageFront sonic-logo/welcome asset used by the renderer.
-export const KARAOKE_INTRO_MS = 11450;
+export const KARAOKE_INTRO_MS = 8200;
 export const KARAOKE_OUTRO_MS = 7000;
 
 function assTime(milliseconds: number) {
@@ -71,7 +71,7 @@ export function karaokeAss(project: AssProject) {
   const introEvents = [
     `Dialogue: 1,${assTime(350)},${assTime(3800)},Intro,,0,0,0,,{\\fad(450,500)}STAGEFRONT`,
     `Dialogue: 1,${assTime(4450)},${assTime(6000)},Intro,,0,0,0,,{\\fad(350,300)}NOW COMING TO THE STAGE`,
-    `Dialogue: 2,${assTime(6100)},${assTime(KARAOKE_INTRO_MS - 300)},IntroTitle,,0,0,0,,{\\fad(500,450)}${introTitle}${introArtist}`,
+    `Dialogue: 2,${assTime(5000)},${assTime(KARAOKE_INTRO_MS - 300)},IntroTitle,,0,0,0,,{\\fad(350,450)}${introTitle}${introArtist}`,
   ];
   return `[Script Info]\nTitle: ${escapeAss(project.title || "StageFront Karaoke")}\nScriptType: v4.00+\nPlayResX: ${width}\nPlayResY: ${height}\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Karaoke,${render.fontFamily || "Arial"},${fontSize},${assColor(render.activeColor, "#f4b400")},${assColor(render.inactiveColor, "#ffffff")},&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,1,${alignment},80,80,70,1\nStyle: Intro,${render.fontFamily || "Arial"},52,&H0000B4F4,&H0000B4F4,&H00000000,&H80000000,-1,0,0,0,100,100,3,0,1,4,1,5,100,100,70,1\nStyle: IntroTitle,${render.fontFamily || "Arial"},68,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,1,5,100,100,70,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n${[...introEvents, ...dialogues].join("\n")}\n`;
 }
