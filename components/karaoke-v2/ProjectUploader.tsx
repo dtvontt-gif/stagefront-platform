@@ -207,7 +207,10 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
         </select>
         {editingProject && <small>Save before switching</small>}
       </nav>}
-      {editingProject && <LyricsEditor key={editingProject.id} projectId={editingProject.id} title={editingProject.title} supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} onClose={() => setEditingProject(null)} />}
+      {editingProject && <LyricsEditor key={editingProject.id} projectId={editingProject.id} title={editingProject.title} artist={editingProject.artist} supabaseUrl={supabaseUrl} supabaseAnonKey={supabaseAnonKey} onProjectRenamed={(title, artist) => {
+        setProjects((current) => current.map((project) => project.id === editingProject.id ? { ...project, title, artist } : project));
+        setEditingProject((current) => current ? { ...current, title, artist } : current);
+      }} onClose={() => setEditingProject(null)} />}
       <section className="projects"><h2>Your projects</h2>{projects.length === 0 ? <p className="muted">No projects yet.</p> : projects.map((project) => {
         const job = jobs.find((item) => item.project_id === project.id && item.kind !== "render");
         const status = job?.status || project.status;

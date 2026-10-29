@@ -31,7 +31,9 @@ function recalculateLine(line: Line, tokens: Token[]): Line {
   return { ...line, tokens, startMs: Math.min(...tokens.map((token) => token.startMs)), endMs: Math.max(...tokens.map((token) => token.endMs)) };
 }
 
-export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAnonKey, onClose }: { projectId: string; title: string; supabaseUrl: string; supabaseAnonKey: string; onClose: () => void }) {
+export default function LyricsEditor({ projectId, title, artist, supabaseUrl, supabaseAnonKey, onProjectRenamed, onClose }: { projectId: string; title: string; artist: string | null; supabaseUrl: string; supabaseAnonKey: string; onProjectRenamed: (title: string, artist: string | null) => void; onClose: () => void }) {
+  const [songTitle, setSongTitle] = useState(title);
+  const [songArtist, setSongArtist] = useState(artist || "");
   const [lines, setLines] = useState<Line[]>([]);
   const [revision, setRevision] = useState(0);
   const [offsetMs, setOffsetMs] = useState(0);
@@ -158,6 +160,8 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not load lyrics.");
       setRevision(data.revision);
+      setSongTitle(data.project?.title || title);
+      setSongArtist(data.project?.artist || artist || "");
       setLines(mergeManualLyricLines(data.project?.lyrics?.lines || []));
       setOffsetMs(data.project?.lyrics?.offsetMs || 0);
       const render = data.project?.render || {};
@@ -298,13 +302,17 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
   async function save() {
     setWorking(true); setError(""); setMessage("");
     try {
+      const cleanTitle = songTitle.trim();
+      const cleanArtist = songArtist.trim();
+      if (!cleanTitle || cleanTitle.length > 160) throw new Error("Enter a song title under 160 characters.");
+      if (cleanArtist.length > 160) throw new Error("Keep the artist under 160 characters.");
       const safeOffsetMs = Number.isSafeInteger(offsetMs) ? offsetMs : 0;
       const normalizedLines = mergeManualLyricLines(lines).map((line) => {
         const tokens = [...line.tokens].sort((first, second) => first.startMs - second.startMs);
         return recalculateLine(line, tokens);
       }).sort((first, second) => first.startMs - second.startMs);
       const saveRequest = () => fetch(`/api/karaoke-v2/projects/${projectId}/lyrics`, {
-        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ baseRevision: revision, offsetMs: safeOffsetMs, lines: normalizedLines, render: previewStyle }),
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ baseRevision: revision, title: cleanTitle, artist: cleanArtist, offsetMs: safeOffsetMs, lines: normalizedLines, render: previewStyle }),
       });
       let response = await saveRequest();
       if (response.status === 401) {
@@ -316,6 +324,9 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
       setLines(normalizedLines);
       setOffsetMs(safeOffsetMs);
       setRevision(data.revision);
+      setSongTitle(cleanTitle);
+      setSongArtist(cleanArtist);
+      onProjectRenamed(cleanTitle, cleanArtist || null);
       setMessage(`Saved revision ${data.revision}.`);
       return true;
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save lyrics."); return false; }
@@ -342,7 +353,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
       if (!response.ok) throw new Error(result.error || "Could not prepare the instrumental.");
       const link = document.createElement("a");
       link.href = result.url;
-      link.download = `${title}-instrumental.mp3`;
+      link.download = `${songTitle}-instrumental.mp3`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -454,7 +465,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
       if (!response.ok) throw new Error(result.error || "Could not prepare the karaoke video.");
       const link = document.createElement("a");
       link.href = result.url;
-      link.download = `${title}-karaoke.mp4`;
+      link.download = `${songTitle}-karaoke.mp4`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -482,7 +493,12 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
   }
 
   return <section className="lyrics-editor panel">
-    <header className="editor-header"><div><p className="eyebrow">Follow-along lyric editor</p><h2>{title}</h2><p className="muted">Revision {revision || "…"} · {orderedWords.length} words</p></div><button className="secondary compact" onClick={onClose}>Close</button></header>
+    <header className="editor-header"><div><p className="eyebrow">Follow-along lyric editor</p><h2>{songTitle}</h2><p className="muted">Revision {revision || "…"} · {orderedWords.length} words</p></div><button className="secondary compact" onClick={onClose}>Close</button></header>
+    <div className="project-details-editor">
+      <label>Song title<input value={songTitle} maxLength={160} onChange={(event) => setSongTitle(event.target.value)} /></label>
+      <label>Artist<input value={songArtist} maxLength={160} onChange={(event) => setSongArtist(event.target.value)} /></label>
+      <p className="muted">Fix the title or artist here, then save. The corrected name will be used on the next video you create.</p>
+    </div>
     <div className="editor-audio"><button className="secondary compact" type="button" disabled={audioLoading} onClick={() => void recoverAudio(false)}>{audioLoading ? "Loading vocals…" : audioUrl ? "Refresh audio" : "Load vocals"}</button>{audioUrl && <audio ref={audioRef} controls preload="metadata" playsInline src={audioUrl} onLoadedMetadata={(event) => void handleAudioReady(event.currentTarget)} onError={() => void recoverAudio(!audioRef.current?.paused)} onPlay={() => { audioRecoveryRef.current = false; setError(""); setIsPlaying(true); }} onPause={() => setIsPlaying(false)} onEnded={() => setIsPlaying(false)} onTimeUpdate={(event) => setCurrentMs(Math.round(event.currentTarget.currentTime * 1000))} />}</div>
     <KaraokePreview lines={lines} currentMs={currentMs} offsetMs={offsetMs} style={previewStyle} />
     <div className="preview-controls">
@@ -527,7 +543,7 @@ export default function LyricsEditor({ projectId, title, supabaseUrl, supabaseAn
     </div>
     {error && <p className="error">{error}</p>}{message && <p className="success">{message}</p>}
     <details className="offset-details"><summary>Advanced: move every word together</summary><label className="offset-field">Milliseconds<input type="number" value={Number.isFinite(offsetMs) ? offsetMs : ""} onChange={(event) => { const value = Number(event.target.value); setOffsetMs(Number.isFinite(value) ? Math.round(value) : 0); }} /></label></details>
-    <div className="editor-actions"><button type="button" disabled={working} onClick={() => void save()}>{working ? "Saving…" : "Save lyric changes"}</button></div>
+    <div className="editor-actions"><button type="button" disabled={working} onClick={() => void save()}>{working ? "Saving…" : "Save project changes"}</button></div>
     <section className="export-panel">
       <div><p className="eyebrow">Export</p><h3>Karaoke files</h3><p className="muted">Save first, then download the timed karaoke subtitles and instrumental audio.</p></div>
       <div className="custom-instrumental"><div><strong>Use your own instrumental for this song</strong>{customInstrumental ? <p className="instrumental-saved"><span>✓ Uploaded</span> {customInstrumental.fileName} · {(customInstrumental.sizeBytes / 1024 / 1024).toFixed(1)} MB · {new Date(customInstrumental.uploadedAt).toLocaleDateString()}</p> : <p className="muted">No custom instrumental uploaded. The separated track will be used.</p>}<p className="muted">This keeps your saved lyrics and timing and skips the separator.</p></div><label className="file-button secondary">{exportWorking === "replace-instrumental" ? "Uploading instrumental…" : customInstrumental ? "Replace instrumental" : "Choose Suno instrumental"}<input type="file" accept=".mp3,.wav,audio/mpeg,audio/wav" disabled={Boolean(exportWorking)} onChange={(event) => { const file = event.target.files?.[0]; if (file) void replaceInstrumental(file); event.currentTarget.value = ""; }} /></label></div>

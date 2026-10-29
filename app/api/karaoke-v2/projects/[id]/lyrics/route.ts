@@ -37,6 +37,10 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   if (!session) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const { id } = await context.params;
   const body = await request.json().catch(() => ({}));
+  const title = String(body.title || "").trim();
+  const artist = String(body.artist || "").trim();
+  if (!title || title.length > 160) return NextResponse.json({ error: "Enter a song title under 160 characters." }, { status: 400 });
+  if (artist.length > 160) return NextResponse.json({ error: "Keep the artist under 160 characters." }, { status: 400 });
   if (!validLines(body.lines)) return NextResponse.json({ error: "Some lyric text or timing is invalid." }, { status: 400 });
   const requestedOffset = Number(body.offsetMs ?? 0);
   const offsetMs = Number.isSafeInteger(requestedOffset) ? requestedOffset : 0;
@@ -75,6 +79,8 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   };
   const projectData = {
     ...currentData,
+    title,
+    artist: artist || undefined,
     status: "ready",
     updatedAt: now,
     revision,
@@ -85,6 +91,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     project_id: id, owner_id: session.user.id, revision, project_data: projectData,
   });
   if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
-  await client.from("karaoke_v2_projects").update({ updated_at: now }).eq("id", id);
+  const { error: projectError } = await client.from("karaoke_v2_projects").update({ title, artist: artist || null, updated_at: now }).eq("id", id);
+  if (projectError) return NextResponse.json({ error: projectError.message }, { status: 500 });
   return NextResponse.json({ saved: true, revision, savedAt: now });
 }

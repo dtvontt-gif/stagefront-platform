@@ -46,6 +46,10 @@
 .lyrics-editor { display: grid; gap: 1rem; margin-top: 2rem; }
 .editor-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
 .editor-header h2 { margin: .2rem 0; }
+.project-details-editor { display: grid; grid-template-columns: minmax(12rem, 1fr) minmax(12rem, 1fr); gap: .7rem; border: 1px solid #f4b40055; border-radius: .85rem; background: #171305; padding: .85rem; }
+.project-details-editor label { display: grid; gap: .4rem; color: #ffffffc9; font-size: .78rem; font-weight: 800; }
+.project-details-editor input { min-width: 0; border: 1px solid #ffffff26; border-radius: .65rem; background: #050506; padding: .7rem; color: #fff; font: inherit; }
+.project-details-editor p { grid-column: 1 / -1; margin: 0; }
 .lyrics-editor audio { width: 100%; }
 .editor-audio { display: grid; grid-template-columns: auto minmax(12rem, 1fr); align-items: center; gap: .7rem; }
 .offset-field { display: grid; gap: .4rem; max-width: 18rem; font-weight: 700; }
@@ -135,6 +139,7 @@
 @media (max-width: 38rem) { .studio-header, .project { align-items: flex-start; flex-direction: column; } .song-switcher { margin-left: auto; padding-left: .6rem; } .song-switcher label { font-size: 0; } .song-switcher label::after { content: "Songs"; font-size: .75rem; } .song-switcher select { width: min(13rem, 62vw); } .song-switcher small { display: none; } }
 @media (max-width: 48rem) { .lyric-line { grid-template-columns: auto 1fr 1fr; } .lyric-line textarea { grid-column: 2 / -1; } }
 @media (max-width: 38rem) { .editor-audio { grid-template-columns: 1fr; } }
+@media (max-width: 38rem) { .project-details-editor { grid-template-columns: 1fr; } }
 @media (max-width: 38rem) { .add-lyrics { grid-template-columns: 1fr; } .add-lyrics button { width: 100%; } }
 @media (max-width: 48rem) { .preview-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); } .karaoke-preview { min-height: 13rem; } .preview-lyrics { transform: scale(.72); width: 132%; } }
 @media (max-width: 48rem) { .export-panel, .export-actions, .custom-instrumental { align-items: stretch; flex-direction: column; } }
