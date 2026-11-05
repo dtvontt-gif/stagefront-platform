@@ -34,8 +34,8 @@ export async function POST(request: Request) {
   const instrumentalPath = `${base}/instrumental.mp3`;
   const vocalsPath = `${base}/vocals.mp3`;
   const [instrumental, vocals] = await Promise.all([
-    client.storage.from(KARAOKE_STEMS_BUCKET).createSignedUploadUrl(instrumentalPath),
-    client.storage.from(KARAOKE_STEMS_BUCKET).createSignedUploadUrl(vocalsPath),
+    client.storage.from(KARAOKE_STEMS_BUCKET).createSignedUploadUrl(instrumentalPath, { upsert: true }),
+    client.storage.from(KARAOKE_STEMS_BUCKET).createSignedUploadUrl(vocalsPath, { upsert: true }),
   ]);
   if (instrumental.error || vocals.error) {
     return NextResponse.json({ error: instrumental.error?.message || vocals.error?.message }, { status: 500 });
