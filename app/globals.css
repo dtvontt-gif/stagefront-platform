@@ -134,6 +134,7 @@ button.compact { padding: .5rem .75rem; }
 .custom-instrumental p { margin-top: .25rem; }
 .custom-instrumental .instrumental-saved { color: #fff; font-size: .82rem; }
 .instrumental-saved span { color: #55db8a; font-weight: 900; }
+.instrumental-actions { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
 .file-button { display: inline-flex; align-items: center; justify-content: center; cursor: pointer; white-space: nowrap; }
 .file-button input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .render-status { margin: 0; border-radius: .6rem; background: #ffffff0d; padding: .6rem .75rem; font-size: .8rem; font-weight: 700; }
