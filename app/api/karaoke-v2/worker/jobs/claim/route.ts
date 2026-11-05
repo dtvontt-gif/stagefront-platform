@@ -13,6 +13,15 @@ type ClaimedJob = {
 export async function POST(request: Request) {
   if (!isAuthorizedWorker(request)) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const client = supabaseService();
+  const abandonedClaimCutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const { error: abandonedError } = await client
+    .from("karaoke_v2_jobs")
+    .update({ status: "queued", progress: null, error: null, lease_expires_at: null })
+    .eq("kind", "prepare")
+    .eq("status", "running")
+    .lte("progress", 0.02)
+    .lt("updated_at", abandonedClaimCutoff);
+  if (abandonedError) return NextResponse.json({ error: abandonedError.message }, { status: 500 });
   const { error: retryError } = await client
     .from("karaoke_v2_jobs")
     .update({ status: "queued", progress: null, error: null, lease_expires_at: null })
