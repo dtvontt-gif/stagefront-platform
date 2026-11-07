@@ -13,6 +13,20 @@ type ClaimedTranscription = {
 export async function POST(request: Request) {
   if (!isAuthorizedWorker(request)) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   const client = supabaseService();
+  const { data: incorrectlySkipped, error: skippedError } = await client.from("karaoke_v2_jobs")
+    .select("id,project_id")
+    .eq("kind", "transcribe").eq("status", "cancelled")
+    .eq("error", "Skipped because saved lyrics already exist.")
+    .order("created_at", { ascending: false }).limit(25);
+  if (skippedError) return NextResponse.json({ error: skippedError.message }, { status: 500 });
+  for (const skipped of incorrectlySkipped || []) {
+    const { count } = await client.from("karaoke_v2_project_revisions")
+      .select("id", { count: "exact", head: true }).eq("project_id", skipped.project_id);
+    if ((count || 0) <= 1) {
+      await client.from("karaoke_v2_jobs").update({ status: "queued", progress: 0, error: null, lease_expires_at: null, updated_at: new Date().toISOString() }).eq("id", skipped.id);
+      await client.from("karaoke_v2_projects").update({ status: "processing", updated_at: new Date().toISOString() }).eq("id", skipped.project_id);
+    }
+  }
   const { error: retryError } = await client.from("karaoke_v2_jobs")
     .update({ status: "queued", progress: null, error: null, lease_expires_at: null })
     .eq("kind", "transcribe").eq("status", "failed").lt("attempts", 3);

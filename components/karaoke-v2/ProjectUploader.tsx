@@ -33,7 +33,8 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
 
   const readyProjects = projects.filter((project) => {
     const job = jobs.find((item) => item.project_id === project.id && item.kind !== "render");
-    return (job?.status || project.status) === "succeeded";
+    const status = job?.status === "cancelled" && project.status === "ready" ? "succeeded" : (job?.status || project.status);
+    return status === "succeeded";
   });
 
   const load = useCallback(async () => {
@@ -213,7 +214,7 @@ export default function ProjectUploader({ email, supabaseUrl, supabaseAnonKey }:
       }} onClose={() => setEditingProject(null)} />}
       <section className="projects"><h2>Your projects</h2>{projects.length === 0 ? <p className="muted">No projects yet.</p> : projects.map((project) => {
         const job = jobs.find((item) => item.project_id === project.id && item.kind !== "render");
-        const status = job?.status || project.status;
+        const status = job?.status === "cancelled" && project.status === "ready" ? "succeeded" : (job?.status || project.status);
         const canDelete = !["queued", "running", "processing"].includes(status);
         const stems = assets.filter((asset) => asset.project_id === project.id);
         return <article className="panel project-card" key={project.id}>

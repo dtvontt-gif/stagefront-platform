@@ -22,7 +22,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     vocals_size: vocalsSize,
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (separationJob && (savedRevisionCount || 0) > 0) {
+  // Every project starts with revision 1. Only revisions after that indicate
+  // lyrics the user or transcription has already saved and must be preserved.
+  if (separationJob && (savedRevisionCount || 0) > 1) {
     await service.from("karaoke_v2_jobs")
       .update({ status: "cancelled", progress: 0, error: "Skipped because saved lyrics already exist.", lease_expires_at: null, updated_at: new Date().toISOString() })
       .eq("project_id", separationJob.project_id).eq("kind", "transcribe").eq("status", "queued");
