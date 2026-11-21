@@ -11,12 +11,9 @@ export type ZooGiftId =
   | "monkey"
   | "money"
   | "feed_bag"
-  | "fly_swatter"
   | "hot_dogs"
   | "don_anaconda"
-  | "sha_monkey"
-  | "unk_lion"
-  | "platinum_panther";
+  | "sha_monkey";
 
 export type ActiveZooGift = {
   id: ZooGiftId;
@@ -26,7 +23,6 @@ export type ActiveZooGift = {
 
 export const zooGiftCatalog: Record<ZooGiftId, { name: string; icon: string; futurePrice: string; coinCost: number; duration: number }> = {
   paw: { name: "Zoo Paw", icon: "🐾", futurePrice: "$0.10", coinCost: 10, duration: 2200 },
-  fly_swatter: { name: "Orange Fly Swatter", icon: "🪰", futurePrice: "$0.50", coinCost: 50, duration: 3600 },
   hot_dogs: { name: "Untamed Hot Dogs", icon: "🌭", futurePrice: "$0.50", coinCost: 50, duration: 3600 },
   feed_bag: { name: "Feed the Animals", icon: "🥜", futurePrice: "$1.00", coinCost: 100, duration: 4000 },
   anaconda: { name: "Anaconda Heart", icon: "🐍", futurePrice: "$2.00", coinCost: 200, duration: 4800 },
@@ -37,8 +33,6 @@ export const zooGiftCatalog: Record<ZooGiftId, { name: string; icon: string; fut
   money: { name: "Money Shower", icon: "💵", futurePrice: "$2.00", coinCost: 200, duration: 4400 },
   don_anaconda: { name: "Don and His Anaconda", icon: "🐍", futurePrice: "$3.00", coinCost: 300, duration: 6500 },
   sha_monkey: { name: "Sha & Her Monkey", icon: "🐒", futurePrice: "$3.00", coinCost: 300, duration: 8200 },
-  unk_lion: { name: "Unk & His Lion", icon: "🦁", futurePrice: "$3.00", coinCost: 300, duration: 8200 },
-  platinum_panther: { name: "Platinum & His Golden-Eyed Panther", icon: "🐈‍⬛", futurePrice: "$3.00", coinCost: 300, duration: 8200 },
 };
 
 function GiftCaption({ gift }: { gift: ActiveZooGift }) {
@@ -155,7 +149,6 @@ const regularGiftArtwork = {
   monkey: { src: "/images/zoo-crew/gifts/monkey.webp", title: "MONKEY WAVE", tone: "gold" },
   money: { src: "/images/zoo-crew/gifts/money.webp", title: "MONEY SHOWER", tone: "green" },
   feed_bag: { src: "/images/zoo-crew/gifts/feed-bag.webp", title: "FEED THE ANIMALS", tone: "gold" },
-  fly_swatter: { src: "/images/zoo-crew/gifts/orange-fly-swatter.webp", title: "FLY SWATTER", tone: "orange" },
   hot_dogs: { src: "/images/zoo-crew/gifts/hot-dog-plate.webp", title: "UNTAMED HOT DOGS", tone: "red" },
 } as const;
 
@@ -192,40 +185,6 @@ function ShaMonkeyAnimation() {
   );
 }
 
-function UnkLionAnimation() {
-  return (
-    <div className="zoo-sha-monkey-wrap">
-      <PremiumGiftMedia
-        className="zoo-sha-monkey-video"
-        desktopSrc="/videos/zoo-crew/unk-lion-gift-transparent.webp?v=2"
-        phoneSrc="/videos/zoo-crew/unk-lion-gift-iphone.webp?v=2"
-        alt="Unk walks beside his lion, who roars as Unk proudly rests his hand on its head"
-      />
-      <div className="zoo-sha-monkey-title">UNK &amp; HIS LION</div>
-      {Array.from({ length: 12 }).map((_, index) => (
-        <i key={index} className={`zoo-sha-spark zoo-sha-spark-${index + 1}`} />
-      ))}
-    </div>
-  );
-}
-
-function PlatinumPantherAnimation() {
-  return (
-    <div className="zoo-sha-monkey-wrap">
-      <PremiumGiftMedia
-        className="zoo-sha-monkey-video"
-        desktopSrc="/videos/zoo-crew/platinum-panther-gift-transparent.webp?v=5"
-        phoneSrc="/videos/zoo-crew/platinum-panther-gift-iphone.webp?v=5"
-        alt="Platinum straightens his golden-eyed panther's chain before the loyal panther affectionately licks his face"
-      />
-      <div className="zoo-sha-monkey-title">PLATINUM &amp; HIS GOLDEN-EYED PANTHER</div>
-      {Array.from({ length: 12 }).map((_, index) => (
-        <i key={index} className={`zoo-sha-spark zoo-sha-spark-${index + 1}`} />
-      ))}
-    </div>
-  );
-}
-
 export default function ZooGiftAnimation({ gift }: { gift: ActiveZooGift | null }) {
   if (!gift) return null;
   return (
@@ -236,8 +195,6 @@ export default function ZooGiftAnimation({ gift }: { gift: ActiveZooGift | null 
       {gift.id in regularGiftArtwork ? <RegularArtworkAnimation giftId={gift.id as RegularArtworkGiftId} /> : null}
       {gift.id === "don_anaconda" ? <DonAnacondaAnimation /> : null}
       {gift.id === "sha_monkey" ? <ShaMonkeyAnimation /> : null}
-      {gift.id === "unk_lion" ? <UnkLionAnimation /> : null}
-      {gift.id === "platinum_panther" ? <PlatinumPantherAnimation /> : null}
       <GiftCaption gift={gift} />
     </div>
   );

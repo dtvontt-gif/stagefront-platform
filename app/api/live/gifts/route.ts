@@ -10,7 +10,6 @@ function roomPrefix(experience: string | undefined) {
 }
 const COSTS = {
   paw: 10,
-  fly_swatter: 50,
   hot_dogs: 50,
   feed_bag: 100,
   anaconda: 200,
@@ -21,8 +20,6 @@ const COSTS = {
   money: 200,
   don_anaconda: 300,
   sha_monkey: 300,
-  unk_lion: 300,
-  platinum_panther: 300,
 } as const;
 type GiftId = keyof typeof COSTS;
 
