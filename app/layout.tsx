@@ -27,7 +27,7 @@ export const metadata: Metadata = {
         sizes: "16x16",
       },
     ],
-    apple: "/images/zoo-crew/zoo-crew-vibe-house-gate-v3.png",
+    apple: "/images/untamed-vibez-jungle-gate-v2.png",
   },
 };
 

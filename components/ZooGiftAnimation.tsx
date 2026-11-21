@@ -27,7 +27,7 @@ export type ActiveZooGift = {
 export const zooGiftCatalog: Record<ZooGiftId, { name: string; icon: string; futurePrice: string; coinCost: number; duration: number }> = {
   paw: { name: "Zoo Paw", icon: "🐾", futurePrice: "$0.10", coinCost: 10, duration: 2200 },
   fly_swatter: { name: "Orange Fly Swatter", icon: "🪰", futurePrice: "$0.50", coinCost: 50, duration: 3600 },
-  hot_dogs: { name: "Zoo Hot Dogs", icon: "🌭", futurePrice: "$0.50", coinCost: 50, duration: 3600 },
+  hot_dogs: { name: "Untamed Hot Dogs", icon: "🌭", futurePrice: "$0.50", coinCost: 50, duration: 3600 },
   feed_bag: { name: "Feed the Animals", icon: "🥜", futurePrice: "$1.00", coinCost: 100, duration: 4000 },
   anaconda: { name: "Anaconda Heart", icon: "🐍", futurePrice: "$2.00", coinCost: 200, duration: 4800 },
   lion: { name: "King’s Roar", icon: "🦁", futurePrice: "$2.00", coinCost: 200, duration: 5200 },
@@ -156,7 +156,7 @@ const regularGiftArtwork = {
   money: { src: "/images/zoo-crew/gifts/money.webp", title: "MONEY SHOWER", tone: "green" },
   feed_bag: { src: "/images/zoo-crew/gifts/feed-bag.webp", title: "FEED THE ANIMALS", tone: "gold" },
   fly_swatter: { src: "/images/zoo-crew/gifts/orange-fly-swatter.webp", title: "FLY SWATTER", tone: "orange" },
-  hot_dogs: { src: "/images/zoo-crew/gifts/hot-dog-plate.webp", title: "ZOO HOT DOGS", tone: "red" },
+  hot_dogs: { src: "/images/zoo-crew/gifts/hot-dog-plate.webp", title: "UNTAMED HOT DOGS", tone: "red" },
 } as const;
 
 type RegularArtworkGiftId = keyof typeof regularGiftArtwork;

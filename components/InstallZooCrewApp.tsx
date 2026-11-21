@@ -14,7 +14,7 @@ export default function InstallZooCrewApp() {
 
   useEffect(() => {
     setInstalled(window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone));
-    void navigator.serviceWorker?.register("/zoo-crew-sw.js").catch(() => undefined);
+    void navigator.serviceWorker?.register("/untamed-vibez-sw.js").catch(() => undefined);
     const capturePrompt = (event: Event) => {
       event.preventDefault();
       setInstallPrompt(event as InstallPromptEvent);
