@@ -1,4 +1,4 @@
--- One shared counter for all successfully spent Zoo Crew live gift coins.
+-- One shared counter for all successfully spent Untamed Vibez live gift coins.
 create or replace function public.zoo_live_gift_points()
 returns bigint
 language sql

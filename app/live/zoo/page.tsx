@@ -4,8 +4,8 @@ import Footer from "@/components/Footer";
 import LiveHouse from "@/components/LiveHouse";
 
 export const metadata: Metadata = {
-  title: "Zoo Crew Live House | StageFront",
-  description: "The official live room for Zoo Crew Vibe on StageFront.",
+  title: "Untamed Vibez Live House | StageFront",
+  description: "The official live room for Untamed Vibez on StageFront.",
 };
 
 export const dynamic = "force-dynamic";

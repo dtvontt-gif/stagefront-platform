@@ -1,4 +1,4 @@
--- Zoo Crew live wallet foundation. Coin purchases are stored value for in-room gifts only;
+-- Untamed Vibez live wallet foundation. Coin purchases are stored value for in-room gifts only;
 -- coins are non-transferable and have no cash-out or creator payout path.
 create table if not exists public.zoo_live_coin_wallets (
   user_id uuid primary key references auth.users(id) on delete cascade,

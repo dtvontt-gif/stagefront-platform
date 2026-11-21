@@ -362,7 +362,7 @@ function Inbox() {
     const zoo = room === "zoo";
     await send({
       conversationId: active,
-      body: `Join me in ${zoo ? "Zoo Crew Live" : "The Jungle"}!`,
+      body: `Join me in ${zoo ? "Untamed Vibez Live" : "The Jungle"}!`,
       messageType: "live_invite",
       metadata: { href: zoo ? "/live/zoo" : "/jungle" },
     });

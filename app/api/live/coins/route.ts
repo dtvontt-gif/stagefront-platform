@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   const user = await authenticatedUser();
   if (!user)
     return Response.json(
-      { message: "Sign in to see your Zoo Crew coin balance." },
+      { message: "Sign in to see your Untamed Vibez coin balance." },
       { status: 401 },
     );
   const db = serviceConfiguration();
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
     );
   if (process.env.ZOO_LIVE_PAID_GIFTS_ENABLED !== "true")
     return Response.json(
-      { message: "Paid Zoo Crew gifts are not enabled yet." },
+      { message: "Paid Untamed Vibez gifts are not enabled yet." },
       { status: 503 },
     );
   const body = (await request.json().catch(() => ({}))) as {
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
             unit_amount: pack.amountCents,
             product_data: {
               name: pack.label,
-              description: "Zoo Coins for gifts in Zoo Crew live rooms.",
+              description: "Vibe Coins for gifts in Untamed Vibez live rooms.",
             },
           },
         },

@@ -71,7 +71,7 @@ export async function GET(request: Request) {
     const isOwner = staff?.role === "owner";
     const isStaffMod = staff?.role === "moderator";
     if (searchParams.get("view") === "reports") {
-      if (!isOwner) return Response.json({ message: "Only Zoo Crew owners can view reports." }, { status: 403 });
+      if (!isOwner) return Response.json({ message: "Only Untamed Vibez owners can view reports." }, { status: 403 });
       const query = new URLSearchParams({ select: "id,room_id,reporter_user_id,reported_user_id,reported_name,comment_id,comment_body,reason,status,created_at", status: "in.(new,reviewed,actioned,dismissed)", order: "created_at.desc", limit: "100" });
       const response = await dbRequest(config, "zoo_live_reports", query);
       if (!response.ok) return Response.json({ message: "The report inbox could not be loaded." }, { status: 502 });
@@ -145,7 +145,7 @@ export async function POST(request: Request) {
       return Response.json({ sent: true });
     }
 
-    if (!isLiveMod) return Response.json({ message: "Only Zoo Crew owners or live moderators can use this control." }, { status: 403 });
+    if (!isLiveMod) return Response.json({ message: "Only Untamed Vibez owners or live moderators can use this control." }, { status: 403 });
 
     if (body.action === "assign_moderator" || body.action === "revoke_moderator") {
       if (!isOwner) return Response.json({ message: "Only an owner can assign live moderators." }, { status: 403 });

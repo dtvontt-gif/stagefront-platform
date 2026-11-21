@@ -3,14 +3,14 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "StageFront | Home of Zoo Crew Vibe",
+  title: "StageFront | Home of Untamed Vibez",
   description:
-    "StageFront is the independent home of Zoo Crew Vibe across TikTok, GoLive Streamers, and Echo Live—plus music, creators, and community.",
+    "StageFront is the independent home of Untamed Vibez across TikTok, GoLive Streamers, and Echo Live—plus music, creators, and community.",
   manifest: "/manifest.webmanifest",
-  applicationName: "Zoo Crew Vibe",
+  applicationName: "Untamed Vibez",
   appleWebApp: {
     capable: true,
-    title: "Zoo Crew Vibe",
+    title: "Untamed Vibez",
     statusBarStyle: "black-translucent",
   },
   icons: {

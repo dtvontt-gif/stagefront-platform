@@ -5,7 +5,7 @@ import LiveDirectory from "@/components/LiveDirectory";
 
 export const metadata: Metadata = {
   title: "StageFront Live Rooms",
-  description: "Choose Zoo Crew Live or The Jungle on StageFront.",
+  description: "Choose Untamed Vibez Live or The Jungle on StageFront.",
 };
 
 export const dynamic = "force-dynamic";

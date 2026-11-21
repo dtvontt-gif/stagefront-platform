@@ -50,8 +50,8 @@ function RoomPicker({ onPick }: { onPick: (room: Experience) => void }) {
         Choose a room and join without leaving the app.
       </Text>
       <RoomCard
-        title="ZOO CREW LIVE"
-        detail="Cages, gifts and the Zoo Crew stage"
+        title="UNTAMED VIBEZ LIVE"
+        detail="Live boxes, gifts and the Untamed Vibez stage"
         color="#7b4b07"
         onPress={() => onPick("zoo")}
       />
@@ -237,7 +237,7 @@ function CallRoom({
       <View style={styles.call}>
         <View style={styles.callTop}>
           <Text style={styles.liveBadge}>
-            ● LIVE · {experience === "zoo" ? "ZOO CREW" : "THE JUNGLE"}
+            ● LIVE · {experience === "zoo" ? "UNTAMED VIBEZ" : "THE JUNGLE"}
           </Text>
           <Text style={styles.count}>{participants.length} in room</Text>
         </View>
@@ -282,7 +282,7 @@ function CallRoom({
         <Text style={styles.backText}>Live rooms</Text>
       </Pressable>
       <Text style={styles.heading}>
-        {experience === "zoo" ? "ZOO CREW LIVE" : "THE JUNGLE"}
+        {experience === "zoo" ? "UNTAMED VIBEZ LIVE" : "THE JUNGLE"}
       </Text>
       {working ? (
         <ActivityIndicator color="#f4b400" size="large" />

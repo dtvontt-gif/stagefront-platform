@@ -1,4 +1,4 @@
--- Introductory Zoo Crew gift pricing and expanded regular gift catalog.
+-- Introductory Untamed Vibez gift pricing and expanded regular gift catalog.
 create or replace function public.zoo_live_spend_gift_coins(
   p_user_id uuid,
   p_gift_id text,

@@ -65,7 +65,7 @@ export default function SuperfanButton({ creator, membershipName, signedIn, user
           });
           const result = await response.json() as { error?: string };
           if (!response.ok) throw new Error(result.error || "StageFront could not record the subscription.");
-          setMessage("Subscription approved. Welcome to the Zoo Crew Superfans!");
+          setMessage("Subscription approved. Welcome to the Untamed Vibez Superfans!");
         },
         onError: () => setMessage("PayPal could not complete the subscription. Please try again."),
       });

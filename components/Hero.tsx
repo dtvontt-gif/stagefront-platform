@@ -16,11 +16,11 @@ export default function Hero() {
             StageFront presents
           </p>
           <h1 id="hero-heading" className="hero-reveal hero-reveal-delay mt-6 text-balance text-5xl font-black uppercase leading-[0.92] tracking-[-0.045em] sm:text-7xl xl:text-8xl">
-            Home of the
-            <span className="mt-2 block bg-gradient-to-r from-[#fff4ca] via-[#f4b400] to-[#fff0b3] bg-clip-text text-transparent">Zoo Crew Vibe.</span>
+            Home of
+            <span className="mt-2 block bg-gradient-to-r from-[#fff4ca] via-[#f4b400] to-[#fff0b3] bg-clip-text text-transparent">Untamed Vibez.</span>
           </h1>
           <p className="hero-reveal hero-reveal-delay-2 mt-7 max-w-2xl text-pretty text-base leading-8 text-white/72 sm:text-xl">
-            One family. One community. Three stages. Follow the full Zoo Crew across TikTok, GoLive Streamers, and Echo Live from one independent home.
+            One community. One independent home. Find Untamed Vibez across TikTok, GoLive Streamers, Echo Live, and the StageFront live rooms.
           </p>
           <div className="hero-reveal hero-reveal-delay-3 mt-10 flex flex-col gap-4 sm:flex-row">
             <a href="#live" className="primary-cta">Find the live show</a>
@@ -32,7 +32,7 @@ export default function Hero() {
         <div className="hero-reveal hero-reveal-delay relative mx-auto w-full max-w-2xl">
           <div className="absolute -inset-5 rounded-[2.5rem] bg-[#f4b400]/15 blur-3xl" />
           <div className="relative overflow-hidden rounded-[2rem] border border-[#f4b400]/35 bg-black shadow-[0_35px_120px_rgba(0,0,0,0.72)]">
-            <Image src="/images/zoo-crew/zoo-crew-vibe-house-gate-v3.png" alt="The Zoo Crew Vibe House family at the golden zoo gate" width={1254} height={1254} priority className="h-auto w-full" />
+            <Image src="/images/untamed-vibez-jungle-gate-v2.png" alt="The Untamed Vibez jungle entrance with an albino anaconda and monkey" width={1254} height={1254} priority className="h-auto w-full" />
           </div>
         </div>
       </div>

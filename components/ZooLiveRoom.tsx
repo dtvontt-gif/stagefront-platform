@@ -251,7 +251,7 @@ function MediaTile({
             <p
               className={`${featured ? "text-base sm:text-xl" : "text-[11px] sm:text-sm"} truncate font-black text-white`}
             >
-              {participant.user_name || "Zoo Crew guest"}
+              {participant.user_name || "Untamed Vibez guest"}
               {participant.local ? " · You" : ""}
             </p>
             {isSuperfan ? (
@@ -677,7 +677,7 @@ export default function ZooLiveRoom({
           setViewerMode(false);
           setStageRequested(false);
           setStatus(
-            `Welcome to ${isJungle ? "On Deck" : "a Zoo Crew cage"}! Camera and microphone controls are now available.`,
+            `Welcome to ${isJungle ? "On Deck" : "an Untamed box"}! Camera and microphone controls are now available.`,
           );
           const localData =
             call?.participants().local?.userData &&
@@ -698,9 +698,9 @@ export default function ZooLiveRoom({
         ) {
           setCageInvite({
             inviterSessionId: data.inviterSessionId,
-            inviterName: sender?.user_name || "Zoo Crew",
+            inviterName: sender?.user_name || "Untamed Vibez",
           });
-          setStatus(`You have an invitation to join ${isJungle ? "On Deck" : "a Zoo Crew cage"}.`);
+          setStatus(`You have an invitation to join ${isJungle ? "On Deck" : "an Untamed box"}.`);
         }
         if (
           data?.kind === "stage-invite-accept" &&
@@ -817,7 +817,7 @@ export default function ZooLiveRoom({
           playGift({
             id: data.giftId,
             eventId: data.eventId,
-            senderName: data.senderName || sender?.user_name || "Zoo Crew",
+            senderName: data.senderName || sender?.user_name || "Untamed Vibez",
           });
           if (data.paid && Number(data.coinsSpent) > 0)
             setGiftPoints((current) => current + Number(data.coinsSpent));
@@ -833,7 +833,7 @@ export default function ZooLiveRoom({
           event.fromId === "API" &&
           !canEndLive
         ) {
-          setStatus(`${isJungle ? "The Jungle" : "The Zoo Crew live"} has ended`);
+          setStatus(`${isJungle ? "The Jungle" : "The Untamed Vibez live"} has ended`);
           void call
             ?.leave()
             .catch(() => undefined)
@@ -863,7 +863,7 @@ export default function ZooLiveRoom({
             ? "Watching from the viewer lobby"
             : isJungle
               ? "Live inside The Jungle"
-              : "Live inside the Zoo Crew habitat",
+              : "Live inside the Untamed Vibez house",
         );
       }
     }
@@ -1358,7 +1358,7 @@ export default function ZooLiveRoom({
 
   async function sendPaidGift(giftId: ZooGiftId) {
     if (!coinsEnabled || giftBusy) {
-      setStatus("Paid Zoo Crew gifts are not enabled yet.");
+      setStatus("Paid Untamed Vibez gifts are not enabled yet.");
       return;
     }
     const coinCost = zooGiftCatalog[giftId].coinCost;
@@ -1383,7 +1383,7 @@ export default function ZooLiveRoom({
       setCoinBalance(
         Number(data.balance ?? Math.max(0, coinBalance - coinCost)),
       );
-      setStatus(`You sent ${zooGiftCatalog[giftId].name} to the Zoo Crew.`);
+      setStatus(`You sent ${zooGiftCatalog[giftId].name} to Untamed Vibez.`);
       setGiftMenuOpen(false);
     } catch (error) {
       setStatus(
@@ -1566,7 +1566,7 @@ export default function ZooLiveRoom({
       setReportOpen(false);
       setReportTarget(null);
       setReportReason("");
-      setStatus("Your report was sent privately to the Zoo Crew owners.");
+      setStatus("Your report was sent privately to the Untamed Vibez owners.");
     } catch (error) {
       setStatus(
         error instanceof Error
@@ -1644,7 +1644,7 @@ export default function ZooLiveRoom({
         } satisfies RoomMessage,
         "*",
       );
-      setStatus(`Your request for ${isJungle ? "an On Deck spot" : "a Zoo Crew cage"} was sent`);
+      setStatus(`Your request for ${isJungle ? "an On Deck spot" : "an Untamed box"} was sent`);
     } catch {
       setStageRequested(false);
       setStatus("Your request could not be sent. Please try again.");
@@ -1877,7 +1877,7 @@ export default function ZooLiveRoom({
 
   async function endBroadcast() {
     if (!canEndLive) return;
-    const confirmed = window.confirm("End the Zoo Crew live for everyone?");
+    const confirmed = window.confirm("End the Untamed Vibez live for everyone?");
     if (!confirmed) return;
     setStatus("Ending the live…");
     try {
@@ -1921,7 +1921,7 @@ export default function ZooLiveRoom({
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
             <p className="truncate text-xs font-black uppercase tracking-[.16em] text-[#f4b400]">
-              {isJungle ? "The Jungle · Live" : "Zoo Crew Vibe · Live"}
+              {isJungle ? "The Jungle · Live" : "Untamed Vibez · Live"}
             </p>
           </div>
           <div className="mt-1 flex min-w-0 items-center gap-2">
@@ -2230,7 +2230,7 @@ export default function ZooLiveRoom({
           <div className="mb-2 rounded-2xl border border-[#f4b400]/25 bg-[#f4b400]/[.05] p-3">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-black uppercase tracking-wider text-[#f4b400]">
-                Gift the Zoo Crew · {coinBalance.toLocaleString()} coins
+                Gift Untamed Vibez · {coinBalance.toLocaleString()} coins
               </p>
               <button
                 type="button"
@@ -2336,7 +2336,7 @@ export default function ZooLiveRoom({
           <input
             name="comment"
             maxLength={180}
-            placeholder="Say something to the Zoo Crew…"
+            placeholder="Say something to Untamed Vibez…"
             className="min-w-0 flex-1 rounded-full border border-white/10 bg-white/[.06] px-4 py-3 text-base text-white outline-none placeholder:text-white/35 focus:border-[#f4b400]/55"
           />
           <button className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#f4b400] font-black text-black">
@@ -2670,7 +2670,7 @@ export default function ZooLiveRoom({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[.18em] text-[#f4b400]">
-                  Zoo Crew coin wallet
+                  Untamed Vibez coin wallet
                 </p>
                 <h2 className="mt-1 text-xl font-black text-white">
                   {coinBalance.toLocaleString()} coins
@@ -2684,7 +2684,7 @@ export default function ZooLiveRoom({
               </button>
             </div>
             <p className="mt-3 text-xs leading-5 text-white/55">
-              Coins are for Zoo Crew live gifts only. There are no creator
+              Coins are for Untamed Vibez live gifts only. There are no creator
               cash-outs; gift proceeds go to the crew. PayPal checkout must be
               enabled by the owners after the payment and database flow is
               verified.
@@ -2709,7 +2709,7 @@ export default function ZooLiveRoom({
                       {pack.coins.toLocaleString()} coins
                     </strong>
                     <small className="text-xs text-white/45">
-                      Zoo Crew Live wallet
+                      Untamed Vibez Live wallet
                     </small>
                   </span>
                   <strong className="text-[#f4b400]">${pack.amount}</strong>
@@ -2851,7 +2851,7 @@ export default function ZooLiveRoom({
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-black text-white">
-                        {person.user_name || "Zoo Crew guest"}
+                        {person.user_name || "Untamed Vibez guest"}
                         {person.local ? " · You" : ""}
                       </p>
                       {superfanIds.has(person.user_id) ? (
@@ -3182,7 +3182,7 @@ export default function ZooLiveRoom({
               </p>
             )}
             <p className="mt-3 text-[11px] leading-4 text-white/45">
-              Only Zoo Crew owners and moderators receive these controls. Guests
+              Only Untamed Vibez owners and moderators receive these controls. Guests
               can turn their own devices back on afterward.
             </p>
           </div>

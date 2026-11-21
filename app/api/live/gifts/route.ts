@@ -43,15 +43,15 @@ async function verifiedSenderName(db: NonNullable<ReturnType<typeof serviceConfi
   const response = await fetch(db.url + "/rest/v1/stagefront_profiles?" + query, {
     headers: serviceHeaders(db.serviceKey), cache: "no-store",
   });
-  if (!response.ok) return "Zoo Crew fan";
+  if (!response.ok) return "Untamed Vibez fan";
   const [profile] = await response.json() as { display_name?: string; username?: string }[];
-  return (profile?.display_name || profile?.username || "Zoo Crew fan").trim().slice(0, 50) || "Zoo Crew fan";
+  return (profile?.display_name || profile?.username || "Untamed Vibez fan").trim().slice(0, 50) || "Untamed Vibez fan";
 }
 
 export async function POST(request: Request) {
   const user = await authenticatedUser();
   if (!user) return Response.json({ message: "Sign in before sending gifts." }, { status: 401 });
-  if (process.env.ZOO_LIVE_PAID_GIFTS_ENABLED !== "true") return Response.json({ message: "Paid Zoo Crew gifts are not enabled yet." }, { status: 503 });
+  if (process.env.ZOO_LIVE_PAID_GIFTS_ENABLED !== "true") return Response.json({ message: "Paid Untamed Vibez gifts are not enabled yet." }, { status: 503 });
   const body = await request.json().catch(() => ({})) as { giftId?: string; eventId?: string; experience?: string };
   if (!(body.giftId && body.giftId in COSTS) || !body.eventId || !/^[0-9a-f-]{36}$/i.test(body.eventId)) {
     return Response.json({ message: "Invalid gift request." }, { status: 400 });
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
         return Response.json({ message: "The gift did not reach the live, so the coins were returned.", eventId: body.eventId, balance: newBalance }, { status: 502 });
       }
       console.error("Zoo gift failed and automatic refund could not be confirmed", { eventId: body.eventId, status: broadcast?.status });
-      return Response.json({ message: "Gift delivery failed and the automatic refund could not be confirmed. Contact a Zoo Crew owner with event ID " + body.eventId + ".", eventId: body.eventId, balance }, { status: 502 });
+      return Response.json({ message: "Gift delivery failed and the automatic refund could not be confirmed. Contact an Untamed Vibez owner with event ID " + body.eventId + ".", eventId: body.eventId, balance }, { status: 502 });
     }
     return Response.json({ sent: true, balance, coinsSpent: COSTS[giftId] });
   } catch (error) {

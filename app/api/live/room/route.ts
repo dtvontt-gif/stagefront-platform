@@ -216,7 +216,7 @@ export async function POST(request: Request) {
     if (action === "start") {
       if (!canControlLive)
         return Response.json(
-          { message: "Only a Zoo Crew owner or manager can start the live." },
+          { message: "Only an Untamed Vibez owner or manager can start the live." },
           { status: 403 },
         );
       const room = await getOrCreateRoom(apiKey, user.id, experience);
@@ -306,7 +306,7 @@ export async function POST(request: Request) {
     if (!room)
       return Response.json(
         {
-          message: "The Zoo Crew is offline right now.",
+          message: "Untamed Vibez is offline right now.",
           isLive: false,
           canControlLive,
           role,

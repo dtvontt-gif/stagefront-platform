@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       custom_id: user.id,
       subscriber: { email_address: user.email },
       application_context: {
-        brand_name: "Zoo Crew Vibe on StageFront",
+        brand_name: "Untamed Vibez on StageFront",
         locale: "en-US",
         shipping_preference: "NO_SHIPPING",
         user_action: "SUBSCRIBE_NOW",

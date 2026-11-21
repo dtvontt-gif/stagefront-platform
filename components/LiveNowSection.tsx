@@ -18,7 +18,7 @@ export default function LiveNowSection() {
               <span className={isLive ? "live-status" : "live-status live-status-offline"}>{isLive ? "Live now" : "Currently offline"}</span>
               {platform ? <span className="pill">Broadcasting on {platform}</span> : null}
             </div>
-            <p className="section-kicker mt-7">Zoo Crew broadcast center</p>
+            <p className="section-kicker mt-7">Untamed Vibez broadcast center</p>
             <h2 id="live-heading" className="mt-4 font-display text-4xl font-black uppercase tracking-tight sm:text-6xl">
               {isLive ? "The family is live." : "One crew. Three stages."}
             </h2>
@@ -27,7 +27,7 @@ export default function LiveNowSection() {
               <span className="pill">TikTok</span><span className="pill">GLS</span><span className="pill">Echo Live</span>
             </div>
           </div>
-          {isLive ? <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="mt-8 inline-flex shrink-0 rounded-full bg-red-500 px-8 py-4 font-black uppercase tracking-wide text-white shadow-[0_0_38px_rgba(239,68,68,0.3)] transition hover:-translate-y-1 hover:bg-red-400 lg:mt-0">Join the live →</a> : <a href="#superfans" className="support-cta mt-8 shrink-0 lg:mt-0">Join the Zoo Crew community →</a>}
+          {isLive ? <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="mt-8 inline-flex shrink-0 rounded-full bg-red-500 px-8 py-4 font-black uppercase tracking-wide text-white shadow-[0_0_38px_rgba(239,68,68,0.3)] transition hover:-translate-y-1 hover:bg-red-400 lg:mt-0">Join the live →</a> : <a href="#superfans" className="support-cta mt-8 shrink-0 lg:mt-0">Join the Untamed Vibez community →</a>}
         </div>
       </div>
     </section>

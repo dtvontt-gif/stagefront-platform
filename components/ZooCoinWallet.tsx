@@ -81,7 +81,7 @@ export default function ZooCoinWallet() {
           </h2>
           <p className="mt-3 max-w-xl text-sm leading-6 text-white/55">
             Your Zoo Coins stay with your StageFront account and can be used for
-            gifts during Zoo Crew live rooms.
+            gifts during Untamed Vibez live rooms.
           </p>
         </div>
         <div className="min-w-44 rounded-3xl border border-[#f4b400]/30 bg-black/35 px-6 py-5 text-center">

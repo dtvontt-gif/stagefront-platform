@@ -1,9 +1,9 @@
 export function GET() {
   return Response.json(
     {
-      name: "Zoo Crew Vibe | StageFront",
-      short_name: "Zoo Crew",
-      description: "The official Zoo Crew Vibe community and Live House.",
+      name: "Untamed Vibez | StageFront",
+      short_name: "Untamed Vibez",
+      description: "The official Untamed Vibez community and Live House.",
       id: "/live",
       start_url: "/live",
       scope: "/",
@@ -34,7 +34,7 @@ export function GET() {
           icons: [{ src: "/images/favicons/icon-192x192.png", sizes: "192x192" }],
         },
         {
-          name: "Zoo Crew Community",
+          name: "Untamed Vibez Community",
           short_name: "Community",
           url: "/community",
           icons: [{ src: "/images/favicons/icon-192x192.png", sizes: "192x192" }],

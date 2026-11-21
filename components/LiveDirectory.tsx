@@ -7,10 +7,10 @@ type RoomStatus = "checking" | "offline" | "live" | "error";
 const rooms = [
   {
     id: "zoo",
-    name: "Zoo Crew Live",
+    name: "Untamed Vibez Live",
     href: "/live/zoo",
     icon: "🦁",
-    description: "Enter the nighttime habitat with the main stage and eight Zoo Crew cages.",
+    description: "Enter the nighttime live house with the main stage and eight Untamed boxes.",
     classes:
       "border-[#f4b400]/35 bg-[radial-gradient(circle_at_70%_16%,rgba(244,180,0,.18),transparent_28%),linear-gradient(145deg,#142018,#070a08_70%)]",
   },
