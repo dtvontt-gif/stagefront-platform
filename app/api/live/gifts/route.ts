@@ -4,9 +4,9 @@ export const runtime = "nodejs";
 const DAILY_API = "https://api.daily.co/v1";
 function roomPrefix(experience: string | undefined) {
   const environment = process.env.VERCEL_ENV === "production" ? "live" : "preview";
-  return experience === "jungle"
-    ? `stagefront-jungle-${environment}-`
-    : `zoo-crew-vibe-${environment}-`;
+  return experience === "zoo"
+    ? `zoo-crew-vibe-${environment}-`
+    : `stagefront-jungle-${environment}-`;
 }
 const COSTS = {
   paw: 10,
@@ -50,6 +50,9 @@ export async function POST(request: Request) {
   if (!user) return Response.json({ message: "Sign in before sending gifts." }, { status: 401 });
   if (process.env.ZOO_LIVE_PAID_GIFTS_ENABLED !== "true") return Response.json({ message: "Paid Untamed Vibez gifts are not enabled yet." }, { status: 503 });
   const body = await request.json().catch(() => ({})) as { giftId?: string; eventId?: string; experience?: string };
+  if (body.experience === "zoo" && process.env.NEXT_PUBLIC_RETIRED_LIVE_ROOM_ENABLED !== "true") {
+    return Response.json({ message: "This live room is retired. Enter The Jungle instead.", href: "/jungle" }, { status: 410 });
+  }
   if (!(body.giftId && body.giftId in COSTS) || !body.eventId || !/^[0-9a-f-]{36}$/i.test(body.eventId)) {
     return Response.json({ message: "Invalid gift request." }, { status: 400 });
   }

@@ -43,21 +43,25 @@ export default function NativeLiveRoom({ request }: { request: Request }) {
 }
 
 function RoomPicker({ onPick }: { onPick: (room: Experience) => void }) {
+  const retiredRoomEnabled =
+    process.env.EXPO_PUBLIC_RETIRED_LIVE_ROOM_ENABLED === "true";
   return (
     <ScrollView contentContainerStyle={styles.picker}>
       <Text style={styles.heading}>STAGEFRONT LIVE</Text>
       <Text style={styles.subheading}>
-        Choose a room and join without leaving the app.
+        Enter the main Untamed Vibez live room without leaving the app.
       </Text>
-      <RoomCard
-        title="UNTAMED VIBEZ LIVE"
-        detail="Live boxes, gifts and the Untamed Vibez stage"
-        color="#7b4b07"
-        onPress={() => onPick("zoo")}
-      />
+      {retiredRoomEnabled ? (
+        <RoomCard
+          title="RETIRED LIVE HOUSE"
+          detail="Archived Untamed Vibez room"
+          color="#7b4b07"
+          onPress={() => onPick("zoo")}
+        />
+      ) : null}
       <RoomCard
         title="THE JUNGLE"
-        detail="On Deck boxes, vines and jungle energy"
+        detail="The main live room with On Deck boxes, vines and jungle energy"
         color="#174d27"
         onPress={() => onPick("jungle")}
       />

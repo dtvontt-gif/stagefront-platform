@@ -9,7 +9,21 @@ const DAILY_API = "https://api.daily.co/v1";
 type LiveExperience = "zoo" | "jungle";
 
 function liveExperience(value: unknown): LiveExperience {
-  return value === "jungle" ? "jungle" : "zoo";
+  return value === "zoo" ? "zoo" : "jungle";
+}
+
+function isRetired(experience: LiveExperience) {
+  return (
+    experience === "zoo" &&
+    process.env.NEXT_PUBLIC_RETIRED_LIVE_ROOM_ENABLED !== "true"
+  );
+}
+
+function retiredResponse() {
+  return Response.json(
+    { message: "This live room is retired. Enter The Jungle instead.", href: "/jungle" },
+    { status: 410 },
+  );
 }
 
 function roomPrefix(experience: LiveExperience) {
@@ -163,6 +177,7 @@ export async function GET(request: Request) {
     const experience = liveExperience(
       new URL(request.url).searchParams.get("experience"),
     );
+    if (isRetired(experience)) return retiredResponse();
     const [room, access] = await Promise.all([
       getRoom(apiKey, experience),
       staffAccess(request),
@@ -205,6 +220,7 @@ export async function POST(request: Request) {
       experience?: string;
     };
     const experience = liveExperience(body.experience);
+    if (isRetired(experience)) return retiredResponse();
     const action = body.action || "enter";
     const access = await staffAccess(request);
     const role = access?.role || null;

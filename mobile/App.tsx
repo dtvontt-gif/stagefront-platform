@@ -359,12 +359,12 @@ function Inbox() {
       setDraft("");
   }
   async function invite(room: "zoo" | "jungle") {
-    const zoo = room === "zoo";
+    const retired = room === "zoo";
     await send({
       conversationId: active,
-      body: `Join me in ${zoo ? "Untamed Vibez Live" : "The Jungle"}!`,
+      body: `Join me in ${retired ? "the retired Untamed Vibez room" : "The Jungle"}!`,
       messageType: "live_invite",
-      metadata: { href: zoo ? "/live/zoo" : "/jungle" },
+      metadata: { href: retired ? "/live/zoo" : "/jungle" },
     });
   }
   if (chat)
@@ -383,19 +383,21 @@ function Inbox() {
           </View>
         </View>
         <View style={s.inviteRow}>
-          <Pressable
-            disabled={busy}
-            onPress={() => invite("zoo")}
-            style={s.invite}
-          >
-            <Text style={s.inviteText}>INVITE TO ZOO</Text>
-          </Pressable>
+          {process.env.EXPO_PUBLIC_RETIRED_LIVE_ROOM_ENABLED === "true" ? (
+            <Pressable
+              disabled={busy}
+              onPress={() => invite("zoo")}
+              style={s.invite}
+            >
+              <Text style={s.inviteText}>INVITE TO RETIRED ROOM</Text>
+            </Pressable>
+          ) : null}
           <Pressable
             disabled={busy}
             onPress={() => invite("jungle")}
             style={s.invite}
           >
-            <Text style={s.inviteText}>INVITE TO JUNGLE</Text>
+            <Text style={s.inviteText}>INVITE TO THE JUNGLE</Text>
           </Pressable>
         </View>
         <ScrollView

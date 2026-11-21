@@ -5,11 +5,15 @@ export const runtime = "nodejs";
 const DAILY_API = "https://api.daily.co/v1";
 type Room = { name: string; url: string };
 
+function retiredExperience(experience: string | null) {
+  return experience === "zoo" && process.env.NEXT_PUBLIC_RETIRED_LIVE_ROOM_ENABLED !== "true";
+}
+
 function roomPrefix(experience: string | null) {
   const environment = process.env.VERCEL_ENV === "production" ? "live" : "preview";
-  return experience === "jungle"
-    ? `stagefront-jungle-${environment}-`
-    : `zoo-crew-vibe-${environment}-`;
+  return experience === "zoo"
+    ? `zoo-crew-vibe-${environment}-`
+    : `stagefront-jungle-${environment}-`;
 }
 
 function dailyHeaders(key: string) {
@@ -58,6 +62,9 @@ async function isRoomModerator(config: NonNullable<ReturnType<typeof serviceConf
 }
 
 export async function GET(request: Request) {
+  if (retiredExperience(new URL(request.url).searchParams.get("experience"))) {
+    return Response.json({ message: "This live room is retired. Enter The Jungle instead.", href: "/jungle" }, { status: 410 });
+  }
   const user = await authenticatedUser();
   if (!user) return Response.json({ message: "Sign in to use live safety tools." }, { status: 401 });
   const apiKey = process.env.DAILY_API_KEY?.trim();
@@ -100,6 +107,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const requestedExperience = new URL(request.url).searchParams.get("experience");
+  if (retiredExperience(requestedExperience)) {
+    return Response.json({ message: "This live room is retired. Enter The Jungle instead.", href: "/jungle" }, { status: 410 });
+  }
   const user = await authenticatedUser();
   if (!user) return Response.json({ message: "Sign in before using live safety tools." }, { status: 401 });
   const apiKey = process.env.DAILY_API_KEY?.trim();
